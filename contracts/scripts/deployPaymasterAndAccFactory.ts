@@ -1,7 +1,8 @@
-import hre from "hardhat";
-import { run } from "hardhat";
 import dotenv from 'dotenv';
 import fs from 'fs';
+import hre from "hardhat";
+import path from 'path';
+import { clearJsonFile } from '../../apps/version1_onboarding/src/utils/clearJsonFile';
 
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
 
@@ -34,23 +35,19 @@ async function main() {
       amountInEtherWithDecimals
   );
 
-  // verify paymaster
-  // await run(`verify:verify`, {
-  //     address: pm.target,
-  //     constructorArguments: [],
-  // });
-
   // deploy account-factory
-  const af = await hre.ethers.deployContract("AccountFactory", [], { signer: faucet }); 
+  const af = await hre.ethers.deployContract("contracts/src/Account.sol:AccountFactory", [], { signer: faucet }); 
   await af.waitForDeployment(); 
   console.log(`\nAF: ${af.target}`); 
   envConfig.ACCOUNT_FACTORY_ADDRESS = af.target.toString();
 
-  // verify account-factory
-  // await run(`verify:verify`, {
-  //     address: af.target,
-  //     constructorArguments: [],
-  // });
+  // delete keypairs since we are making a new deployment and the old keypairs will be not valid anymore
+  let dirPath = path.join(__dirname, '../../apps/version2_private_transfers/keypair/');
+  try {
+    fs.rmSync(dirPath, { recursive: true, force: true });
+} catch (err) {
+    console.error(`Error while deletion of ${dirPath}:`, err);
+}
 
   // write new addresses to .env file
   const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');

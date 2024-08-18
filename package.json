@@ -15,19 +15,22 @@
     "@openzeppelin/contracts": "^4.2.0",
     "@openzeppelin/contracts-upgradeable": "4.9.3",
     "@types/figlet": "^1.5.8",
-    "circom": "^0.0.35",
-    "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",
-    "snarkjs": "git+https://github.com/tornadocash/snarkjs.git#869181cfaf7526fe8972073d31655493a04326d5",
-    "websnark": "git+https://github.com/tornadocash/websnark.git#4c0af6a8b65aabea3c09f377f63c44e7a58afa6d",
-    "fixed-merkle-tree": "^0.6.1",
+    "alchemy-sdk": "^3.3.1",
+    "circom": "^0.5.45",
+    "circomlib": "git+https://github.com/tornadocash/circomlib.git#d20d53411d1bef61f38c99a8b36d5d0cc4836aa1",
     "circomlibjs": "^0.1.2",
+    "csv-parser": "^3.0.0",
     "dotenv": "^16.4.5",
     "erc-20-abi": "^1.0.1",
+    "eth-sig-util": "^3.0.1",
     "figlet": "^1.7.0",
-    "hardhat": "^2.22.6"
+    "fixed-merkle-tree": "^0.6.1",
+    "snarkjs": "git+https://github.com/tornadocash/snarkjs.git#f37f146948f3b28086493e71512006b030588fc2",
+    "websnark": "git+https://github.com/tornadocash/websnark.git#4c0af6a8b65aabea3c09f377f63c44e7a58afa6d"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-etherscan": "^3.1.8",
-    "@types/circomlibjs": "^0.1.6"
+    "@types/circomlibjs": "^0.1.6",
+    "hardhat": "^2.22.6"
   }
 }

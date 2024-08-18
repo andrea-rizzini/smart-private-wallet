@@ -13,12 +13,38 @@ interface IOnboardingMixer {
         bytes calldata _proof,
         bytes32 _root,
         bytes32 _nullifierHash,
-        address payable _recipient,
-        address payable _relayer,
-        uint256 _fee,
-        uint256 _refund
+        address payable _recipient
     ) external payable;
 } 
+
+interface IPoolUsers {
+    struct Account_ {
+        address owner;
+        bytes publicKey;
+    }
+
+    function register(Account_ memory _account) external;
+}
+
+interface IUTXOsPool {
+    struct ExtData {
+    address recipient;
+    int256 extAmount;
+    bytes encryptedOutput1;
+    bytes encryptedOutput2;
+  }
+
+  struct Proof {
+    bytes proof;
+    bytes32 root;
+    bytes32[] inputNullifiers;
+    bytes32[2] outputCommitments;
+    uint256 publicAmount;
+    bytes32 extDataHash;
+  }
+
+  function transact(Proof memory _args, ExtData memory _extData) external payable;
+}
 
 // Account contract
 
@@ -30,7 +56,6 @@ contract Account is IAccount {
         bytes data;
     }
 
-    uint public counter;
     address public owner;
     
     /// The ERC-4337 entry point singleton
@@ -53,22 +78,22 @@ contract Account is IAccount {
         return owner == recovered ? 0 : 1; //return 0 if signature is valid, 1 otherwise
     }
 
-    function append_commitment(address contract_address, bytes32 _commitment, uint32 flag) external payable {
-        if (flag == 1){
+    function append_commitment(address contract_address, bytes32 _commitment, uint256 amount) external payable { // amount in wei
+        if (amount == 10000000000000000){         
             require(address(this).balance >= 0.01 ether, "Insufficient funds"); 
-            IOnboardingMixer(contract_address).createCommitment{value: 0.01 ether}(_commitment);
+            IOnboardingMixer(contract_address).createCommitment{value: amount}(_commitment);
         }
-        else if (flag == 2){
+        else if (amount == 100000000000000000){
             require(address(this).balance >= 0.1 ether, "Insufficient funds");
-            IOnboardingMixer(contract_address).createCommitment{value: 0.1 ether}(_commitment);
+            IOnboardingMixer(contract_address).createCommitment{value: amount}(_commitment);
         }
-        else if (flag == 3){
+        else if (amount == 1000000000000000000){
             require(address(this).balance >= 1 ether, "Insufficient funds");
-            IOnboardingMixer(contract_address).createCommitment{value: 1 ether}(_commitment);
+            IOnboardingMixer(contract_address).createCommitment{value: amount}(_commitment);
         }
-        else if (flag == 4){
+        else if (amount == 1000000000000000000){
             require(address(this).balance >= 10 ether, "Insufficient funds");
-            IOnboardingMixer(contract_address).createCommitment{value: 10 ether}(_commitment);
+            IOnboardingMixer(contract_address).createCommitment{value: amount}(_commitment);
         }
     }
 
@@ -77,18 +102,29 @@ contract Account is IAccount {
         bytes calldata _proof,
         bytes32 _root,
         bytes32 _nullifierHash,
-        address payable _recipient,
-        address payable _relayer,
-        uint256 _fee,
-        uint256 _refund
+        address payable _recipient
     ) external payable {
-        IOnboardingMixer(contract_address).redeemCommitment(_proof, _root, _nullifierHash, _recipient, _relayer, _fee, _refund);
+        IOnboardingMixer(contract_address).redeemCommitment(_proof, _root, _nullifierHash, _recipient);
     }
 
-    function test () external {
-        counter++;
+     function insertIntoPoolUsers(address poolUsersContract, bytes memory publicKey) public {
+        IPoolUsers.Account_ memory account_ = IPoolUsers.Account_({
+            owner: address(this),
+            publicKey: publicKey
+        });
+
+        IPoolUsers(poolUsersContract).register(account_);
     }
-    
+
+    function callTransact(
+        address poolAddress,
+        IUTXOsPool.Proof memory _proofArgs,
+        IUTXOsPool.ExtData memory _extData
+    ) external payable {
+        uint256 valueToSend = _extData.extAmount > 0 ? uint256(_extData.extAmount) : 0;
+        IUTXOsPool(poolAddress).transact{value: valueToSend}(_proofArgs, _extData);
+    }
+
 }
 
 contract AccountFactory {

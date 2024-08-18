@@ -14,6 +14,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY_ALICE!,
         process.env.PRIVATE_KEY_BOB!,
         process.env.PRIVATE_KEY_FAUCET!,
+        process.env.PRIVATE_KEY_RELAYER!,
       ],
     },
     arb: {
@@ -22,11 +23,12 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY_ALICE!,
         process.env.PRIVATE_KEY_BOB!,
         process.env.PRIVATE_KEY_FAUCET!,
+        process.env.PRIVATE_KEY_RELAYER!,
       ],
     },
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY, // La chiave API per Etherscan o altri esploratori di blockchain
+    apiKey: process.env.ETHERSCAN_API_KEY, 
   },
   solidity: {
     compilers: [
@@ -39,16 +41,7 @@ const config: HardhatUserConfig = {
           },
           viaIR: true,
         },
-      },
-      {
-        version: "0.5.0",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 1000,
-          },
-        },
-      },
+      }
     ],
   },
   

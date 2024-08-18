@@ -16,4 +16,25 @@ node_modules
 # Hardhat Ignition default folder for deployments against a local node
 ignition/deployments/chain-31337
 
-next_step.txt
+# Apps files
+/apps/version1_onboarding/contacts/*
+/apps/version1_onboarding/links/*
+/apps/version1_onboarding/nullifiers/*
+/apps/version1_onboarding/cache/*
+
+/apps/version2_private_transfers/contacts/*
+/apps/version2_private_transfers/links/*
+/apps/version2_private_transfers/nullifiers/*
+/apps/version2_private_transfers/keypair/*
+/apps/version2_private_transfers/cache/*
+
+/apps/version3_compliance/contacts/*
+/apps/version3_compliance/links/*
+/apps/version3_compliance/nullifiers/*
+/apps/version3_compliance/keypair/*
+/apps/version3_compliance/cache/*
+
+# circuits files
+/home/andrea/Desktop/smart-private-wallet/circuits/artifacts/circuits/ptau18
+
+/circuits/artifacts/circuits/*

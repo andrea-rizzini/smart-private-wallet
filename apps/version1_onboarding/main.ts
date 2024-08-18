@@ -1,7 +1,7 @@
 import figlet from 'figlet';
 import * as readline from 'readline';
-import { acceptInvite, alreadyRegistered, onboardViaLink } from '../../src/walletFirstActions';
-import { inputFromCLI } from '../../src/utils/inputFromCLI';
+import { acceptInvite, alreadyRegistered, onboardViaLink } from './src/walletFirstActions';
+import { inputFromCLI } from './src/utils/inputFromCLI';
 
 async function main() {
 
@@ -25,23 +25,23 @@ async function main() {
       output: process.stdout
     });
 
-    const answer = await inputFromCLI('\n[1] Accept invite (via invitation code) \n[2] Already have an account  \n[3] Onboard via link\n: ', rl);
+    const answer = await inputFromCLI('\n[1] Accept invite (via invitation code) \n[2] Onboard via link \n[3] Exit \n: ', rl);
 
     rl.close();
     
     if (answer === '1') {
       await acceptInvite();
       isCorrectCode = true;
-    } else if (answer === '2') {    
-      // not in our scope
-      isCorrectCode = true;
-      await alreadyRegistered();
-    } else if (answer === '3') {
+    } else if (answer === '2') {
       isCorrectCode = true;
       await onboardViaLink();
     }
+    else if (answer === '3') {
+      console.log('\nGoodbye!');
+      process.exit(0);
+    }
     else {
-      console.log('Invalid input.');
+      console.log('\nInvalid input.');
     }
   }
     
