@@ -32,6 +32,27 @@ version_1: ```npx hardhat run /apps/version1_onboarding/main.ts```
 version_2: ```npx hardhat run /apps/version2_private_transfers/main.ts```  
 version_3: ```npx hardhat run /apps/version3_compliance/main.ts``` 
 
+# Demo:
+This demo shows all the functionalities of version_1 and version_2.    
+You need 2 terminals, T1 and T2.
+1) (T1): ```npx hardhat run apps/version2_private_transfers/main.ts```  
+2) (T1): type ```1```, type ```testnet``` and chose a name for you account (Alice)
+3) (T1): in the menu type ```1``` and this will generate a keypair and register its public key into the users pool
+4) (T1): in the menu type ```4```, then type ```1``` to receive some eth to your smart-wallet, then insert the amount you want and press enter; make sure to have enough eth for an invitation and then for a send
+5) (T1): in the menu type ```3``` to invite someone, select a name (Bob) for him and select the amount you want onboard him with  
+6) (T2): ```npx hardhat run apps/version2_private_transfers/main.ts``` 
+7) (T2): wait for the snark proof verification and chose a name (Bob), now you are in
+8) (T2): in the menu type ```1``` and this will generate a keypair and register its public key into the users pool
+9) (T2): in the menu type ```7``` to verify if the person who invited you is present in the contacts (there should be Alice with her address)
+10) (T1): in the menu type ```8``` to refresh, this will check if the note has been redeemed
+11) (T1): in the menu type ```7``` to verify if the person you have onboarded is now present in your contacts (there should be Bob with his address)
+12) (T1): in the menu type ```4``` and then ```2``` to fund the private amount, then insert the amount you want make private and press enter
+13) (T1): in the menu type ```2``` to verify if the utxo has been created
+14) (T1): in the menu type ```5```, insert an amount, then you can decide to send to a contact of yours of to send directly inserting the address, finally you can decide if use a relayer for the send
+15) (T2): in the menu type ```2``` and verify if you have received the amount sent to you by Alice
+16) (T2): in the menu type ```6``` to withdraw specifying the amount you need
+17) (T2): in the menu type ```2``` and verify if the withdrawal has gone well
+
 # Notes:
 - You can decide to deploy the contracts on the chain you prefer, all you have to do is to modify the file ```hardhat.config.ts``` specifying the RPC_URL and adding the relevant ```PRIVATE_KEYs``` (with the same name you'll specify them on the .env file).  
 View the following example:  

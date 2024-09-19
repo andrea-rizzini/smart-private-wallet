@@ -1,14 +1,17 @@
+import dotenv from 'dotenv';
+import fs from 'fs';
 import hre from "hardhat";
+import path from 'path';
+import * as readline from 'readline';
+
 import { createNote } from "./note/createNote";
 import { inputFromCLI } from "./utils/inputFromCLI";
 import { LinkNote, EthersStr } from "./types/link";
 import { OnbUser } from "./types/onbUser";
 import { UserNullifier } from "./types/userNullifier";
 import { call_userop } from "./userop/createUserOp";
+import { deleteDir } from './utils/deleteDir';
 import { getUnredeemedNullifiers } from "./utils/getUnredeemedNullifiers";
-import * as readline from 'readline';
-import fs from 'fs';
-import path from 'path';
 
 const ONBOARDING_MIXER_ADDRESS_TEST = process.env.ONBOARDING_MIXER_ADDRESS_TEST || '';
 const ONBOARDING_MIXER_ADDRESS_LOW = process.env.ONBOARDING_MIXER_ADDRESS_LOW || '';
@@ -332,30 +335,15 @@ export async function showContacts(name: string) {
     console.log('\nExiting ...');
 
     let dirPath = path.join(__dirname, `../contacts/${name}/`);
-
-    if (fs.existsSync(dirPath)) {
-        try {
-            fs.rmSync(dirPath, { recursive: true, force: true });
-            // console.log(`Directory "${dirPath}" removed succesfully.`);
-        } catch (err) {
-            console.error(`Error during deletion of directory "${dirPath}":`, err);
-        }
-    } else {
-        console.log(`Directory "${dirPath}" does not exist.`);
-    }
+    deleteDir(dirPath);
 
     dirPath = path.join(__dirname, `../nullifiers/${name}/`);
+    deleteDir(dirPath);
 
-    if (fs.existsSync(dirPath)) {
-        try {
-            fs.rmSync(dirPath, { recursive: true, force: true });
-            // console.log(`Directory "${dirPath}" removed succesfully.`);
-        } catch (err) {
-            console.error(`Error during deletion of directory "${dirPath}":`, err);
-        }
-    } else {
-        console.log(`Directory "${dirPath}" does not exist.`);
-    }
+    const envConfig = dotenv.parse(fs.readFileSync('.env'));
+    envConfig.INDEX_ACCOUNT = "0";
+    const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');
+    fs.writeFileSync('.env', updatedEnv);
 
     process.exit(0);
 

@@ -1,19 +1,21 @@
+import dotenv from 'dotenv';
+import fs from 'fs';
 import hre from "hardhat";
+import path from 'path';
+import * as readline from 'readline';
+
+import { call_userop } from "./userop/createUserOp";
 import { createNote } from "./note/createNote";
-import { inputFromCLI } from "./utils/inputFromCLI";
-import { getUnredeemedNullifiers } from "./utils/getUnredeemedNullifiers";
 import { deleteDir } from "./utils/deleteDir";
+import { getAccountAddress, getTotalAmount } from "./pool/poolFunctions";
+import { getUnredeemedNullifiers } from "./utils/getUnredeemedNullifiers";
+import { inputFromCLI } from "./utils/inputFromCLI";
+import { Keypair } from "./pool/keypair";
 import { LinkNote, EthersStr } from "./types/link";
 import { OnbUser } from "./types/onbUser";
-import { UserNullifier } from "./types/userNullifier";
-import { call_userop } from "./userop/createUserOp";
 import { prepareDeposit, prepareTransfer, prepareWithdrawal } from "./pool/poolPrepareActions";
-import { getAccountAddress, getTotalAmount } from "./pool/poolFunctions";
-import { Keypair } from "./pool/keypair";
+import { UserNullifier } from "./types/userNullifier";
 import { Utxo } from "./pool/utxo";
-import * as readline from 'readline';
-import fs from 'fs';
-import path from 'path';
 
 const INIT_CODE_RELAYER = process.env.INIT_CODE_RELAYER || '';
 const ONBOARDING_MIXER_ADDRESS_TEST = process.env.ONBOARDING_MIXER_ADDRESS_TEST || '';
@@ -258,7 +260,6 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     fs.writeFileSync(filePath, jsonString);
 
 }
-
 
 export async function send(username: string, account: string, initCode: string, signer: any) {
     console.log("\nYou can send utxos with arbitrary denomination !");
@@ -656,6 +657,11 @@ export async function showContacts(name: string) {
 
     dirPath = path.join(__dirname, `../nullifiers/${name}/`);
     deleteDir(dirPath);
+
+    const envConfig = dotenv.parse(fs.readFileSync('.env'));
+    envConfig.INDEX_ACCOUNT = "0";
+    const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');
+    fs.writeFileSync('.env', updatedEnv);
 
     process.exit(0);
 

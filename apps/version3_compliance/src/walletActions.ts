@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import fs from 'fs';
 import hre from "hardhat";
 import path from 'path';
@@ -673,6 +674,11 @@ export async function showContacts(name: string) {
 
     dirPath = path.join(__dirname, `../nullifiers/${name}/`);
     deleteDir(dirPath);
+
+    const envConfig = dotenv.parse(fs.readFileSync('.env'));
+    envConfig.INDEX_ACCOUNT = "0";
+    const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');
+    fs.writeFileSync('.env', updatedEnv);
 
     process.exit(0);
 
