@@ -113,7 +113,7 @@ export async function acceptInvite() {
 
   console.log('\nCreating smart account ...');
 
-  let index = parseInt(process.env.INDEX_ACCOUNT || '', 10);
+  let index = process.env.INDEX_ACCOUNT ? parseInt(process.env.INDEX_ACCOUNT, 10) : 0;
   
   // deploy new account
   const AccountFactory = await hre.ethers.getContractFactory("contracts/src/Account.sol:AccountFactory"); 
@@ -158,11 +158,6 @@ export async function acceptInvite() {
   // menu options
   await getChoice();
   
-}
-
-export async function alreadyRegistered() {
-  console.log('\nThis is the wanna be page for already registered users')
-  console.log('\nNot in our scope for now');
 }
 
 export async function onboardViaLink() {
@@ -235,7 +230,7 @@ export async function onboardViaLink() {
   const jsonData = fs.readFileSync(filePath, 'utf-8');
   const link: LinkNote = JSON.parse(jsonData); 
   
-  let index = parseInt(process.env.INDEX_ACCOUNT || '', 10);
+  let index = process.env.INDEX_ACCOUNT ? parseInt(process.env.INDEX_ACCOUNT, 10) : 0;
 
   const AccountFactory = await hre.ethers.getContractFactory("contracts/src/Account.sol:AccountFactory"); 
   const signers = await hre.ethers.getSigners(); // signers[i] is the whole object
