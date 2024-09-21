@@ -40,13 +40,5 @@ export async function call_userop(which_function: string, args: any[], sender: s
     userOp, // userOp object   
     EP_ADDRESS, // The entrypoint address the request should be sent through. 
   ]);
-  // setTimeout(async () => {
-  //   const { transactionHash } = await hre.ethers.provider.send(
-  //     "eth_getUserOperationByHash",
-  //     [opHash]
-  //   );
-  //   console.log("transaction hash: ",transactionHash); // if it appears null after the timeout, it may be that the transaction is still pending
-  //   console.log("\n");
-  // }, 10000);
-  // console.log("\n");
+
 }

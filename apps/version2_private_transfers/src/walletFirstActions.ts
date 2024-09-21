@@ -159,7 +159,6 @@ export async function acceptInvite() {
   
 }
 
-
 export async function onboardViaLink() {
 
   let currentAction = '';
@@ -219,7 +218,6 @@ export async function onboardViaLink() {
     }
     await getChoice();
   }
-
   
   console.log('\nOnboarding page')
   console.log('\nReading link ...');

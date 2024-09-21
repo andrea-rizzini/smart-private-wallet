@@ -1,6 +1,6 @@
 import figlet from 'figlet';
 import * as readline from 'readline';
-import { acceptInvite, onboardViaLink } from '../version3_compliance/src/walletFirstActions';
+import { acceptInvite, login, onboardViaLink } from '../version3_compliance/src/walletFirstActions';
 import { inputFromCLI } from '../version3_compliance/src/utils/inputFromCLI';
 
 async function main() {
@@ -25,18 +25,23 @@ async function main() {
       output: process.stdout
     });
 
-    const answer = await inputFromCLI('\n[1] Accept invite (via invitation code) \n[2] Onboard via link \n[3] Exit \n: ', rl);
+    const answer = await inputFromCLI('\n[1] Accept invite (via invitation code) \n[2] Already registered \n[3] Onboard via link \n[4] Exit \n: ', rl);
 
     rl.close();
     
     if (answer === '1') {
       await acceptInvite();
       isCorrectCode = true;
-    } else if (answer === '2') {
+    }
+    else if (answer === '2') {
+      await login();
       isCorrectCode = true;
-      await onboardViaLink();
     }
     else if (answer === '3') {
+      await onboardViaLink();
+      isCorrectCode = true;
+    }
+    else if (answer === '4') {
       console.log('\nGoodbye!');
       process.exit(0);
     }

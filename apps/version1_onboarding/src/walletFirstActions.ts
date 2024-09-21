@@ -1,6 +1,9 @@
 import dotenv from 'dotenv';
 import fs from 'fs';
 import hre from "hardhat";
+import path from 'path';
+import * as readlineSync from 'readline-sync';
+
 import { inputFromCLI } from './utils/inputFromCLI';
 import { showMenu } from './menu/menu';
 import { redeem } from './note/redeemNote';
@@ -8,8 +11,6 @@ import { OnbUser } from "./types/onbUser";
 import { checkAccountBalance, inviteUsingLink, send, receive, refresh, showContacts, exit } from './walletActions';
 import { LinkNote } from './types/link';
 import * as readline from 'readline';
-import path from 'path';
-
 
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
 const FACTORY_ADDRESS: string = process.env.ACCOUNT_FACTORY_ADDRESS || '';
@@ -96,6 +97,10 @@ export async function acceptInvite() {
   });
 
   let username = await inputFromCLI('\nChose a username: ', rl); 
+
+  let password: string = readlineSync.question('Chose a password: ', {
+    hideEchoBack: true 
+  });
 
   rl.close();
 

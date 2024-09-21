@@ -669,17 +669,6 @@ export async function showContacts(name: string) {
  export async function exit(name: string) {
     console.log('\nExiting ...');
 
-    let dirPath = path.join(__dirname, `../contacts/${name}/`);
-    deleteDir(dirPath);
-
-    dirPath = path.join(__dirname, `../nullifiers/${name}/`);
-    deleteDir(dirPath);
-
-    const envConfig = dotenv.parse(fs.readFileSync('.env'));
-    envConfig.INDEX_ACCOUNT = "0";
-    const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');
-    fs.writeFileSync('.env', updatedEnv);
-
     process.exit(0);
 
  }
