@@ -7,8 +7,9 @@ import * as readline from 'readline';
 import { call_userop } from "./userop/createUserOp";
 import { createNote } from "./note/createNote";
 import { checkSanctionedAddress } from "./poi/checkIfSanctioned";
-import { deleteDir } from "./utils/deleteDir";
 import { getAccountAddress, getTotalAmount } from "./pool/poolFunctions";
+import { getContactOfUser, getContactsByUserId, getID, getUnredeemedNullifiersByUserId, insertContact, insertKeypair, insertUserNullifier, 
+    updateContact, updateNullifierRedeemed } from '../database/database';
 import { getUnredeemedNullifiers } from "./utils/getUnredeemedNullifiers";
 import { inputFromCLI } from "./utils/inputFromCLI";
 import { Keypair } from "./pool/keypair";
@@ -42,23 +43,9 @@ export async function setup(username: string, account: string, initCode: string,
         // register in poolUsers
         await call_userop("insertIntoPoolUsers", [POOL_USERS_ADDRESS, output.keypair.address()], account , initCode, signer);
 
-        // save this value in file keypair.json (it's like a pseudo db, to be improved in a real one in the future)
-        let dirPath = path.join(__dirname, `../keypair/${username}/`);
-        let filePath = path.join(dirPath, 'keypair.json');
+        const index = getID(username);
 
-        if (!fs.existsSync(dirPath)) {
-            fs.mkdirSync(dirPath, { recursive: true });
-        }
-
-        const dataToSave = {
-            privkey: keypair.privkey,
-            pubkey: keypair.pubkey.toString(), // this is needed since we cannot serialize a BigInt directly
-            encryptionKey: keypair.encryptionKey,
-        };
-
-        const jsonData = JSON.stringify(dataToSave, null, 2)
-
-        fs.writeFileSync(filePath, jsonData);
+        insertKeypair(index, keypair.privkey, keypair.pubkey.toString(), keypair.encryptionKey);
 
         console.log("\nRegistered successfully!\n")
     }
@@ -208,60 +195,12 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     fs.writeFileSync(filePath, jsonString);
 
-    // 5) append the OnbUser to the contacts.json file of the sender and append <nameOnbUser, nullifierHex> to the nullifiers.json file
+    // 5) insert contact in the 'Contacts' table of the sender and insert <nameOnbUser, nullifierHex, amount, redeemed> in the 'Nullifiers' table
+    insertContact(getID(name), nameOnbUser, "0x");
 
-    const onbUser: OnbUser = {
-        name: nameOnbUser,
-        address: "0x" // it's 0x until the redeemption of the note
-    };
-
-    dirPath = path.join(__dirname, `../contacts/${name}/`);
-    filePath = path.join(dirPath, 'contacts.json');
-
-    if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-    }
-
-    let contactsArray: OnbUser[] = []; 
-    if (fs.existsSync(filePath)) {
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
-        if (fileContent) {
-            contactsArray = JSON.parse(fileContent);
-        }
-    }
-
-    contactsArray.push(onbUser);
-    jsonString = JSON.stringify(contactsArray, null, 2);
-    fs.writeFileSync(filePath, jsonString);
-
-    const userNullifier: UserNullifier = {
-        name: nameOnbUser,
-        nullifier: nullifierHex,
-        amount: Number(ethValue),
-        redeemed: false
-    };
-
-    dirPath = path.join(__dirname, `../nullifiers/${name}/`);
-    filePath = path.join(dirPath, 'nullifiers.json');
-
-    if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-    }
-
-    let nullifiersArray: UserNullifier[] = []; 
-    if (fs.existsSync(filePath)) {
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
-        if (fileContent) {
-            nullifiersArray = JSON.parse(fileContent);
-        }
-    }
-
-    nullifiersArray.push(userNullifier);
-    jsonString = JSON.stringify(nullifiersArray, null, 2);
-    fs.writeFileSync(filePath, jsonString);
+    insertUserNullifier(getID(name), nameOnbUser, nullifierHex, Number(ethValue));
 
 }
-
 
 export async function send(username: string, account: string, initCode: string, signer: any) {
     console.log("\nYou can send utxos with arbitrary denomination !");
@@ -326,16 +265,17 @@ export async function send(username: string, account: string, initCode: string, 
     if (choice === '1') {
         let contactName: string;
         
-        const dirPath = path.join(__dirname, `../contacts/${username}/`);
-        const filePath = path.join(dirPath, 'contacts.json');
+        // const dirPath = path.join(__dirname, `../contacts/${username}/`);
+        // const filePath = path.join(dirPath, 'contacts.json');
         try {
-            const data = fs.readFileSync(filePath, 'utf-8');
-            const contacts = JSON.parse(data);
+            // const data = fs.readFileSync(filePath, 'utf-8');
+            // const contacts = JSON.parse(data);
             do {
                 contactName = await inputFromCLI("\nInsert the name of the receiver (or type exit to return to the menu): ", rl);
-                const contact = contacts.find((c: { name: string; address: string }) => c.name === contactName);
-                if (contact) {
-                    addressReceiver = contact.address;
+                // const contact = contacts.find((c: { name: string; address: string }) => c.name === contactName);
+                const address = getContactOfUser(getID(username), contactName);
+                if (address) {
+                    addressReceiver = address as string; 
                     isValid = true;
                 } 
                 else if (contactName === 'exit') {
@@ -530,16 +470,16 @@ export async function refresh(username: string) {
     console.log('\nRefreshing ...');
     console.log('\n');
 
-    let dirPath = path.join(__dirname, `../nullifiers/${username}/`);
-    let filePath = path.join(dirPath, 'nullifiers.json');
+    // let dirPath = path.join(__dirname, `../nullifiers/${username}/`);
+    // let filePath = path.join(dirPath, 'nullifiers.json');
 
-    let unredeemedNullifiers;
+    let unredeemedNullifiers: any;
 
     try {
-        unredeemedNullifiers = await getUnredeemedNullifiers(filePath);
+        unredeemedNullifiers = getUnredeemedNullifiersByUserId(getID(username));
     } catch (error) {
         unredeemedNullifiers = [];
-        console.error(`Error during refresh of directory "${dirPath}":`, error);
+        console.error(`Error during refresh:`, error);
     }
 
     for (let i = 0; i < unredeemedNullifiers.length; i++) {
@@ -573,45 +513,41 @@ export async function refresh(username: string) {
         events.forEach(event => {
             if (event.args.nullifierHash === nullifierHash) {
 
-                // modify unredeemedNullifiers[i].redeemed to true and update the nullifiers.json file
-                unredeemedNullifiers[i].redeemed = true;
-                let jsonString = JSON.stringify(unredeemedNullifiers, null, 2);
-                fs.writeFileSync(filePath, jsonString);
+                // modify unredeemedNullifiers[i].redeemed to true and update the table in the database
                 
-                // update the contacts.json file of the sender adding the address of the related contact
-                dirPath = path.join(__dirname, `../contacts/${username}/`);
-                filePath = path.join(dirPath, 'contacts.json');
-                let contactsArray: OnbUser[] = [];
-                if (fs.existsSync(filePath)) {
-                    const fileContent = fs.readFileSync(filePath, 'utf-8');
-                    if (fileContent) {
-                        contactsArray = JSON.parse(fileContent);
-                    }
-                }
-                contactsArray.forEach(contact => {
-                    if (contact.name === name) {
-                        contact.address = event.args.to;
-                    }
-                });
-                jsonString = JSON.stringify(contactsArray, null, 2);
-                fs.writeFileSync(filePath, jsonString);              
+                // unredeemedNullifiers[i].redeemed = true;
+                // let jsonString = JSON.stringify(unredeemedNullifiers, null, 2);
+                // fs.writeFileSync(filePath, jsonString);
+                updateNullifierRedeemed(getID(username), nullifierHash);
+                
+                // update the 'Contacts' table' of the sender adding the address of the related contact
+
+                // dirPath = path.join(__dirname, `../contacts/${username}/`);
+                // filePath = path.join(dirPath, 'contacts.json');
+                // let contactsArray: OnbUser[] = [];
+                // if (fs.existsSync(filePath)) {
+                //     const fileContent = fs.readFileSync(filePath, 'utf-8');
+                //     if (fileContent) {
+                //         contactsArray = JSON.parse(fileContent);
+                //     }
+                // }
+                // contactsArray.forEach(contact => {
+                //     if (contact.name === name) {
+                //         contact.address = event.args.to;
+                //     }
+                // });
+                // jsonString = JSON.stringify(contactsArray, null, 2);
+                // fs.writeFileSync(filePath, jsonString);   
+                updateContact(getID(username), name, event.args.to);           
             }
         });
     }  
 }
 
 export async function showContacts(name: string) {
-    const dirPath = path.join(__dirname, `../contacts/${name}/`);
-    const filePath = path.join(dirPath, 'contacts.json');
-
-    if (fs.existsSync(filePath)) {
-        const jsonData = fs.readFileSync(filePath, 'utf-8');
-        const contacts: OnbUser[] = JSON.parse(jsonData);
-        console.log("\nContacts: \n");
-        console.log(contacts);
-    } else {
-        console.log("\nNo contacts in the address book.");
-    }
+    getContactsByUserId(getID(name)).forEach(contact => {
+        console.log(contact);
+    });
 
     console.log("\n");
  }

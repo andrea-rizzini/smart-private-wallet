@@ -1,4 +1,4 @@
-import { createTable } from "./database";
+import { createTables } from "./database";
 
-createTable();
+createTables();
 

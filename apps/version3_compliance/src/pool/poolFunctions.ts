@@ -1,12 +1,11 @@
 import { BaseUtxo, CreateTransactionParams, CommitmentEvents, PrepareTxParams } from "./types";
+import { getKeyPairByUserId, getID } from "../../database/database";
 import { getProof } from "../proof/generateTransactionProof";
 import hre from "hardhat";
 import { Keypair } from "./keypair";
 // @ts-ignore
 import MerkleTree from 'fixed-merkle-tree';
-import path from 'path';
 import { poseidonHash2 } from "../utils/hashFunctions";
-import { readFileSync } from 'fs';
 import { toFixedHex } from "../utils/toHex";
 import { Utxo } from "./utxo";
 
@@ -68,16 +67,17 @@ export async function getAccountAddress(account: string){
 }
 
 export async function getAccountKeyPair(username: string, addressSender: string): Promise<Keypair | undefined>{
+
   const poolAddress = getAccountAddress(addressSender);
+
   if (!poolAddress) {
     return undefined
   }
-  let dirPath = path.join(__dirname, `../../keypair/${username}/`);
-  let filePath = path.join(dirPath, 'keypair.json');
-  const jsonData = readFileSync(filePath, 'utf-8');
-  const keyPair = JSON.parse(jsonData);
 
-  return keyPair
+  let keyPair: Keypair = getKeyPairByUserId(getID(username)) as Keypair;
+
+  return keyPair;
+  
 }
 
 export async function getUserAccountInfo(username: string, addressSender: string, {amount}: {amount: any}){
