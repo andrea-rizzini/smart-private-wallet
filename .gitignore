@@ -28,11 +28,9 @@ ignition/deployments/chain-31337
 /apps/version2_private_transfers/keypair/*
 /apps/version2_private_transfers/cache/*
 
-/apps/version3_compliance/contacts/*
 /apps/version3_compliance/links/*
-/apps/version3_compliance/nullifiers/*
-/apps/version3_compliance/keypair/*
 /apps/version3_compliance/cache/*
+/apps/version3_compliance/data/*
 
 # circuits files
 /home/andrea/Desktop/smart-private-wallet/circuits/artifacts/circuits/ptau18

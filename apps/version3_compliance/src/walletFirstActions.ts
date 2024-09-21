@@ -6,13 +6,12 @@ import path from 'path';
 import * as readline from 'readline';
 import * as readlineSync from 'readline-sync';
 
-import { deleteUser, getID, getUserByUsername, insertUser, usernameExists } from '../database/database';
+import { deleteUser, getID, getUserByUsername, insertContact, insertUser, usernameExists } from '../database/database';
 import { inputFromCLI } from './utils/inputFromCLI';
 import { LinkNote } from './types/link';
 import { redeem } from './note/redeemNote';
 import { setup, checkAccountBalance, inviteUsingLink, send, receive, refresh, showContacts, withdraw, exit } from './walletActions';
 import { showMenu } from './menu/menu';
-import { OnbUser } from "./types/onbUser";
 
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
 const FACTORY_ADDRESS: string = process.env.ACCOUNT_FACTORY_ADDRESS || '';
@@ -159,11 +158,6 @@ export async function acceptInvite() {
   catch (error: any) {
     account = "0x" + error.data.slice(-40); 
   }
-  
-  // const code = await hre.ethers.provider.getCode(account); // get the bytecode of the smart account
-  // if (code !== "0x") {
-  //   initCode = "0x";
-  // }
 
   const _account = await hre.ethers.getContractAt("Account", account);
 
@@ -433,11 +427,6 @@ export async function onboardViaLink() {
   catch (error: any) {
     account = "0x" + error.data.slice(-40); 
   }
-  
-  // const code = await hre.ethers.provider.getCode(account); // get the bytecode of the smart account
-  // if (code !== "0x") {
-  //   initCode = "0x";
-  // }
 
   const _account = await hre.ethers.getContractAt("Account", account);
 
@@ -449,31 +438,8 @@ export async function onboardViaLink() {
   }
 
   // Update contacts with the sender of the note, once redeemed
-  const onbUser: OnbUser = {
-    name: link.sender,
-    address: link.sender_address 
-  };
 
-  dirPath = path.join(__dirname, `../contacts/${username}/`);
-  filePath = path.join(dirPath, 'contacts.json');
-
-  if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-  
-  let contactsArray: OnbUser[] = []; 
-  if (fs.existsSync(filePath)) {
-    const fileContent = fs.readFileSync(filePath, 'utf-8');
-    if (fileContent) {
-        contactsArray = JSON.parse(fileContent);
-    }
-  }
-
-  contactsArray.push(onbUser);
-
-  let jsonString = JSON.stringify(contactsArray, null, 2);
-
-  fs.writeFileSync(filePath, jsonString);
+  insertContact(getID(username), link.sender, link.sender_address);
 
   // start the wallet
   

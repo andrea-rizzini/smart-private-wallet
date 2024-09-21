@@ -8,15 +8,12 @@ import { call_userop } from "./userop/createUserOp";
 import { createNote } from "./note/createNote";
 import { checkSanctionedAddress } from "./poi/checkIfSanctioned";
 import { getAccountAddress, getTotalAmount } from "./pool/poolFunctions";
-import { getContactOfUser, getContactsByUserId, getID, getUnredeemedNullifiersByUserId, insertContact, insertKeypair, insertUserNullifier, 
+import { getAddressOfContactOfUser, getContactsByUserId, getID, getUnredeemedNullifiersByUserId, insertContact, insertKeypair, insertUserNullifier, 
     updateContact, updateNullifierRedeemed } from '../database/database';
-import { getUnredeemedNullifiers } from "./utils/getUnredeemedNullifiers";
 import { inputFromCLI } from "./utils/inputFromCLI";
 import { Keypair } from "./pool/keypair";
 import { LinkNote, EthersStr } from "./types/link";
-import { OnbUser } from "./types/onbUser";
 import { prepareDeposit, prepareTransfer, prepareWithdrawal } from "./pool/poolPrepareActions";
-import { UserNullifier } from "./types/userNullifier";
 import { Utxo } from "./pool/utxo";
 
 const INIT_CODE_RELAYER = process.env.INIT_CODE_RELAYER || '';
@@ -265,15 +262,10 @@ export async function send(username: string, account: string, initCode: string, 
     if (choice === '1') {
         let contactName: string;
         
-        // const dirPath = path.join(__dirname, `../contacts/${username}/`);
-        // const filePath = path.join(dirPath, 'contacts.json');
         try {
-            // const data = fs.readFileSync(filePath, 'utf-8');
-            // const contacts = JSON.parse(data);
             do {
                 contactName = await inputFromCLI("\nInsert the name of the receiver (or type exit to return to the menu): ", rl);
-                // const contact = contacts.find((c: { name: string; address: string }) => c.name === contactName);
-                const address = getContactOfUser(getID(username), contactName);
+                const address = getAddressOfContactOfUser(getID(username), contactName);
                 if (address) {
                     addressReceiver = address as string; 
                     isValid = true;
@@ -470,9 +462,6 @@ export async function refresh(username: string) {
     console.log('\nRefreshing ...');
     console.log('\n');
 
-    // let dirPath = path.join(__dirname, `../nullifiers/${username}/`);
-    // let filePath = path.join(dirPath, 'nullifiers.json');
-
     let unredeemedNullifiers: any;
 
     try {
@@ -513,31 +502,7 @@ export async function refresh(username: string) {
         events.forEach(event => {
             if (event.args.nullifierHash === nullifierHash) {
 
-                // modify unredeemedNullifiers[i].redeemed to true and update the table in the database
-                
-                // unredeemedNullifiers[i].redeemed = true;
-                // let jsonString = JSON.stringify(unredeemedNullifiers, null, 2);
-                // fs.writeFileSync(filePath, jsonString);
                 updateNullifierRedeemed(getID(username), nullifierHash);
-                
-                // update the 'Contacts' table' of the sender adding the address of the related contact
-
-                // dirPath = path.join(__dirname, `../contacts/${username}/`);
-                // filePath = path.join(dirPath, 'contacts.json');
-                // let contactsArray: OnbUser[] = [];
-                // if (fs.existsSync(filePath)) {
-                //     const fileContent = fs.readFileSync(filePath, 'utf-8');
-                //     if (fileContent) {
-                //         contactsArray = JSON.parse(fileContent);
-                //     }
-                // }
-                // contactsArray.forEach(contact => {
-                //     if (contact.name === name) {
-                //         contact.address = event.args.to;
-                //     }
-                // });
-                // jsonString = JSON.stringify(contactsArray, null, 2);
-                // fs.writeFileSync(filePath, jsonString);   
                 updateContact(getID(username), name, event.args.to);           
             }
         });
@@ -545,9 +510,17 @@ export async function refresh(username: string) {
 }
 
 export async function showContacts(name: string) {
-    getContactsByUserId(getID(name)).forEach(contact => {
-        console.log(contact);
-    });
+
+    const contacts = getContactsByUserId(getID(name));
+
+    if (contacts.length === 0) {
+        console.log("\nNo contacts present in the address book\n");
+        return;
+    }
+    else {
+        console.log("\nContacts:\n");
+        console.log(contacts);
+    }
 
     console.log("\n");
  }

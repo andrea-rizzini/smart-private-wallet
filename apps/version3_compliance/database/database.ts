@@ -1,6 +1,15 @@
 import Database from 'better-sqlite3';
+import fs from 'fs';
+import path from 'path';
 
-const db = new Database('version3_compliance.db');
+const dbDir = path.join(__dirname, '../data');
+const dbPath = path.join(dbDir, 'version3_compliance.db');
+
+if (!fs.existsSync(dbDir)) {
+    fs.mkdirSync(dbDir, { recursive: true });
+}
+
+const db = new Database(dbPath);
 
 export const createTables = () => {
     const createTableSQL = `
@@ -99,8 +108,14 @@ export const getContacts = () => {
     return stmt.all();
 }
 
-export const getContactOfUser = (userId: number, name: string) => {
-    const selectSQL = `SELECT * FROM contacts WHERE userId = ? AND name = ?;`;
+export const getNullifiers = () => {
+    const selectSQL = `SELECT * FROM user_nullifiers;`;
+    const stmt = db.prepare(selectSQL);
+    return stmt.all();
+}
+
+export const getAddressOfContactOfUser = (userId: number, name: string) => {
+    const selectSQL = `SELECT address FROM contacts WHERE userId = ? AND name = ?;`;
     const stmt = db.prepare(selectSQL);
     return stmt.get(userId, name);
 }
@@ -178,5 +193,20 @@ export const deleteUser = (id: number) => {
 
 export const deleteUsers = () => {
     const deleteSQL = `DELETE FROM users;`;
+    db.exec(deleteSQL);
+}
+
+export const deleteKeypairs = () => {
+    const deleteSQL = `DELETE FROM keypair;`;
+    db.exec(deleteSQL);
+}
+
+export const deleteContacts = () => {
+    const deleteSQL = `DELETE FROM contacts;`;
+    db.exec(deleteSQL);
+}
+
+export const deleteNullifiers = () => {
+    const deleteSQL = `DELETE FROM user_nullifiers;`;
     db.exec(deleteSQL);
 }
