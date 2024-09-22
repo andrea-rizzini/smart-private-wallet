@@ -115,9 +115,16 @@ export const getNullifiers = () => {
 }
 
 export const getAddressOfContactOfUser = (userId: number, name: string) => {
+
+    interface ContactAddress {
+        address: string;
+    }
+
     const selectSQL = `SELECT address FROM contacts WHERE userId = ? AND name = ?;`;
     const stmt = db.prepare(selectSQL);
-    return stmt.get(userId, name);
+    const result = stmt.get(userId, name) as ContactAddress | undefined;
+
+    return result?.address; 
 }
 
 export const updateContact = (userId: number, name: string, address: string) => {
