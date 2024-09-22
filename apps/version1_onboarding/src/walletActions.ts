@@ -1,4 +1,3 @@
-import dotenv from 'dotenv';
 import fs from 'fs';
 import hre from "hardhat";
 import path from 'path';
@@ -7,11 +6,9 @@ import * as readline from 'readline';
 import { createNote } from "./note/createNote";
 import { inputFromCLI } from "./utils/inputFromCLI";
 import { LinkNote, EthersStr } from "./types/link";
-import { OnbUser } from "./types/onbUser";
-import { UserNullifier } from "./types/userNullifier";
 import { call_userop } from "./userop/createUserOp";
-import { deleteDir } from './utils/deleteDir';
-import { getUnredeemedNullifiers } from "./utils/getUnredeemedNullifiers";
+import { getContactsByUserId, getID, getUnredeemedNullifiersByUserId, insertContact, insertKeypair, insertUserNullifier, 
+    updateContact, updateNullifierRedeemed } from '../database/database';
 
 const ONBOARDING_MIXER_ADDRESS_TEST = process.env.ONBOARDING_MIXER_ADDRESS_TEST || '';
 const ONBOARDING_MIXER_ADDRESS_LOW = process.env.ONBOARDING_MIXER_ADDRESS_LOW || '';
@@ -42,7 +39,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     console.log("\nchoose the amount to send for onboarding:");
 
-    const amountOptions = ['\n[1] 0.01 ETH', '[2] 0.1 ETH', '[3] 1 ETH', '[4] 10 ETH'];
+    const amountOptions = ['\n[1] 0.01 ETH', '[2] 0.1 ETH', '[3] 1 ETH', '[4] 10 ETH', '[5] Return to the menu'];
 
     for (let i = 0; i < amountOptions.length; i++) {
         console.log(amountOptions[i]);
@@ -71,7 +68,14 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
                 console.log("\nInsufficient funds.");
             }
     
-        } else {
+        }
+        else if (choice === '5') {
+            console.log("\n");
+            isValid = true;
+            rl.close();
+            return;
+        }
+        else {
             console.log('\nInvalid input.');
         }
     } while (!isValid);
@@ -146,57 +150,11 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     fs.writeFileSync(filePath, jsonString);
 
-    // 5) append the OnbUser to the contacts.json file of the sender and append <nameOnbUser, nullifierHex> to the nullifiers.json file
+    // 5) append the OnbUser to the contacts.json file of the sender and append <nameOnbUser, nullifierHex, amount, redeemed> to the nullifiers.json file
+    
+    insertContact(getID(name), nameOnbUser, "0x");
 
-    const onbUser: OnbUser = {
-        name: nameOnbUser,
-        address: "0x" // it's 0x until the redeemption of the note
-    };
-
-    dirPath = path.join(__dirname, `../contacts/${name}/`);
-    filePath = path.join(dirPath, 'contacts.json');
-
-    if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-    }
-
-    let contactsArray: OnbUser[] = []; 
-    if (fs.existsSync(filePath)) {
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
-        if (fileContent) {
-            contactsArray = JSON.parse(fileContent);
-        }
-    }
-
-    contactsArray.push(onbUser);
-    jsonString = JSON.stringify(contactsArray, null, 2);
-    fs.writeFileSync(filePath, jsonString);
-
-    const userNullifier: UserNullifier = {
-        name: nameOnbUser,
-        nullifier: nullifierHex,
-        amount: Number(ethValue),
-        redeemed: false
-    };
-
-    dirPath = path.join(__dirname, `../nullifiers/${name}/`);
-    filePath = path.join(dirPath, 'nullifiers.json');
-
-    if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-    }
-
-    let nullifiersArray: UserNullifier[] = []; 
-    if (fs.existsSync(filePath)) {
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
-        if (fileContent) {
-            nullifiersArray = JSON.parse(fileContent);
-        }
-    }
-
-    nullifiersArray.push(userNullifier);
-    jsonString = JSON.stringify(nullifiersArray, null, 2);
-    fs.writeFileSync(filePath, jsonString);
+    insertUserNullifier(getID(name), nameOnbUser, nullifierHex, Number(ethValue));
 
 }
 
@@ -243,108 +201,72 @@ export async function refresh(username: string) {
     console.log('\nRefreshing ...');
     console.log('\n');
 
-    let dirPath = path.join(__dirname, `../nullifiers/${username}/`);
-    let filePath = path.join(dirPath, 'nullifiers.json');
-
-    let unredeemedNullifiers;
+    let unredeemedNullifiers: any;
 
     try {
-        unredeemedNullifiers = await getUnredeemedNullifiers(filePath);
+        unredeemedNullifiers = getUnredeemedNullifiersByUserId(getID(username));
     } catch (error) {
         unredeemedNullifiers = [];
-        console.error(`Error during refresh of directory "${dirPath}":`, error);
+        console.error(`Error during refresh:`, error);
     }
 
     for (let i = 0; i < unredeemedNullifiers.length; i++) {
         const name = unredeemedNullifiers[i].name;
         const nullifierHash = unredeemedNullifiers[i].nullifier;
         const amount = unredeemedNullifiers[i].amount;
-        let contractAddress = "0x";
+        let contactAddress = "0x";
 
         // selecting the mixer contract address based on the amount
         switch (amount) {
             case 0.01:
-                contractAddress = ONBOARDING_MIXER_ADDRESS_TEST;
+                contactAddress = ONBOARDING_MIXER_ADDRESS_TEST;
                 break;
             case 0.1:
-                contractAddress = ONBOARDING_MIXER_ADDRESS_LOW;
+                contactAddress = ONBOARDING_MIXER_ADDRESS_LOW;
                 break;
             case 1:
-                contractAddress = ONBOARDING_MIXER_ADDRESS_MEDIUM;
+                contactAddress = ONBOARDING_MIXER_ADDRESS_MEDIUM;
                 break;
             case 10:
-                contractAddress = ONBOARDING_MIXER_ADDRESS_HIGH;
+                contactAddress = ONBOARDING_MIXER_ADDRESS_HIGH;
                 break;
             default:
-                contractAddress = "0x";
+                contactAddress = "0x";
         }
 
         // fetching Withdrawal events from the mixer contract
-        const contract = await hre.ethers.getContractAt("OnboardingMixer", contractAddress);
+        const contract = await hre.ethers.getContractAt("OnboardingMixer", contactAddress);
         const filter = contract.filters.Withdrawal();
         const events = await contract.queryFilter(filter);
         events.forEach(event => {
             if (event.args.nullifierHash === nullifierHash) {
 
-                // modify unredeemedNullifiers[i].redeemed to true and update the nullifiers.json file
-                unredeemedNullifiers[i].redeemed = true;
-                let jsonString = JSON.stringify(unredeemedNullifiers, null, 2);
-                fs.writeFileSync(filePath, jsonString);
-                
-                // update the contacts.json file of the sender adding the address of the related contact
-                dirPath = path.join(__dirname, `../contacts/${username}/`);
-                filePath = path.join(dirPath, 'contacts.json');
-                let contactsArray: OnbUser[] = [];
-                if (fs.existsSync(filePath)) {
-                    const fileContent = fs.readFileSync(filePath, 'utf-8');
-                    if (fileContent) {
-                        contactsArray = JSON.parse(fileContent);
-                    }
-                }
-                contactsArray.forEach(contact => {
-                    if (contact.name === name) {
-                        contact.address = event.args.to;
-                    }
-                });
-                jsonString = JSON.stringify(contactsArray, null, 2);
-                fs.writeFileSync(filePath, jsonString);              
+                updateNullifierRedeemed(getID(username), nullifierHash);
+                updateContact(getID(username), name, event.args.to);           
             }
-          });
-
-    }
-    
+        });
+    }  
 }
 
 export async function showContacts(name: string) {
-    const dirPath = path.join(__dirname, `../contacts/${name}/`);
-    const filePath = path.join(dirPath, 'contacts.json');
 
-    if (fs.existsSync(filePath)) {
-        const jsonData = fs.readFileSync(filePath, 'utf-8');
-        const contacts: OnbUser[] = JSON.parse(jsonData);
-        console.log("\nContacts: \n");
+    const contacts = getContactsByUserId(getID(name));
+
+    if (contacts.length === 0) {
+        console.log("\nNo contacts present in the address book\n");
+        return;
+    }
+    else {
+        console.log("\nContacts:\n");
         console.log(contacts);
-    } else {
-        console.log("\nNo contacts in the address book.");
     }
 
     console.log("\n");
- }
+}
 
- export async function exit(name: string) {
+export async function exit(name: string) {
     console.log('\nExiting ...');
-
-    let dirPath = path.join(__dirname, `../contacts/${name}/`);
-    deleteDir(dirPath);
-
-    dirPath = path.join(__dirname, `../nullifiers/${name}/`);
-    deleteDir(dirPath);
-
-    const envConfig = dotenv.parse(fs.readFileSync('.env'));
-    envConfig.INDEX_ACCOUNT = "0";
-    const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');
-    fs.writeFileSync('.env', updatedEnv);
 
     process.exit(0);
 
- }
+}

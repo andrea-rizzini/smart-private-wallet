@@ -17,10 +17,9 @@ node_modules
 ignition/deployments/chain-31337
 
 # Apps files
-/apps/version1_onboarding/contacts/*
 /apps/version1_onboarding/links/*
-/apps/version1_onboarding/nullifiers/*
 /apps/version1_onboarding/cache/*
+/apps/version1_onboarding/data/*
 
 /apps/version2_private_transfers/links/*
 /apps/version2_private_transfers/cache/*
