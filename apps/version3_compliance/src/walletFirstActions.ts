@@ -1,5 +1,4 @@
 import bcrypt from 'bcrypt';
-import dotenv from 'dotenv';
 import fs from 'fs';
 import hre from "hardhat";
 import path from 'path';
@@ -100,12 +99,12 @@ export async function acceptInvite() {
 
   }
   
-  const rl = readline.createInterface({
-      input: process.stdin,
-      output: process.stdout
-  });
-
   let username: string;
+
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+  });
 
   while (true) {
     username = await inputFromCLI('\nChoose a username: ', rl);
@@ -136,7 +135,6 @@ export async function acceptInvite() {
 
   } while (password !== password_two);
   
-
   let passwordHash = bcrypt.hashSync(password, 10);
 
   let index: number = insertUser(username, passwordHash) - 1;
@@ -263,6 +261,12 @@ export async function login() {
     });
     
     const user: any = getUserByUsername(username);
+
+    if (!user) {
+      console.log('\nUser does not exist. Please try again.');
+      continue;
+    }
+
     const queriedUsername: string = user.username;
     const queriedPassword: string = user.passwordHash;
 

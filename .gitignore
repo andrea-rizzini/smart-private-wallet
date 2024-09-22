@@ -22,13 +22,11 @@ ignition/deployments/chain-31337
 /apps/version1_onboarding/nullifiers/*
 /apps/version1_onboarding/cache/*
 
-/apps/version2_private_transfers/contacts/*
 /apps/version2_private_transfers/links/*
-/apps/version2_private_transfers/nullifiers/*
-/apps/version2_private_transfers/keypair/*
 /apps/version2_private_transfers/cache/*
+/apps/version2_private_transfers/data/*
 
-/apps/version3_compliance/links/*
+/apps/version3_compliance/link/*
 /apps/version3_compliance/cache/*
 /apps/version3_compliance/data/*
 

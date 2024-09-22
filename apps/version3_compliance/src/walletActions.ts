@@ -1,4 +1,3 @@
-import dotenv from 'dotenv';
 import fs from 'fs';
 import hre from "hardhat";
 import path from 'path';
@@ -193,6 +192,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     fs.writeFileSync(filePath, jsonString);
 
     // 5) insert contact in the 'Contacts' table of the sender and insert <nameOnbUser, nullifierHex, amount, redeemed> in the 'Nullifiers' table
+    
     insertContact(getID(name), nameOnbUser, "0x");
 
     insertUserNullifier(getID(name), nameOnbUser, nullifierHex, Number(ethValue));
@@ -430,6 +430,7 @@ export async function receive(signer: any, account: string, initCode: string) {
         console.log("...")
 
         const { sanction, message } = await checkSanctionedAddress(account, 3); // be carefull to increse the number of hops, complexity can increase exponentially
+        
         if (sanction) {
             console.log("\nYou cannot fund the private amount.");
             console.log(`\n${message}\n`);
@@ -525,7 +526,7 @@ export async function showContacts(name: string) {
     console.log("\n");
  }
 
- export async function withdraw(username: string, account: string, initCode: string, signer: any) {
+export async function withdraw(username: string, account: string, initCode: string, signer: any) {
     console.log("\nYou can withdraw utxos with arbitrary denomination !");
     const rl = readline.createInterface({
         input: process.stdin,
@@ -573,11 +574,11 @@ export async function showContacts(name: string) {
     else {
         console.log("\nWithdraw preparation failed");
     } 
- }
+}
 
- export async function exit(name: string) {
+export async function exit(name: string) {
     console.log('\nExiting ...');
 
     process.exit(0);
 
- }
+}
