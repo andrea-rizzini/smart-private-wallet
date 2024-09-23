@@ -6,6 +6,7 @@ import * as readline from 'readline';
 import { call_userop } from "./userop/createUserOp";
 import { createNote } from "./note/createNote";
 import { checkSanctionedAddress } from "./poi/checkIfSanctioned";
+import { generatePOI } from './poi/generatePOI';
 import { getAccountAddress, getTotalAmount } from "./pool/poolFunctions";
 import { getAddressOfContactOfUser, getContactsByUserId, getID, getUnredeemedNullifiersByUserId, insertContact, insertKeypair, insertUserNullifier, 
     updateContact, updateNullifierRedeemed } from '../database/database';
@@ -557,18 +558,32 @@ export async function withdraw(username: string, account: string, initCode: stri
 
     rl.close();
     const result = await prepareWithdrawal(choiceAmount, username, account, signer);
+
     if (result) {
 
-        const { args, extData } = result;
+        const POI = await generatePOI();
 
-        try {
-            await call_userop("callTransact", [UTXOS_POOL_ADDRESS, args, extData], account , initCode, signer);
-            console.log(`\nWithdrawal of ${choiceAmount} eth completed succesfully!\n`);
+        if (POI) {
+
+            const { args, extData } = result;
+
+            try {
+                await call_userop("callTransact", [UTXOS_POOL_ADDRESS, args, extData], account , initCode, signer);
+                console.log(`\nWithdrawal of ${choiceAmount} eth completed succesfully!\n`);
+            }
+            catch (error) {
+                console.error("\nSomething went wrong during the withdrawal transaction:", error);
+                console.log("\n");
+            }
+
         }
-        catch (error) {
-            console.error("\nSomething went wrong during the withdrawal transaction:", error);
-            console.log("\n");
-        }     
+
+        else {
+
+            // log that there has been problems with POI generation
+        }
+
+             
         
     }
     else {

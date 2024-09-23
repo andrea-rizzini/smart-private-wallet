@@ -53,7 +53,7 @@ You need 2 terminals, T1 and T2.
 11) (T1): in the menu type ```7``` to verify if the person you have onboarded is now present in your contacts (there should be Bob with his address)
 12) (T1): in the menu type ```4``` and then ```2``` to fund the private amount, then insert the amount you want make private and press enter
 13) (T1): in the menu type ```2``` to verify if the utxo has been created
-14) (T1): in the menu type ```5```, insert an amount, then you can decide to send to a contact of yours of to send directly inserting the address, finally you can decide if use a relayer for the send
+14) (T1): in the menu type ```5```, insert an amount, then you can decide to send to a contact of yours or to send directly inserting the address, finally you can decide if use a relayer for the send
 15) (T2): in the menu type ```2``` and verify if you have received the amount sent to you by Alice
 16) (T2): in the menu type ```6``` to withdraw specifying the amount you need
 17) (T2): in the menu type ```2``` and verify if the withdrawal has gone well
