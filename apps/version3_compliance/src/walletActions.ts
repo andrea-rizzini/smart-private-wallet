@@ -563,7 +563,7 @@ export async function withdraw(username: string, account: string, initCode: stri
 
         const POI = await generatePOI();
 
-        if (POI) {
+        // if (POI) {
 
             const { args, extData } = result;
 
@@ -576,15 +576,13 @@ export async function withdraw(username: string, account: string, initCode: stri
                 console.log("\n");
             }
 
-        }
+        // }
 
-        else {
+        // else {
 
             // log that there has been problems with POI generation
-        }
-
-             
-        
+        // }
+ 
     }
     else {
         console.log("\nWithdraw preparation failed");
