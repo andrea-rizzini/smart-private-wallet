@@ -13,7 +13,10 @@ To test the demo you need at least: two users, a faucet and a relayer; hence at 
 Execute ```./circuit/script_v1.sh```  
 Execute ```./circuit/script_v2.sh 2```  
 Execute ```./circuit/script_v2.sh 16```  
-A folder ```/artifacts``` inside ```/circuits``` will be created with the compiled circom stuff needed to generate zk-proofs and verification, from that folder move ```Verifier2``` and ```Verifier16``` into the folder ```contracts/src/Transfers/``` being sure to modify the contract declaration inside the .sol files.
+Execute ```./circuit/script_v3.sh 2```  
+Execute ```./circuit/script_v3.sh 16```  
+A folder ```/artifacts``` inside ```/circuits``` will be created with the compiled circom stuff needed to generate zk-proofs and verification, from that folder move ```Verifier2``` and ```Verifier16``` into the folder ```contracts/src/Transfers/``` being sure to modify the contract declaration inside the .sol files; also move  
+```VerifierPOI2``` and ```VerifierPOI16``` into the folder ```contracts/src/Compòiance/``` 
 5) Base contract setup:   
 Deploy ```Paymaster``` and ```AccountFactory``` using ```./contracts/scripts/deployPaymasterAndAccFactory.ts```    
 6) Onboarding mixer setup:   

@@ -10,5 +10,4 @@ npx snarkjs groth16 setup artifacts/circuits/withdraw.r1cs artifacts/circuits/pt
 npx snarkjs zkey contribute artifacts/circuits/withdraw.zkey artifacts/circuits/withdraw_1.zkey
 npx snarkjs zkey beacon artifacts/circuits/withdraw_1.zkey artifacts/circuits/withdraw.zkey e586fccaf245c9a1d7e78294d4802018f3001149a71b8f10cd997ef8235aa372 10
 npx snarkjs zkey export solidityverifier artifacts/circuits/withdraw.zkey artifacts/circuits/Verifier.sol
-#sed -i.bak "s/contract Verifier/contract Verifier${1}/g" artifacts/circuits/Verifier$1.sol
 npx snarkjs info -r artifacts/circuits/withdraw.r1cs

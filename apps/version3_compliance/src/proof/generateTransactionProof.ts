@@ -1,7 +1,8 @@
-import { ArgsProof, BaseUtxo, Params, ProofParams } from "../pool/types";
-import { BytesLike } from '@ethersproject/bytes'
 import fs from 'fs';
 import path from 'path';
+
+import { ArgsProof, BaseUtxo, Params, ProofParams } from "../pool/types";
+import { BytesLike } from '@ethersproject/bytes'
 import  { prove } from "../proof/prover";
 import { toFixedHex } from "../utils/toHex";
 
@@ -108,7 +109,7 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient }: 
     // @ts-ignore
     const proof = await prove(input, wasmBuffer, zKeyBuffer)
   
-    const args: ArgsProof = {
+    const args: ArgsProof = { // public inputs 
       proof,
       root: toFixedHex(input.root),
       inputNullifiers: inputs.map((x) => toFixedHex(x.getNullifier())),

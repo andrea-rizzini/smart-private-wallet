@@ -48,7 +48,6 @@ template Transaction(levels, nIns, nOuts, zeroLeaf) {
         inNullifierHasher[tx].inputs[1] <== inPathIndices[tx];
         inNullifierHasher[tx].inputs[2] <== inSignature[tx].out;
             
-
         inTree[tx] = MerkleProof(levels);
         inTree[tx].leaf <== inCommitmentHasher[tx].out;
         inTree[tx].pathIndices <== inPathIndices[tx];
