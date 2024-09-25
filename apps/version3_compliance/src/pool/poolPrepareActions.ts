@@ -60,6 +60,6 @@ export async function prepareWithdrawal(amount: string, username: string, addres
     senderKeyPair,
     signer
   )
-  return { extData, args }
+  return { extData, args, unspentUtxo }
 
 }

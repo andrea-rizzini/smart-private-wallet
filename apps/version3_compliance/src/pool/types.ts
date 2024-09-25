@@ -46,13 +46,16 @@ export type PrepareTxParams = {
 export type CreateTransactionParams = {
   outputs?: BaseUtxo[]
   inputs?: BaseUtxo[]
-  fee?: bigint
   relayer?: string | bigint
   recipient?: string | bigint
   rootHex?: string
   events?: CommitmentEvents
-  isL1Withdrawal?: boolean
-  l1Fee?: bigint
+}
+
+export type GeneratePOIParams = {
+  inputs: BaseUtxo[]
+  events: CommitmentEvents
+  senderAddress: string
 }
 
 export interface BaseKeypair {

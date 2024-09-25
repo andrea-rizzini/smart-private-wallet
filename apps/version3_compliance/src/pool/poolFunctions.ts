@@ -144,7 +144,7 @@ export async function getTotalAmount(username: string, addressSender: string): P
 
 }
 
-function buildMerkleTree({ events }: { events: CommitmentEvents }): typeof MerkleTree {
+export function buildMerkleTree({ events }: { events: CommitmentEvents }): typeof MerkleTree {
   const leaves = events.sort((a, b) => a.index - b.index).map((e) => toFixedHex(e.commitment))
   return new MerkleTree(MERKLE_TREE_HEIGHT, leaves, { hashFunction: poseidonHash2 })
 }
@@ -193,7 +193,7 @@ async function prepareTransaction({
 
 }
 
-async function fetchCommitments(): Promise<CommitmentEvents>{
+export async function fetchCommitments(): Promise<CommitmentEvents>{
   const contract = await hre.ethers.getContractAt("UTXOsPool", UTXOS_POOL_ADDRESS);
   const filter = contract.filters.NewCommitment();
   const events = await contract.queryFilter(filter);

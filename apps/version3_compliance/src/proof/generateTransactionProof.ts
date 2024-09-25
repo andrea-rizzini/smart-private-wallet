@@ -9,7 +9,7 @@ const ADDRESS_BYTES_LENGTH = 20
 const FIELD_SIZE = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617')
 const MERKLE_TREE_HEIGHT = 20;
 
-function shuffle(array: BaseUtxo[]) {
+export function shuffle(array: BaseUtxo[]) {
     let currentIndex = array.length
     let randomIndex
   

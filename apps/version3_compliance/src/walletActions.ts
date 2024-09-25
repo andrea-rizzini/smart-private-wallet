@@ -6,6 +6,8 @@ import * as readline from 'readline';
 import { call_userop } from "./userop/createUserOp";
 import { createNote } from "./note/createNote";
 import { checkSanctionedAddress } from "./poi/checkIfSanctioned";
+import { CommitmentEvents, GeneratePOIParams } from './pool/types';
+import { fetchCommitments } from './pool/poolFunctions';
 import { generatePOI } from './poi/generatePOI';
 import { getAccountAddress, getTotalAmount } from "./pool/poolFunctions";
 import { getAddressOfContactOfUser, getContactsByUserId, getID, getUnredeemedNullifiersByUserId, insertContact, insertKeypair, insertUserNullifier, 
@@ -430,7 +432,7 @@ export async function receive(signer: any, account: string, initCode: string) {
         console.log("Or if it has been involved in transactions with sanctioned addresses");
         console.log("...")
 
-        const { sanction, message } = await checkSanctionedAddress(account, 3); // be carefull to increse the number of hops, complexity can increase exponentially
+        const { sanction, message } = await checkSanctionedAddress(account, 2); // be carefull to increse the number of hops, complexity can increase exponentially
         
         if (sanction) {
             console.log("\nYou cannot fund the private amount.");
@@ -561,9 +563,17 @@ export async function withdraw(username: string, account: string, initCode: stri
 
     if (result) {
 
-        const POI = await generatePOI();
+        const events: CommitmentEvents = await fetchCommitments()
 
-        // if (POI) {
+        const params: GeneratePOIParams = {
+            inputs: result.unspentUtxo,
+            events: events,
+            senderAddress: account
+        }
+
+        const POI = await generatePOI(params);
+
+        if (POI) {
 
             const { args, extData } = result;
 
@@ -576,12 +586,13 @@ export async function withdraw(username: string, account: string, initCode: stri
                 console.log("\n");
             }
 
-        // }
+        }
 
-        // else {
+        else {
 
-            // log that there has been problems with POI generation
-        // }
+            console.log("\nPOI generation failed");
+            console.log("\nYou are sending a transaction without a POI, consider that the receiver may burn the funds");
+        }
  
     }
     else {
