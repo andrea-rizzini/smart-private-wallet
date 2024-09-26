@@ -17,7 +17,7 @@ async function main() {
     const faucet = signers[2];  
 
     const utxosPool = await hre.ethers.getContractFactory("UTXOsPoolWithCompliance", faucet);
-    const utxosPool_ = await utxosPool.deploy(VERIFIER_POI_2, VERIFIER_POI_16, VERIFIER_2, VERIFIER_16, 20, HASHER_TRANSFERS); 
+    const utxosPool_ = await utxosPool.deploy(VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, 20, HASHER_TRANSFERS); 
     await utxosPool_.waitForDeployment();
     console.log(`UTXOsPool deployed to ${utxosPool_.target}`);
 
@@ -25,7 +25,7 @@ async function main() {
 
     await run(`verify:verify`, {
         address: utxosPool_.target,
-        constructorArguments: [VERIFIER_POI_2, VERIFIER_POI_16, VERIFIER_2, VERIFIER_16, 20, HASHER_TRANSFERS],
+        constructorArguments: [VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, 20, HASHER_TRANSFERS],
     }); 
 
     const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');

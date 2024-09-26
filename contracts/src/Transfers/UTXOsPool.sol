@@ -13,7 +13,6 @@ contract UTXOsPool is MerkleTreeWithHistory, ReentrancyGuard {
   IVerifier public immutable verifier16;
 
   uint256 public lastBalance;
-  uint256 public __gap; // storage padding to prevent storage collision
   uint256 public maximumDepositAmount = 100 ether;
   mapping(bytes32 => bool) public nullifierHashes;
 

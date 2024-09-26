@@ -17,7 +17,6 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
   IVerifierPOI public immutable verifierPOI16;
 
   uint256 public lastBalance;
-  uint256 public __gap; // storage padding to prevent storage collision
   uint256 public maximumDepositAmount = 100 ether;
   mapping(bytes32 => bool) public nullifierHashes;
 
@@ -68,7 +67,7 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
-    _deposit(_args, _extData);
+     _deposit(_args, _extData);
   }
 
   function _deposit(Proof memory _args, ExtData memory _extData) internal nonReentrant {

@@ -157,7 +157,7 @@ export async function acceptInvite() {
     account = "0x" + error.data.slice(-40); 
   }
 
-  const _account = await hre.ethers.getContractAt("Account", account);
+  const _account = await hre.ethers.getContractAt("AccountForV3", account);
 
   console.log('\nSome sepolia eth will be sent to your account soon ...');
   
@@ -288,7 +288,7 @@ export async function login() {
   const address = await signers[index].getAddress(); 
 
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, signers[2]);
-  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/Account.sol:AccountFactory"); 
+  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/AccountForV3.sol:AccountFactory"); 
 
   let initCode = FACTORY_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
   let account: string = "0x";
@@ -417,7 +417,7 @@ export async function onboardViaLink() {
 
   let index: number = insertUser(username, passwordHash) - 1;
 
-  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/Account.sol:AccountFactory"); 
+  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/AccountForV3.sol:AccountFactory"); 
   const signers = await hre.ethers.getSigners(); // signers[i] is the whole object
   const address = await signers[index].getAddress(); 
 
@@ -432,7 +432,7 @@ export async function onboardViaLink() {
     account = "0x" + error.data.slice(-40); 
   }
 
-  const _account = await hre.ethers.getContractAt("Account", account);
+  const _account = await hre.ethers.getContractAt("AccountForV3", account);
 
   try {
     await redeem(link, account, initCode, signers[index]);

@@ -26,8 +26,8 @@ interface IPoolUsers {
     function register(Account_ memory _account) external;
 }
 
-interface IUTXOsPool {
-    struct ExtData {
+interface IUTXOsPoolWithCompliance {
+  struct ExtData {
     address recipient;
     int256 extAmount;
     bytes encryptedOutput1;
@@ -55,13 +55,7 @@ interface IUTXOsPool {
 
 // Account contract
 
-contract Account is IAccount {
-
-    struct Call {
-        address dest;
-        uint256 value;
-        bytes data;
-    }
+contract AccountForV3 is IAccount {
 
     address public owner;
     
@@ -123,24 +117,23 @@ contract Account is IAccount {
         IPoolUsers(poolUsersContract).register(account_);
     }
 
-
     function callDeposit(
         address poolAddress,
-        IUTXOsPool.Proof memory _proofArgs,
-        IUTXOsPool.ExtData memory _extData
+        IUTXOsPoolWithCompliance.Proof memory _proofArgs,
+        IUTXOsPoolWithCompliance.ExtData memory _extData
     ) external payable {
         uint256 valueToSend = _extData.extAmount > 0 ? uint256(_extData.extAmount) : 0;
-        IUTXOsPool(poolAddress).deposit{value: valueToSend}(_proofArgs, _extData);
+        IUTXOsPoolWithCompliance(poolAddress).deposit{value: valueToSend}(_proofArgs, _extData);
     }
 
     function callTransact(
         address poolAddress,
-        IUTXOsPool.Proof memory _proofArgs,
-        IUTXOsPool.POI memory _proof_poi,
-        IUTXOsPool.ExtData memory _extData
+        IUTXOsPoolWithCompliance.Proof memory _proofArgs,
+        IUTXOsPoolWithCompliance.POI memory _proof_poi,
+        IUTXOsPoolWithCompliance.ExtData memory _extData
     ) external payable {
         uint256 valueToSend = _extData.extAmount > 0 ? uint256(_extData.extAmount) : 0;
-        IUTXOsPool(poolAddress).transact{value: valueToSend}(_proofArgs, _proof_poi, _extData);
+        IUTXOsPoolWithCompliance(poolAddress).transact{value: valueToSend}(_proofArgs, _proof_poi, _extData);
     }
 
 }
@@ -149,7 +142,7 @@ contract AccountFactory {
     function createAccount(address owner) external returns (address) {
 
         bytes32 salt = bytes32(uint256(uint160(owner)));
-        bytes memory bytecode = abi.encodePacked(type(Account).creationCode, abi.encode(owner));
+        bytes memory bytecode = abi.encodePacked(type(AccountForV3).creationCode, abi.encode(owner));
 
         address addr = Create2.computeAddress(salt, keccak256(bytecode));
         uint256 codeSize = addr.code.length;

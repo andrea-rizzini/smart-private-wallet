@@ -30,7 +30,7 @@ export async function generatePOI(params: GeneratePOIParams, n: number = 10) { /
     
     // first check if the sender is sanctioned, it may be that the sender address has become sanctioned in the meantime
     // if that is the case, he can't generate a valid POI
-    // if that is not the case, we can include him utxos to build the POI
+    // if that is not the case, we can include his utxos to build the POI
     const { sanction, message } = await checkSanctionedAddress(params.senderAddress, 2);
     
     if (sanction) {
@@ -47,10 +47,10 @@ export async function generatePOI(params: GeneratePOIParams, n: number = 10) { /
     for (const event of events) {
         const transactionHash = event.transactionHash;
         const receipt = await hre.ethers.provider.getTransactionReceipt(transactionHash);
-        receipt.logs.forEach((log: any, index: number) => {
+        receipt.logs.forEach(async (log: any, index: number) => {
             if (index === 5 && log.topics.length === 4) { // length 4 means it's a deposit event
                 const address = '0x' + log.topics[2].slice(26)
-                if (address !== RELAYER_ADDRESS && address !== params.senderAddress) {
+                if (address !== RELAYER_ADDRESS && address !== params.senderAddress && !(await checkSanctionedAddress(address, 2)).sanction) {
                     events_.push(event);
                 }         
             }
