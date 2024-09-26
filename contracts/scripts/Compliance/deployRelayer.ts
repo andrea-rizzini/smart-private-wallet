@@ -3,14 +3,14 @@ import fs from 'fs';
 import hre from "hardhat";
 
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
-const FACTORY_ADDRESS: string = process.env.ACCOUNT_FACTORY_ADDRESS || '';
+const FACTORY_ADDRESS: string = process.env.ACCOUNT_FACTORY_V3_ADDRESS || '';
 
 async function main() {
 
     const envConfig = dotenv.parse(fs.readFileSync('.env'));
 
     // deploy the relayer
-    const AccountFactory = await hre.ethers.getContractFactory("contracts/src/Transfers/Relayer.sol:AccountFactory"); 
+    const AccountFactory = await hre.ethers.getContractFactory("contracts/src/Compliance/Relayer.sol:AccountFactory"); 
     const signers = await hre.ethers.getSigners(); // signers[i] is the whole object
     const address = await signers[3].getAddress(); 
 
@@ -30,11 +30,11 @@ async function main() {
         initCode = "0x";
     }
 
-    const _relayer = await hre.ethers.getContractAt("contracts/src/Transfers/Relayer.sol:Relayer", relayer);
+    const _relayer = await hre.ethers.getContractAt("contracts/src/Compliance/Relayer.sol:Relayer", relayer);
     console.log("Relayer:", relayer);
 
-    envConfig.RELAYER_ADDRESS = relayer.toString();
-    envConfig.INIT_CODE_RELAYER = initCode.toString();
+    envConfig.RELAYER_V3_ADDRESS = relayer.toString();
+    envConfig.INIT_CODE_RELAYER_V3 = initCode.toString();
     const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');
     fs.writeFileSync('.env', updatedEnv);
 

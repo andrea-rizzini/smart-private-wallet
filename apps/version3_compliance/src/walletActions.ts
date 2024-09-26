@@ -18,13 +18,13 @@ import { LinkNote, EthersStr } from "./types/link";
 import { prepareDeposit, prepareTransfer, prepareWithdrawal } from "./pool/poolPrepareActions";
 import { Utxo } from "./pool/utxo";
 
-const INIT_CODE_RELAYER = process.env.INIT_CODE_RELAYER || '';
+const INIT_CODE_RELAYER_V3 = process.env.INIT_CODE_RELAYER_V3 || '';
 const ONBOARDING_MIXER_ADDRESS_TEST = process.env.ONBOARDING_MIXER_ADDRESS_TEST || '';
 const ONBOARDING_MIXER_ADDRESS_LOW = process.env.ONBOARDING_MIXER_ADDRESS_LOW || '';
 const ONBOARDING_MIXER_ADDRESS_MEDIUM = process.env.ONBOARDING_MIXER_ADDRESS_MEDIUM || '';
 const ONBOARDING_MIXER_ADDRESS_HIGH = process.env.ONBOARDING_MIXER_ADDRESS_HIGH || '';
 const POOL_USERS_ADDRESS = process.env.POOL_USERS_ADDRESS || '';
-const RELAYER_ADDRESS = process.env.RELAYER_ADDRESS || '';
+const RELAYER_V3_ADDRESS = process.env.RELAYER_V3_ADDRESS || '';
 const UTXOS_POOL_ADDRESS_WITH_COMPLIANCE = process.env.UTXOS_POOL_ADDRESS_WITH_COMPLIANCE || '';
 
 export async function setup(username: string, account: string, initCode: string, signer: any) {
@@ -345,7 +345,7 @@ export async function send(username: string, account: string, initCode: string, 
             if (useRelayer) {
                 const signers = await hre.ethers.getSigners();
                 try {
-                    await call_userop("callTransact", [UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, args, args_poi, extData], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
+                    await call_userop("callTransact", [UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, args, args_poi, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
                 }
                 catch (error) {
                     console.error("\nSomething went wrong during the transfer transaction:", error);
