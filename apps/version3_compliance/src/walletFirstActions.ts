@@ -13,7 +13,7 @@ import { setup, checkAccountBalance, inviteUsingLink, send, receive, refresh, sh
 import { showMenu } from './menu/menu';
 
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
-const FACTORY_ADDRESS: string = process.env.ACCOUNT_FACTORY_ADDRESS || '';
+const ACCOUNT_FACTORY_V3_ADDRESS: string = process.env.ACCOUNT_FACTORY_V3_ADDRESS || '';
 
 export async function acceptInvite() { 
 
@@ -148,7 +148,7 @@ export async function acceptInvite() {
 
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, signers[2]);
 
-  let initCode = FACTORY_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
+  let initCode = ACCOUNT_FACTORY_V3_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
   let account: string = "0x";
   try {
     await ep.getSenderAddress(initCode);
@@ -290,7 +290,7 @@ export async function login() {
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, signers[2]);
   const AccountFactory = await hre.ethers.getContractFactory("contracts/src/AccountForV3.sol:AccountFactory"); 
 
-  let initCode = FACTORY_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
+  let initCode = ACCOUNT_FACTORY_V3_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
   let account: string = "0x";
   try {
     await ep.getSenderAddress(initCode);
@@ -423,7 +423,7 @@ export async function onboardViaLink() {
 
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, signers[2]);
 
-  let initCode = FACTORY_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
+  let initCode = ACCOUNT_FACTORY_V3_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
   let account: string = "0x";
   try {
     await ep.getSenderAddress(initCode);

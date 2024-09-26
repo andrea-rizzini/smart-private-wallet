@@ -221,7 +221,4 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
     }
   }
 
-  function _configureLimits(uint256 _maximumDepositAmount) internal {
-    maximumDepositAmount = _maximumDepositAmount;
-  }
 }

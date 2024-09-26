@@ -35,19 +35,17 @@ async function main() {
       amountInEtherWithDecimals
   );
 
-  // deploy account-factory
+  // deploy account-factory for v1 and v2
   const af = await hre.ethers.deployContract("contracts/src/Account.sol:AccountFactory", [], { signer: faucet }); 
   await af.waitForDeployment(); 
   console.log(`\nAF: ${af.target}`); 
   envConfig.ACCOUNT_FACTORY_ADDRESS = af.target.toString();
 
-  // delete keypairs since we are making a new deployment and the old keypairs will be not valid anymore
-  let dirPath = path.join(__dirname, '../../apps/version2_private_transfers/keypair/');
-  try {
-    fs.rmSync(dirPath, { recursive: true, force: true });
-} catch (err) {
-    console.error(`Error while deletion of ${dirPath}:`, err);
-}
+  // deploy account-factory for v3
+  const af_v3 = await hre.ethers.deployContract("contracts/src/AccountForV3.sol:AccountFactory", [], { signer: faucet }); 
+  await af_v3.waitForDeployment(); 
+  console.log(`\nAF_V3: ${af_v3.target}`); 
+  envConfig.ACCOUNT_FACTORY_V3_ADDRESS = af_v3.target.toString();
 
   // write new addresses to .env file
   const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');
