@@ -106,21 +106,23 @@ export async function generatePOI(params: GeneratePOIParams, n: number = 10) { /
     }
 
     let dirPath = path.join(__dirname, `../../../../circuits/artifacts/circuits/`);
-    let fileName = `compliance${inputs.length}.wasm`;
+    let fileName = `poi${inputs.length}.wasm`;
     let filePath = path.join(dirPath, fileName);
     let wasmBuffer = fs.readFileSync(filePath);
     
-    fileName = `compliance${inputs.length}.zkey`;
+    fileName = `poi${inputs.length}.zkey`;
     filePath = path.join(dirPath, fileName);
     let zKeyBuffer = fs.readFileSync(filePath);
 
     // @ts-ignore
     const proof = await prove(input, wasmBuffer, zKeyBuffer)
 
-    const args: ArgsPOI = {
+    const argsPOI: ArgsPOI = {
         proof,
         root: toFixedHex(input.root),
         inputNullifiers: inputs.map((x) => toFixedHex(x.getNullifier()))
     }
+
+    return argsPOI;
 
 }

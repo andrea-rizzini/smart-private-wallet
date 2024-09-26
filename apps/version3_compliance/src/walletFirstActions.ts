@@ -142,7 +142,7 @@ export async function acceptInvite() {
   console.log('\nCreating smart account ...');
   
   // deploy new account
-  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/Account.sol:AccountFactory"); 
+  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/AccountForV3.sol:AccountFactory"); 
   const signers = await hre.ethers.getSigners(); // signers[i] is the whole object
   const address = await signers[index].getAddress(); 
 

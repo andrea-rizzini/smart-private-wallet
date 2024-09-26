@@ -37,7 +37,7 @@ export async function prepareTransfer(amount: string, username: string, addressS
     const outputs = (totalAmount - (hre.ethers.parseEther(amount))) == BigInt(0) ? [recipientUtxo] : [recipientUtxo, senderChangeUtxo]
 
     const { extData, args } = await createTransactionData({ outputs, inputs: unspentUtxo }, senderKeyPair, signer)
-    return { args, extData }
+    return { args, extData, unspentUtxo }
 
 
   } else {

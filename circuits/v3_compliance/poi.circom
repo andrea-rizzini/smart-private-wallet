@@ -12,9 +12,7 @@ template poi(levels, nIns, zeroLeaf) {
     signal private input inPathElements[nIns][levels];
 
     component inKeypair[nIns];
-    component inSignature[nIns];
     component inCommitmentHasher[nIns];
-    component inNullifierHasher[nIns];
     component inTree[nIns];
     component inCheckRoot[nIns];
 

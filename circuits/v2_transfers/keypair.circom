@@ -1,6 +1,5 @@
 include "../../node_modules/circomlib/circuits/poseidon.circom";
 
-// Since we don't use signatures, the keypair can be based on a simple hash
 template Keypair() {
     signal input privateKey;
     signal output publicKey;

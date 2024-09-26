@@ -329,11 +329,23 @@ export async function send(username: string, account: string, initCode: string, 
 
         const result = await prepareTransfer(choiceAmount, username, account, addressReceiver, signer);
         if (result) {
-            const { args, extData } = result;
+
+            const events: CommitmentEvents = await fetchCommitments()
+
+            const params: GeneratePOIParams = {
+                inputs: result.unspentUtxo,
+                events: events,
+                senderAddress: account
+            }
+
+            const args_poi = await generatePOI(params);
+                const { args, extData } = result;
+
+            
             if (useRelayer) {
                 const signers = await hre.ethers.getSigners();
                 try {
-                    await call_userop("callTransact", [UTXOS_POOL_ADDRESS, args, extData], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
+                    await call_userop("callTransact", [UTXOS_POOL_ADDRESS, args, args_poi, extData], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
                 }
                 catch (error) {
                     console.error("\nSomething went wrong during the transfer transaction:", error);
@@ -446,7 +458,7 @@ export async function receive(signer: any, account: string, initCode: string) {
         if (result) {
             const { args, extData } = result;
             try {
-                await call_userop("callTransact", [UTXOS_POOL_ADDRESS, args, extData], account , initCode, signer);
+                await call_userop("callDeposit", [UTXOS_POOL_ADDRESS, args, extData], account , initCode, signer);
                 console.log(`\nFunded private amount with ${choiceAmount} ethers\n`)
             }
             catch (error) {
@@ -571,14 +583,15 @@ export async function withdraw(username: string, account: string, initCode: stri
             senderAddress: account
         }
 
-        const POI = await generatePOI(params);
+        const args_poi = await generatePOI(params);
 
-        if (POI) {
+        if (args_poi) {
 
             const { args, extData } = result;
 
             try {
-                await call_userop("callTransact", [UTXOS_POOL_ADDRESS, args, extData], account , initCode, signer);
+                await call_userop("callTransact", [UTXOS_POOL_ADDRESS, args, args_poi, extData], account , initCode, signer);
+                console.log("\nProof of innocence verified succesfully!\n");
                 console.log(`\nWithdrawal of ${choiceAmount} eth completed succesfully!\n`);
             }
             catch (error) {
