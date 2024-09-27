@@ -18,7 +18,7 @@ Execute ```./circuit/script_v3.sh 16```
 A folder ```/artifacts``` inside ```/circuits``` will be created with the compiled circom stuff needed to generate zk-proofs and verification, from that folder move ```Verifier2``` and ```Verifier16``` into the folder ```contracts/src/Transfers/```; also move ```VerifierPOI2``` and ```VerifierPOI16``` into the folder ```contracts/src/Compliance/```  
 You will have to modifily the .sol files with the correct declaration name, since circom will generate all the verifier contract as ```contract Verifier [...]```  
 f.i.: ```VerifierPOI2.sol``` --> ```contract VerifierPOI2 [...]```  
-Also rename ```verifyProof``` in ```verifyPOI``` in POI verifier contracts, to avoid collosions in function names.
+Also rename ```verifyProof``` in ```verifyPOI``` in POI verifier contracts, to avoid collisions in function names.
 5) Base contract setup:   
 Deploy ```Paymaster``` and ```AccountFactory``` using ```./contracts/scripts/deployPaymasterAndAccFactory.ts```    
 6) Onboarding mixer setup (for version 1):   
