@@ -1,3 +1,4 @@
+import { deleteDir } from "../src/utils/deleteDir";
 import { deleteUsers, deleteKeypairs, deleteContacts, deleteNullifiers } from "./database";
 
 deleteUsers();

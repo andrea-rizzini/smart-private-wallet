@@ -15,8 +15,10 @@ Execute ```./circuit/script_v2.sh 2```
 Execute ```./circuit/script_v2.sh 16```  
 Execute ```./circuit/script_v3.sh 2```  
 Execute ```./circuit/script_v3.sh 16```  
-A folder ```/artifacts``` inside ```/circuits``` will be created with the compiled circom stuff needed to generate zk-proofs and verification, from that folder move ```Verifier2``` and ```Verifier16``` into the folder ```contracts/src/Transfers/``` being sure to modify the contract declaration inside the .sol files; also move  
-```VerifierPOI2``` and ```VerifierPOI16``` into the folder ```contracts/src/Compòiance/``` 
+A folder ```/artifacts``` inside ```/circuits``` will be created with the compiled circom stuff needed to generate zk-proofs and verification, from that folder move ```Verifier2``` and ```Verifier16``` into the folder ```contracts/src/Transfers/```; also move ```VerifierPOI2``` and ```VerifierPOI16``` into the folder ```contracts/src/Compliance/```  
+You will have to modifily the .sol files with the correct declaration name, since circom will generate all the verifier contract as ```contract Verifier [...]```  
+f.i.: ```VerifierPOI2.sol``` --> ```contract VerifierPOI2 [...]```  
+Also rename ```verifyProof``` in ```verifyPOI``` in POI verifier contracts, to avoid collosions in function names.
 5) Base contract setup:   
 Deploy ```Paymaster``` and ```AccountFactory``` using ```./contracts/scripts/deployPaymasterAndAccFactory.ts```    
 6) Onboarding mixer setup (for version 1):   
@@ -38,13 +40,13 @@ Deploy the ```relayer``` for version3 using  ```./contracts/scripts/Compliance/d
 ```npx hardhat run /apps/version1_onboarding/database/initialize_db.ts```  
 ```npx hardhat run /apps/version2_private_transfers/database/initialize_db.ts```  
 ```npx hardhat run /apps/version3_compliance/database/initialize_db.ts```  
-Note: a ```.db``` file will be created inside ```/apps/versionX/data/``` dir;  if you want initialize a new database, you just have to delete the ```.db``` file inside the ```/apps/versionX/data/``` dir and reexecute one of the commands above based on the version you will work on.
+Note: a ```.db``` file will be created inside ```/apps/versionX/data/``` dir;  if you want initialize a new database, you just have to delete the ```.db``` file inside the ```/apps/versionX/data/``` dir and reexecute one of the commands above based on the version you are testing on.
 9) Start the version you prefer, from the root of the project, with:  
 version_1: ```npx hardhat run /apps/version1_onboarding/main.ts```  
 version_2: ```npx hardhat run /apps/version2_private_transfers/main.ts```  
 version_3: ```npx hardhat run /apps/version3_compliance/main.ts```  
 
-# Demo for version 2:
+# Demo for version 2 (soon for version 3):
 This demo shows all the functionalities of version_1 and version_2.    
 You need 2 terminals, T1 and T2.
 1) (T1): ```npx hardhat run apps/version2_private_transfers/main.ts```  

@@ -4,3 +4,4 @@ deleteUsers();
 deleteKeypairs();
 deleteContacts();
 deleteNullifiers();
+
