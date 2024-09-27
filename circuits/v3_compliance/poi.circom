@@ -4,7 +4,7 @@ include "../v2_transfers/keypair.circom"
 
 template poi(levels, nIns, zeroLeaf) {
     signal         input root;
-    signal         input inputNullifier[nIns];
+    signal         input inputNullifiers[nIns];
     signal private input inAmount[nIns];
     signal private input inPrivateKey[nIns];
     signal private input inBlinding[nIns];

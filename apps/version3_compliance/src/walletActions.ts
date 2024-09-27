@@ -330,6 +330,8 @@ export async function send(username: string, account: string, initCode: string, 
         const result = await prepareTransfer(choiceAmount, username, account, addressReceiver, signer);
         if (result) {
 
+            console.log("\nGenerating proof of innocence ...");
+
             const events: CommitmentEvents = await fetchCommitments()
 
             const params: GeneratePOIParams = {
@@ -339,27 +341,38 @@ export async function send(username: string, account: string, initCode: string, 
             }
 
             const args_poi = await generatePOI(params);
-                const { args, extData } = result;
 
-            
-            if (useRelayer) {
-                const signers = await hre.ethers.getSigners();
-                try {
-                    await call_userop("callTransact", [UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, args, args_poi, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
+            const { args, extData } = result;
+
+            if (args_poi) {
+
+                if (useRelayer) {
+                    const signers = await hre.ethers.getSigners();
+                    try {
+                        await call_userop("callTransact", [UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, args, args_poi, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
+                    }
+                    catch (error) {
+                        console.error("\nSomething went wrong during the transfer transaction:", error);
+                        console.log("\n");
+                    }
+                } else {
+                    try {
+                        await call_userop("callTransact", [UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, args, args_poi, extData], account , initCode, signer);
+                    }
+                    catch (error) {
+                        console.error("\nSomething went wrong during the transfer transaction:", error);
+                        console.log("\n");
+                    }
                 }
-                catch (error) {
-                    console.error("\nSomething went wrong during the transfer transaction:", error);
-                    console.log("\n");
-                }
-            } else {
-                try {
-                    await call_userop("callTransact", [UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, args, extData], account , initCode, signer);
-                }
-                catch (error) {
-                    console.error("\nSomething went wrong during the transfer transaction:", error);
-                    console.log("\n");
-                }
+
             }
+    
+            else {
+    
+                console.log("\nPOI generation failed");
+    
+            }
+     
         }
         else {
             console.log("\nTransfer preparation failed\n");
@@ -593,7 +606,7 @@ export async function withdraw(username: string, account: string, initCode: stri
 
             try {
                 await call_userop("callTransact", [UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, args, args_poi, extData], account , initCode, signer);
-                console.log("\nProof of innocence verified succesfully!\n");
+                console.log("\nProof of innocence verified succesfully!");
                 console.log(`\nWithdrawal of ${choiceAmount} eth completed succesfully!\n`);
             }
             catch (error) {
@@ -606,7 +619,7 @@ export async function withdraw(username: string, account: string, initCode: stri
         else {
 
             console.log("\nPOI generation failed");
-            console.log("\nYou are sending a transaction without a POI, consider that the receiver may burn the funds");
+
         }
  
     }

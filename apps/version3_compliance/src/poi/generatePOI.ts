@@ -26,7 +26,7 @@ export function shuffleEvents(array: CommitmentEvents) {
     return array
 }
 
-export async function generatePOI(params: GeneratePOIParams, n: number = 10) { // n is the number of events to include in the merkle tree
+export async function generatePOI(params: GeneratePOIParams, n: number = 5) { // n is the number of events to include in the merkle tree
     
     // first check if the sender is sanctioned, it may be that the sender address has become sanctioned in the meantime
     // if that is the case, he can't generate a valid POI
@@ -61,6 +61,7 @@ export async function generatePOI(params: GeneratePOIParams, n: number = 10) { /
     events_ = shuffleEvents(events_).slice(0, n);
 
     // here we add events associated with user's input utxos
+
     for (const input of inputs) {
         //if (input.amount > 0) {
             const event = events.find(event => event.commitment === toFixedHex(input.commitment));
@@ -70,6 +71,8 @@ export async function generatePOI(params: GeneratePOIParams, n: number = 10) { /
             }
         //}
     }
+
+    // let nIns = events_.length;
 
     // reshuffle after adding input utxos
     events_ = shuffleEvents(events_);
@@ -96,7 +99,7 @@ export async function generatePOI(params: GeneratePOIParams, n: number = 10) { /
 
     const input = {
         root: typeof tree === 'string' ? tree : tree.root(),
-        inputNullifier: inputs.map((x) => x.getNullifier()),
+        inputNullifiers: inputs.map((x) => x.getNullifier()),
     
         inAmount: inputs.map((x) => x.amount),
         inPrivateKey: inputs.map((x) => x.keypair.privkey), 

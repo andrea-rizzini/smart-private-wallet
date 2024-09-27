@@ -98,7 +98,7 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
     }
     // first verify the POI, then the transaction
     require(verifyPOI(_args_poi), "Invalid POI proof");
-    _transact(_args, _extData);
+     _transact(_args, _extData);
   }
 
   function _transact(Proof memory _args, ExtData memory _extData) internal nonReentrant {
@@ -192,7 +192,7 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
             uint256(_args_poi.inputNullifiers[1])
           ]
         );
-    } else if (_args_poi.inputNullifiers.length == 17) {
+    } else if (_args_poi.inputNullifiers.length == 16) {
         return
           verifierPOI16.verifyPOI(
             _args_poi.proof,
