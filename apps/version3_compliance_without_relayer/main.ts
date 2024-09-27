@@ -1,7 +1,7 @@
 import figlet from 'figlet';
 import * as readline from 'readline';
-import { acceptInvite, login, onboardViaLink } from '../version3_compliance/src/walletFirstActions';
-import { inputFromCLI } from '../version3_compliance/src/utils/inputFromCLI';
+import { acceptInvite, login, onboardViaLink } from '../version3_compliance_without_relayer/src/walletFirstActions';
+import { inputFromCLI } from '../version3_compliance_without_relayer/src/utils/inputFromCLI';
 
 async function main() {
 

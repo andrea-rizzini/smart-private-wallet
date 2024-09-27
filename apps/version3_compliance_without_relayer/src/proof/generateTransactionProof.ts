@@ -3,7 +3,7 @@ import path from 'path';
 
 import { ArgsProof, BaseUtxo, Params, ProofParams } from "../pool/types";
 import { BytesLike } from '@ethersproject/bytes'
-import  { prove } from "../proof/prover";
+import  { prove } from "./prover";
 import { toFixedHex } from "../utils/toHex";
 
 const ADDRESS_BYTES_LENGTH = 20

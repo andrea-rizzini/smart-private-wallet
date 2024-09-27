@@ -22,6 +22,11 @@ async function main () {
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
+    dirPath = path.join(__dirname, '../../../apps/version3_compliance_without_relayer/cache/');
+    fileName = `CommitmentCreated_eth_0.01.json`;
+    filePath = path.join(dirPath, fileName);
+    clearJsonFile(filePath);
+
     dirPath = path.join(__dirname, '../../../apps/version1_onboarding/cache/');
     fileName = `CommitmentCreated_eth_0.1.json`;
     filePath = path.join(dirPath, fileName);
@@ -33,6 +38,11 @@ async function main () {
     clearJsonFile(filePath);
 
     dirPath = path.join(__dirname, '../../../apps/version3_compliance/cache/');
+    fileName = `CommitmentCreated_eth_0.1.json`;
+    filePath = path.join(dirPath, fileName);
+    clearJsonFile(filePath);
+
+    dirPath = path.join(__dirname, '../../../apps/version3_compliance_without_relayer/cache/');
     fileName = `CommitmentCreated_eth_0.1.json`;
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
@@ -52,6 +62,11 @@ async function main () {
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
+    dirPath = path.join(__dirname, '../../../apps/version3_compliance_without_relayer/cache/');
+    fileName = `CommitmentCreated_eth_1.json`;
+    filePath = path.join(dirPath, fileName);
+    clearJsonFile(filePath);
+
     dirPath = path.join(__dirname, '../../../apps/version1_onboarding/cache/');
     fileName = `CommitmentCreated_eth_10.json`;
     filePath = path.join(dirPath, fileName);
@@ -67,6 +82,11 @@ async function main () {
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
+    dirPath = path.join(__dirname, '../../../apps/version3_compliance_without_relayer/cache/');
+    fileName = `CommitmentCreated_eth_10.json`;
+    filePath = path.join(dirPath, fileName);
+    clearJsonFile(filePath);
+    
     const envConfig = dotenv.parse(fs.readFileSync('.env'));
 
     const VERIFIER_ONBOARDING = process.env.VERIFIER_ONBOARDING || '';

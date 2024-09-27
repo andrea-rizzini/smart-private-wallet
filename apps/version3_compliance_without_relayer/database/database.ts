@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 const dbDir = path.join(__dirname, '../data');
-const dbPath = path.join(dbDir, 'version3_compliance.db');
+const dbPath = path.join(dbDir, 'version3_compliance_without_relayer.db');
 
 if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
