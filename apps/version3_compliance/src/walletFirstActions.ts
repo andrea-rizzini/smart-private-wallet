@@ -14,6 +14,7 @@ import { showMenu } from './menu/menu';
 
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
 const ACCOUNT_FACTORY_V3_ADDRESS: string = process.env.ACCOUNT_FACTORY_V3_ADDRESS || '';
+const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
 export async function acceptInvite() { 
 
@@ -159,16 +160,18 @@ export async function acceptInvite() {
 
   const _account = await hre.ethers.getContractAt("AccountForV3", account);
 
-  console.log('\nSome sepolia eth will be sent to your account soon ...');
-  
-  const depositValue = hre.ethers.parseEther("0.01");
+  console.log('\nSome USDC will be sent to your account soon ...');
+
   const signer = await hre.ethers.getSigners();
-  const fundTx = await signer[2].sendTransaction({
-    to: account,
-    value: depositValue
-  });
-  await fundTx.wait();
-  console.log(`\nFunded account with 0.01 ethers: ${fundTx.hash}`)
+
+  const usdc = await hre.ethers.getContractAt("IERC20", USDC_ADDRESS, signer[2]);
+  const usdcAmount = hre.ethers.parseUnits("0.01", 6);
+
+  await usdc.approve(account, usdcAmount);
+
+  const transferTx = await usdc.transfer(account, usdcAmount);
+  await transferTx.wait();
+  console.log(`\nFunded account with 0.01 USDC: ${transferTx.hash}`);
   console.log('\nWelcome !\n');
 
   // menu options
@@ -436,8 +439,8 @@ export async function onboardViaLink() {
 
   try {
     await redeem(link, account, initCode, signers[index]);
-  } catch {
-    console.log('\nError redeeming the link');
+  } catch (error) {
+    console.log('\nError redeeming the link: ', error);
     deleteUser(index + 1);
   }
 

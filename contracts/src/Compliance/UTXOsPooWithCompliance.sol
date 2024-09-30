@@ -3,6 +3,8 @@
 pragma solidity ^0.8.9;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol"; 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { IVerifier } from "../Transfers/interfaces/IVerifier.sol";
 import { IVerifierPOI } from "./interfaces/IVerifierPOI.sol";
@@ -10,11 +12,15 @@ import "../Transfers/MerkleTreeWithHistoryTransactions.sol";
 
 contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
 
+  using SafeERC20 for IERC20;
+
   IVerifier public immutable verifier2;
   IVerifier public immutable verifier16;
 
   IVerifierPOI public immutable verifierPOI2;
   IVerifierPOI public immutable verifierPOI16;
+
+  IERC20 public token;
 
   uint256 public lastBalance;
   uint256 public maximumDepositAmount = 100 ether;
@@ -50,6 +56,7 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
     IVerifier _verifier16,
     IVerifierPOI _verifierPOI2,
     IVerifierPOI _verifierPOI16,
+    IERC20 _token,
     uint32 _levels,
     address _hasher
   )
@@ -59,6 +66,7 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
     verifier16 = _verifier16;
     verifierPOI2 = _verifierPOI2;
     verifierPOI16 = _verifierPOI16;
+    token = _token;
     super._initialize();
   }
 
@@ -89,6 +97,7 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
+    token.safeTransferFrom(msg.sender, address(this), uint256(_extData.extAmount));
   }
 
   // function that allows transfers and withdrawal
@@ -115,8 +124,7 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
 
     if (_extData.extAmount < 0) { // we enter here only if the operation is a withdrawal
       require(_extData.recipient != address(0), "Can't withdraw to zero address");
-      (bool success, ) = _extData.recipient.call{ value: uint256(-_extData.extAmount) }("");
-      require(success, "payment to _recipient did not go thru");
+      token.safeTransfer(msg.sender, uint256(-_extData.extAmount));
     }
 
     // lastBalance = token.balanceOf(address(this));

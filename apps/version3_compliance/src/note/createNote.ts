@@ -4,7 +4,7 @@ import { toHex } from "../utils/toHex";
 import * as circomlib from "circomlib";
 
 const netId = "84532" // Base Sepolia net id
-const currency = "eth"
+const currency = "usdc"
 
 const pedersenHash = (data: Buffer) => circomlib.babyJub.unpackPoint(circomlib.pedersenHash.hash(data))[0]
 const rbigint = (nbytes: number) => BigInt('0x' + crypto.randomBytes(nbytes).toString('hex'))   

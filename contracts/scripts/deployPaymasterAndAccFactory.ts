@@ -1,7 +1,6 @@
 import dotenv from 'dotenv';
 import fs from 'fs';
 import hre from "hardhat";
-import path from 'path';
 
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
 

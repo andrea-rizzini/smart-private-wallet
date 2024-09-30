@@ -28,7 +28,7 @@ export function shuffleEvents(array: CommitmentEvents) {
 
 export async function generatePOI(params: GeneratePOIParams, n: number = 5) { // n is the number of events to include in the merkle tree
     
-    // first check if the sender is sanctioned, it may be that the sender address has become sanctioned in the meantime
+    // first check if the sender is sanctioned, it may be that the sender address has become sanctioned in the meantime for illegal activities in other applications
     // if that is the case, he can't generate a valid POI
     // if that is not the case, we can include his utxos to build the POI
     const { sanction, message } = await checkSanctionedAddress(params.senderAddress, 2);

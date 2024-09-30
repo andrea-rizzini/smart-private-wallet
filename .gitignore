@@ -20,18 +20,19 @@ ignition/deployments/chain-31337
 /apps/version1_onboarding/links/*
 /apps/version1_onboarding/cache/*
 /apps/version1_onboarding/data/*
+/apps/version1_onboarding/links/linkNote.json
+apps/version1_onboarding/links/linkNote.json
 
 /apps/version2_private_transfers/links/*
 /apps/version2_private_transfers/cache/*
 /apps/version2_private_transfers/data/*
+/apps/version2_private_transfers/links/linkNote.json
+apps/version2_private_transfers/links/linkNote.json
 
 /apps/version3_compliance/link/*
 /apps/version3_compliance/cache/*
 /apps/version3_compliance/data/*
-
-/apps/version3_compliance/link/*
-/apps/version3_compliance/cache/*
-/apps/version3_compliance/data/*
+apps/version3_compliance/links/linkNote.json
 
 # circuits files
 /home/andrea/Desktop/smart-private-wallet/circuits/artifacts/circuits/ptau18

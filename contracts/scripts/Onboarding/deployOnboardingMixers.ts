@@ -4,66 +4,68 @@ import hre from 'hardhat';
 import path from 'path';
 import { clearJsonFile } from '../../../apps/version1_onboarding/src/utils/clearJsonFile';
 
+const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
+
 async function main () {
 
     // delete cache files content, for the moment files are just for 0.01 eth commitments
     let dirPath = path.join(__dirname, '../../../apps/version1_onboarding/cache/');
-    let fileName = `CommitmentCreated_eth_0.01.json`;
+    let fileName = `CommitmentCreated_usdc_0.01.json`;
     let filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
     dirPath = path.join(__dirname, '../../../apps/version2_private_transfers/cache/');
-    fileName = `CommitmentCreated_eth_0.01.json`;
+    fileName = `CommitmentCreated_usdc_0.01.json`;
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
     dirPath = path.join(__dirname, '../../../apps/version3_compliance/cache/');
-    fileName = `CommitmentCreated_eth_0.01.json`;
+    fileName = `CommitmentCreated_usdc_0.01.json`;
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
     dirPath = path.join(__dirname, '../../../apps/version1_onboarding/cache/');
-    fileName = `CommitmentCreated_eth_0.1.json`;
+    fileName = `CommitmentCreated_usdc_0.1.json`;
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
     dirPath = path.join(__dirname, '../../../apps/version2_private_transfers/cache/');
-    fileName = `CommitmentCreated_eth_0.1.json`;
+    fileName = `CommitmentCreated_usdc_0.1.json`;
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
     dirPath = path.join(__dirname, '../../../apps/version3_compliance/cache/');
-    fileName = `CommitmentCreated_eth_0.1.json`;
+    fileName = `CommitmentCreated_usdc_0.1.json`;
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
     dirPath = path.join(__dirname, '../../../apps/version1_onboarding/cache/');
-    fileName = `CommitmentCreated_eth_1.json`;
+    fileName = `CommitmentCreated_usdc_1.json`;
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
     dirPath = path.join(__dirname, '../../../apps/version2_private_transfers/cache/');
-    fileName = `CommitmentCreated_eth_1.json`;
+    fileName = `CommitmentCreated_usdc_1.json`;
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
     dirPath = path.join(__dirname, '../../../apps/version3_compliance/cache/');
-    fileName = `CommitmentCreated_eth_1.json`;
+    fileName = `CommitmentCreated_usdc_1.json`;
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
     dirPath = path.join(__dirname, '../../../apps/version1_onboarding/cache/');
-    fileName = `CommitmentCreated_eth_10.json`;
+    fileName = `CommitmentCreated_usdc_10.json`;
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
     dirPath = path.join(__dirname, '../../../apps/version2_private_transfers/cache/');
-    fileName = `CommitmentCreated_eth_10.json`;
+    fileName = `CommitmentCreated_usdc_10.json`;
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
 
     dirPath = path.join(__dirname, '../../../apps/version3_compliance/cache/');
-    fileName = `CommitmentCreated_eth_10.json`;
+    fileName = `CommitmentCreated_usdc_10.json`;
     filePath = path.join(dirPath, fileName);
     clearJsonFile(filePath);
     
@@ -77,7 +79,8 @@ async function main () {
 
     const mixer = await hre.ethers.getContractFactory("OnboardingMixer", faucet);
 
-    const mixer_test = await mixer.deploy(VERIFIER_ONBOARDING, HASHER_ONBOARDING, hre.ethers.parseEther("0.01"), 20);
+    let denomination = hre.ethers.parseUnits("0.01", 6);
+    const mixer_test = await mixer.deploy(VERIFIER_ONBOARDING, HASHER_ONBOARDING, USDC_ADDRESS, denomination, 20);
     await mixer_test.waitForDeployment();
     console.log(`Mixer test deployed at: ${mixer_test.target}`);
     envConfig.ONBOARDING_MIXER_ADDRESS_TEST = mixer_test.target.toString();
@@ -86,7 +89,8 @@ async function main () {
     //   constructorArguments: [VERIFIER_ONBOARDING, HASHER_ONBOARDING, hre.ethers.parseEther("10"), 20],
     // });
 
-    const mixer_low_denomination= await mixer.deploy(VERIFIER_ONBOARDING, HASHER_ONBOARDING, hre.ethers.parseEther("0.1"), 20);
+    denomination = hre.ethers.parseUnits("0.1", 6);
+    const mixer_low_denomination= await mixer.deploy(VERIFIER_ONBOARDING, HASHER_ONBOARDING, USDC_ADDRESS, denomination, 20);
     await mixer_low_denomination.waitForDeployment();
     console.log(`Mixer low denomination deployed at: ${mixer_low_denomination.target}`);
     envConfig.ONBOARDING_MIXER_ADDRESS_LOW = mixer_low_denomination.target.toString();
@@ -95,8 +99,8 @@ async function main () {
     //   constructorArguments: [VERIFIER_ONBOARDING, HASHER_ONBOARDING, hre.ethers.parseEther("10"), 20],
     // });
 
-
-    const mixer_medium_denomination= await mixer.deploy(VERIFIER_ONBOARDING, HASHER_ONBOARDING, hre.ethers.parseEther("1"), 20);
+    denomination = hre.ethers.parseUnits("1", 6);
+    const mixer_medium_denomination= await mixer.deploy(VERIFIER_ONBOARDING, HASHER_ONBOARDING, USDC_ADDRESS, denomination, 20);
     await mixer_medium_denomination.waitForDeployment();
     console.log(`Mixer medium denomination deployed at: ${mixer_medium_denomination.target}`);
     envConfig.ONBOARDING_MIXER_ADDRESS_MEDIUM = mixer_medium_denomination.target.toString();
@@ -106,7 +110,7 @@ async function main () {
     // });
 
 
-    const mixer_high_denomination= await mixer.deploy(VERIFIER_ONBOARDING, HASHER_ONBOARDING, hre.ethers.parseEther("10"), 20);
+    const mixer_high_denomination= await mixer.deploy(VERIFIER_ONBOARDING, HASHER_ONBOARDING, USDC_ADDRESS, denomination, 20);
     await mixer_high_denomination.waitForDeployment();
     console.log(`Mixer high denomination deployed at: ${mixer_high_denomination.target}`);
     envConfig.ONBOARDING_MIXER_ADDRESS_HIGH = mixer_high_denomination.target.toString();

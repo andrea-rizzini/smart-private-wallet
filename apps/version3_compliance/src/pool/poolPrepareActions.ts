@@ -6,7 +6,7 @@ export async function prepareDeposit(amount: string, address: string, signer: an
   const recipientAddress = await getAccountAddress(address)
   if (recipientAddress) {
     const keypair = Keypair.fromString(recipientAddress);
-    const output = new Utxo({ amount: hre.ethers.parseEther(amount), keypair })
+    const output = new Utxo({ amount: hre.ethers.parseUnits(amount, 6), keypair })
     const { extData, args } = await createTransactionData({ outputs: [output] }, keypair, signer)
     return { args, extData }
   } else {
@@ -19,22 +19,23 @@ export async function prepareTransfer(amount: string, username: string, addressS
   if (recipientAddress) {
 
     const recipientUtxo = new Utxo({
-      amount: hre.ethers.parseEther(amount),
+      amount: hre.ethers.parseUnits(amount, 6),
       keypair: Keypair.fromString(recipientAddress),
     })
     
-    const { unspentUtxo, totalAmount, senderKeyPair } = await getUserAccountInfo(username, addressSender, {amount: hre.ethers.parseEther(amount)})
+    const { unspentUtxo, totalAmount, senderKeyPair } = await getUserAccountInfo(username, addressSender, {amount: hre.ethers.parseUnits(amount, 6)})
     
-    if (totalAmount < (hre.ethers.parseEther(amount))) {
-      throw new Error(`Insufficient funds!`)
+    if (totalAmount < (hre.ethers.parseUnits(amount, 6))) {
+      console.log(`\nInsufficient funds!`);
+      return;
     }
 
     const senderChangeUtxo = new Utxo({
       keypair: senderKeyPair,
-      amount: totalAmount - (hre.ethers.parseEther(amount)),
+      amount: totalAmount - (hre.ethers.parseUnits(amount, 6)),
     })
 
-    const outputs = (totalAmount - (hre.ethers.parseEther(amount))) == BigInt(0) ? [recipientUtxo] : [recipientUtxo, senderChangeUtxo]
+    const outputs = (totalAmount - (hre.ethers.parseUnits(amount, 6))) == BigInt(0) ? [recipientUtxo] : [recipientUtxo, senderChangeUtxo]
 
     const { extData, args } = await createTransactionData({ outputs, inputs: unspentUtxo }, senderKeyPair, signer)
     return { args, extData, unspentUtxo }
@@ -47,9 +48,9 @@ export async function prepareTransfer(amount: string, username: string, addressS
 
 export async function prepareWithdrawal(amount: string, username: string, addressSender: string, signer: any) {
 
-  const { unspentUtxo, totalAmount, senderKeyPair } = await getUserAccountInfo(username, addressSender, {amount: hre.ethers.parseEther(amount)})
+  const { unspentUtxo, totalAmount, senderKeyPair } = await getUserAccountInfo(username, addressSender, {amount: hre.ethers.parseUnits(amount, 6)})
 
-  const outputs = [new Utxo({ amount: totalAmount - (hre.ethers.parseEther(amount)), keypair: senderKeyPair })]
+  const outputs = [new Utxo({ amount: totalAmount - (hre.ethers.parseUnits(amount, 6)), keypair: senderKeyPair })]
 
   const { extData, args } = await createTransactionData(
     {

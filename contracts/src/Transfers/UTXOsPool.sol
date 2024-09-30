@@ -3,17 +3,23 @@
 pragma solidity ^0.8.9;
 pragma experimental ABIEncoderV2;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol"; 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import { IVerifier } from "./interfaces/IVerifier.sol";
 import "./MerkleTreeWithHistoryTransactions.sol";
 
 contract UTXOsPool is MerkleTreeWithHistory, ReentrancyGuard {
 
+  using SafeERC20 for IERC20;
+
   IVerifier public immutable verifier2;
   IVerifier public immutable verifier16;
 
+  IERC20 public token;
+
   uint256 public lastBalance;
-  uint256 public maximumDepositAmount = 100 ether;
+  uint256 public maximumDepositAmount = 100 * 10**6; // 100 USDC
   mapping(bytes32 => bool) public nullifierHashes;
 
   struct ExtData {
@@ -38,6 +44,7 @@ contract UTXOsPool is MerkleTreeWithHistory, ReentrancyGuard {
   constructor(
     IVerifier _verifier2,
     IVerifier _verifier16,
+    IERC20 _token,
     uint32 _levels,
     address _hasher
   )
@@ -45,7 +52,37 @@ contract UTXOsPool is MerkleTreeWithHistory, ReentrancyGuard {
   {
     verifier2 = _verifier2;
     verifier16 = _verifier16;
+    token = _token;
     super._initialize();
+  }
+
+  function deposit(Proof memory _args, ExtData memory _extData) external payable { 
+    if (_extData.extAmount > 0) {
+      require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
+    }
+     _deposit(_args, _extData);
+  }
+
+  function _deposit(Proof memory _args, ExtData memory _extData) internal nonReentrant {
+    require(isKnownRoot(_args.root), "Invalid merkle root");
+    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
+      require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
+    }
+    require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE, "Incorrect external data hash");
+    require(verifyProof(_args), "Invalid transaction proof");
+
+    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
+      nullifierHashes[_args.inputNullifiers[i]] = true;
+    }
+
+    _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);
+    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
+      emit NewNullifier(_args.inputNullifiers[i]);
+    }
+
+    token.safeTransferFrom(msg.sender, address(this), uint256(_extData.extAmount));
   }
 
   // function that allows deposits, transfers and withdrawal.
@@ -70,11 +107,9 @@ contract UTXOsPool is MerkleTreeWithHistory, ReentrancyGuard {
 
     if (_extData.extAmount < 0) { // we enter here only if the operation is a withdrawal
       require(_extData.recipient != address(0), "Can't withdraw to zero address");
-      (bool success, ) = _extData.recipient.call{ value: uint256(-_extData.extAmount) }("");
-      require(success, "payment to _recipient did not go thru");
+      token.safeTransfer(msg.sender, uint256(-_extData.extAmount));
     }
 
-    // lastBalance = token.balanceOf(address(this));
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
     emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
     emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);

@@ -5,7 +5,7 @@ import * as readline from 'readline';
 
 import { createNote } from "./note/createNote";
 import { inputFromCLI } from "./utils/inputFromCLI";
-import { LinkNote, EthersStr } from "./types/link";
+import { LinkNote, USDCStr } from "./types/link";
 import { call_userop } from "./userop/createUserOp";
 import { getContactsByUserId, getID, getUnredeemedNullifiersByUserId, insertContact, insertKeypair, insertUserNullifier, 
     updateContact, updateNullifierRedeemed } from '../database/database';
@@ -14,16 +14,17 @@ const ONBOARDING_MIXER_ADDRESS_TEST = process.env.ONBOARDING_MIXER_ADDRESS_TEST 
 const ONBOARDING_MIXER_ADDRESS_LOW = process.env.ONBOARDING_MIXER_ADDRESS_LOW || '';
 const ONBOARDING_MIXER_ADDRESS_MEDIUM = process.env.ONBOARDING_MIXER_ADDRESS_MEDIUM || '';
 const ONBOARDING_MIXER_ADDRESS_HIGH = process.env.ONBOARDING_MIXER_ADDRESS_HIGH || '';
+const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
 export async function checkAccountBalance(account: string) {
     console.log("\nChecking account balance ...");
     
     console.log("\nAddress:", account);
 
-    const publicAmount = await hre.ethers.provider.getBalance(account);
-    console.log("\nPublic account balance in wei:", publicAmount.toString()); // .toString() to avoid publicAmount print ending with 'n'
-    console.log("Public account balance in eth: ", Number(publicAmount) / Number(BigInt("1000000000000000000")))
-    console.log('\n');
+    const usdcContract = await hre.ethers.getContractAt("IERC20", USDC_ADDRESS);
+    const usdcBalance = await usdcContract.balanceOf(account);
+
+    console.log(`\nAccount balance: ${hre.ethers.formatUnits(usdcBalance, 6)} USDC\n`); 
 }
 
 export async function inviteUsingLink(name: string, account: string, initCode: string, signer: any) {
@@ -39,7 +40,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     console.log("\nchoose the amount to send for onboarding:");
 
-    const amountOptions = ['\n[1] 0.01 ETH', '[2] 0.1 ETH', '[3] 1 ETH', '[4] 10 ETH', '[5] Return to the menu'];
+    const amountOptions = ['\n[1] 0.01 USDC', '[2] 0.1 USDC', '[3] 1 USDC', '[4] 10 USDC', '[5] Return to the menu'];
 
     for (let i = 0; i < amountOptions.length; i++) {
         console.log(amountOptions[i]);
@@ -47,21 +48,24 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     let choice: string;
     let isValid: boolean = false; 
-    let publicAmount: bigint = await hre.ethers.provider.getBalance(account)
+
+
+    const usdcContract = await hre.ethers.getContractAt("IERC20", USDC_ADDRESS);
+    const usdcBalance = await usdcContract.balanceOf(account);
 
     do {
-        console.log('\nChose an option:')
+        console.log('\n\nChose an option:')
         choice = await inputFromCLI(": ", rl);
         if (choice === '1' || choice === '2' || choice === '3' || choice === '4') {
 
             const thresholds = {
-                '1': BigInt(10000000000000000), 
-                '2': BigInt(100000000000000000), 
-                '3': BigInt(1000000000000000000), 
-                '4': BigInt(10000000000000000000) 
+                '1': 10000, 
+                '2': 100000, 
+                '3': 1000000, 
+                '4': 10000000
             };
     
-            if (publicAmount >= thresholds[choice]) {
+            if (usdcBalance >= thresholds[choice]) {
                 isValid = true;
                 rl.close();
             } else {
@@ -80,47 +84,42 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
         }
     } while (!isValid);
 
-    let ethValue: EthersStr;
+    let usdcValue: USDCStr;
     let functionName: string = "append_commitment";
     let id: string;
-    let amountInWei;
 
     switch (choice) {
         case '1':
-            ethValue = "0.01";
-            amountInWei = hre.ethers.parseEther(ethValue);
+            usdcValue = "0.01";
             id = ONBOARDING_MIXER_ADDRESS_TEST;
             break;
         case '2':
-            ethValue = "0.1";
-            amountInWei = hre.ethers.parseEther(ethValue);
+            usdcValue = "0.1";
             id = ONBOARDING_MIXER_ADDRESS_LOW;
             break;
         case '3':
-            ethValue = "1";
-            amountInWei = hre.ethers.parseEther(ethValue);
+            usdcValue = "1";
             id = ONBOARDING_MIXER_ADDRESS_MEDIUM;
             break;
         case '4':
-            ethValue = "10";
-            amountInWei = hre.ethers.parseEther(ethValue);
+            usdcValue = "10";
             id = ONBOARDING_MIXER_ADDRESS_HIGH;
             break;
         default:
-            ethValue = "0"; 
+            usdcValue = "0"; 
             id = "";
     }
 
     // 2) create the note 
 
-    const {noteString, nullifierHex, commitmentHex} = await createNote(ethValue);
+    const {noteString, nullifierHex, commitmentHex} = await createNote(usdcValue);
 
     const link: LinkNote = {
         type: "notev1",
         note: noteString,
         sender: name,
         sender_address: account,
-        ethers: ethValue, // 0.01, 0.1, 1 or 10 eth
+        usdc: usdcValue, // 0.01, 0.1, 1 or 10 usdc
         id: id // address of the onboarding mixer contract
     };
 
@@ -130,8 +129,13 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     if (code !== "0x") {
       initCode = "0x";
     }
-    
-    await call_userop(functionName, [id, commitmentHex, amountInWei], account , initCode, signer);
+
+    const signers = await hre.ethers.getSigners();
+    const faucet = signers[2];
+
+    const usdcAmount = hre.ethers.parseUnits(usdcValue, 6)
+
+    await call_userop(functionName, [id, commitmentHex, usdcAmount], account , initCode, signer);
 
     // 4) send the link to the invited user
 
@@ -154,7 +158,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     
     insertContact(getID(name), nameOnbUser, "0x");
 
-    insertUserNullifier(getID(name), nameOnbUser, nullifierHex, Number(ethValue));
+    insertUserNullifier(getID(name), nameOnbUser, nullifierHex, Number(usdcValue));
 
 }
 
@@ -186,15 +190,17 @@ export async function receive(signer: any, account: string) {
         }
     } while (!amountValid);
 
-    const depositValue = hre.ethers.parseEther(choiceAmount);
-    const fundTx = await signer.sendTransaction({
-        to: account,
-        value: depositValue
-    });
-    
-    await fundTx.wait();
-    console.log(`\nFunded public amount with ${choiceAmount} ethers: ${fundTx.hash}`)
-    console.log('\n');
+    rl.close();
+
+    const usdc = await hre.ethers.getContractAt("IERC20", USDC_ADDRESS, signer);
+    const usdcAmount = hre.ethers.parseUnits(choiceAmount, 6);
+
+    await usdc.approve(account, usdcAmount);
+
+    const transferTx = await usdc.transfer(account, usdcAmount);
+    await transferTx.wait();
+
+    console.log(`\nFunded public amount with ${choiceAmount} USDC\n`)
 }
 
 export async function refresh(username: string) {

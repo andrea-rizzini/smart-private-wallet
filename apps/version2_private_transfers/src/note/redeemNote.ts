@@ -45,6 +45,6 @@ export async function redeem(link: LinkNote, account: string, initCode: string, 
       initCode = "0x";
     }
 
-    await call_userop(functionName, [id, proof, args[0], args[1], args[2]], account, initCode, signer);
+    await call_userop(functionName, [id, proof, args[0], args[1]], account, initCode, signer);
 
 }
