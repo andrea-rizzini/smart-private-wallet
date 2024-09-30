@@ -5,3 +5,5 @@ deleteUsers();
 deleteKeypairs();
 deleteContacts();
 deleteNullifiers();
+
+deleteDir("apps/version1_onboarding/data");
