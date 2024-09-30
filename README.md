@@ -41,7 +41,7 @@ Deploy the ```relayer``` for version3 using  ```./contracts/scripts/Compliance/d
 ```npx hardhat run /apps/version2_private_transfers/database/initialize_db.ts```  
 ```npx hardhat run /apps/version3_compliance/database/initialize_db.ts```  
 ```npx hardhat run /apps/version3_compliance_without_relayer/database/initialize_db.ts```  
-Note: a ```.db``` file will be created inside ```/apps/versionX/data/```;  if you want initialize a new database, you just have to delete the ```.db``` file inside ```/apps/versionX/data/``` and execute again one of the command for the version you want deploy the database.
+Note: a ```.db``` file will be created inside ```/apps/versionX/data/```;  if you want initialize a new database, you just have to execute the script ```npx hardhat run /apps/versionX/database/deleteDB.ts``` and execute again one of the command above, for the version you want deploy the database.
 9) Start the version you prefer, from the root of the project, with:  
 version_1: ```npx hardhat run /apps/version1_onboarding/main.ts```  
 version_2: ```npx hardhat run /apps/version2_private_transfers/main.ts```  
