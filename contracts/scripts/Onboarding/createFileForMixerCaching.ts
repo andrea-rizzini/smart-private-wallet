@@ -43,10 +43,6 @@ async function createAllCacheFiles() {
     { directory: '../../../apps/version3_compliance/cache/', fileName: 'CommitmentCreated_eth_1.json' },
     { directory: '../../../apps/version3_compliance/cache/', fileName: 'CommitmentCreated_eth_10.json' },
 
-    { directory: '../../../apps/version3_compliance_without_relayer/cache/', fileName: 'CommitmentCreated_eth_0.01.json' },
-    { directory: '../../../apps/version3_compliance_without_relayer/cache/', fileName: 'CommitmentCreated_eth_0.1.json' },
-    { directory: '../../../apps/version3_compliance_without_relayer/cache/', fileName: 'CommitmentCreated_eth_1.json' },
-    { directory: '../../../apps/version3_compliance_without_relayer/cache/', fileName: 'CommitmentCreated_eth_10.json' },
   ];
 
   for (const { directory, fileName } of filesToCreate) {
