@@ -291,6 +291,7 @@ export async function send(username: string, account: string, initCode: string, 
 
     }
     else if (choice === '2') {
+        
         addressReceiver = await inputFromCLI("\nInsert the address (or type exit to return to the menu): ", rl);
         if (addressReceiver === 'exit') {
             console.log("\n");
@@ -299,85 +300,46 @@ export async function send(username: string, account: string, initCode: string, 
         }
     }
 
-    let useRelayer: boolean = false;
+    const result = await prepareTransfer(choiceAmount, username, account, addressReceiver, signer);
 
-    if (askForRelayer){
-        
-        isValid = false;
-    
-        console.log("\nDo you want use a relayer? [y], [n], [exit]")
-        do {
-            console.log("\nChose an option:");
-            choice = await inputFromCLI(": ", rl);
-            if (choice === 'y' || choice === 'n') {
-                if (choice === 'y') {
-                    useRelayer = true;
-                }
-                isValid = true;
-                console.log('\n');
+    if (result) {
+
+        console.log("\nGenerating proof of innocence ...");
+
+        const events: CommitmentEvents = await fetchCommitments()
+
+        const params: GeneratePOIParams = {
+            inputs: result.unspentUtxo,
+            events: events,
+            senderAddress: account
+        }
+
+        const args_poi = await generatePOI(params);
+
+        const { args, extData } = result;
+
+        if (args_poi) {
+
+            const signers = await hre.ethers.getSigners();
+            try {
+                await call_userop("callTransact", [UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, args, args_poi, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
             }
-            else if (choice === 'exit') {
+            catch (error) {
+                console.error("\nSomething went wrong during the transfer transaction:", error);
                 console.log("\n");
-                isValid = true;
-                rl.close();
-                return;
             }
-            else {
-                console.log('\nInvalid input.');
-            }
-        } while(!isValid)
+ 
 
-        const result = await prepareTransfer(choiceAmount, username, account, addressReceiver, signer);
-        if (result) {
+        } else {
 
-            console.log("\nGenerating proof of innocence ...");
+            console.log("\nPOI generation failed");
 
-            const events: CommitmentEvents = await fetchCommitments()
-
-            const params: GeneratePOIParams = {
-                inputs: result.unspentUtxo,
-                events: events,
-                senderAddress: account
-            }
-
-            const args_poi = await generatePOI(params);
-
-            const { args, extData } = result;
-
-            if (args_poi) {
-
-                if (useRelayer) {
-                    const signers = await hre.ethers.getSigners();
-                    try {
-                        await call_userop("callTransact", [UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, args, args_poi, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
-                    }
-                    catch (error) {
-                        console.error("\nSomething went wrong during the transfer transaction:", error);
-                        console.log("\n");
-                    }
-                } else {
-                    try {
-                        await call_userop("callTransact", [UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, args, args_poi, extData], account , initCode, signer);
-                    }
-                    catch (error) {
-                        console.error("\nSomething went wrong during the transfer transaction:", error);
-                        console.log("\n");
-                    }
-                }
-
-            }
-    
-            else {
-    
-                console.log("\nPOI generation failed");
-    
-            }
+        }
      
-        }
-        else {
-            console.log("\nTransfer preparation failed\n");
-        }
-    }  
+    } else {
+        console.log("\nTransfer preparation failed\n");
+    }
+
     
     rl.close();
 

@@ -41,7 +41,7 @@ export async function prepareTransfer(amount: string, username: string, addressS
 
 
   } else {
-    console.log('Recipient not registered in the pool');
+    console.log('\nRecipient not registered in the pool');
   }  
 } 
 
