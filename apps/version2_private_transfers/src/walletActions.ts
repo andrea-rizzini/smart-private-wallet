@@ -256,8 +256,6 @@ export async function send(username: string, account: string, initCode: string, 
     let addressReceiver: string = "0x";
     isValid = false;   
 
-    let askForRelayer: boolean = true;
-
     if (choice === '1') {
         let contactName: string;
         
@@ -282,7 +280,6 @@ export async function send(username: string, account: string, initCode: string, 
         }
         catch (error) {
             console.error(`\nNo contacts present in the address book\n`);
-            askForRelayer = false;
         }       
 
     }
@@ -295,60 +292,23 @@ export async function send(username: string, account: string, initCode: string, 
         }
     }
 
-    let useRelayer: boolean = false;
+    const result = await prepareTransfer(choiceAmount, username, account, addressReceiver, signer);
 
-    if (askForRelayer){
+    if (result) {
+        const signers = await hre.ethers.getSigners();
+        const { args, extData } = result;
+        try {
+            await call_userop("callTransact", [UTXOS_POOL_ADDRESS, args, extData], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
+        }
+        catch (error) {
+            console.error("\nSomething went wrong during the transfer transaction:", error);
+            console.log("\n");
+        }
         
-        isValid = false;
-    
-        console.log("\nDo you want use a relayer? [y], [n], [exit]")
-        do {
-            console.log("\nChose an option:");
-            choice = await inputFromCLI(": ", rl);
-            if (choice === 'y' || choice === 'n') {
-                if (choice === 'y') {
-                    useRelayer = true;
-                }
-                isValid = true;
-                console.log('\n');
-            }
-            else if (choice === 'exit') {
-                console.log("\n");
-                isValid = true;
-                rl.close();
-                return;
-            }
-            else {
-                console.log('\nInvalid input.');
-            }
-        } while(!isValid)
-
-        const result = await prepareTransfer(choiceAmount, username, account, addressReceiver, signer);
-        if (result) {
-            const { args, extData } = result;
-            if (useRelayer) {
-                const signers = await hre.ethers.getSigners();
-                try {
-                    await call_userop("callTransact", [UTXOS_POOL_ADDRESS, args, extData], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
-                }
-                catch (error) {
-                    console.error("\nSomething went wrong during the transfer transaction:", error);
-                    console.log("\n");
-                }
-            } else {
-                try {
-                    await call_userop("callTransact", [UTXOS_POOL_ADDRESS, args, extData], account , initCode, signer);
-                }
-                catch (error) {
-                    console.error("\nSomething went wrong during the transfer transaction:", error);
-                    console.log("\n");
-                }
-            }
-        }
-        else {
-            console.log("\nTransfer preparation failed\n");
-        }
-    }  
+    }
+    else {
+        console.log("\nTransfer preparation failed\n");
+    }
     
     rl.close();
 
