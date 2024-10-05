@@ -10,41 +10,42 @@ This project comprises three demos:
 To test the demo you need at least: two users, a faucet and a relayer; hence at least four private keys
 3) Make sure to have enough funds on your faucet
 4) Circuits:  
-Execute ```./circuit/script_v1.sh```  
-Execute ```./circuit/script_v2.sh 2```  
-Execute ```./circuit/script_v2.sh 16```  
-Execute ```./circuit/script_v3.sh 2```  
-Execute ```./circuit/script_v3.sh 16```  
+```cd circuits```  
+Execute ```./script_v1.sh```  
+Execute ```./script_v2.sh 2```  
+Execute ```./script_v2.sh 16```  
+Execute ```./script_v3.sh 2```  
+Execute ```./script_v3.sh 16```  
 A folder ```/artifacts``` inside ```/circuits``` will be created with the compiled circom stuff needed to generate zk-proofs and verification, from that folder move ```Verifier2``` and ```Verifier16``` into the folder ```contracts/src/Transfers/```; also move ```VerifierPOI2``` and ```VerifierPOI16``` into the folder ```contracts/src/Compliance/```  
 You will have to modifily the .sol files with the correct declaration name, since circom will generate all the verifier contract as ```contract Verifier [...]```  
 f.i.: ```VerifierPOI2.sol``` --> ```contract VerifierPOI2 [...]```  
 Also rename ```verifyProof``` in ```verifyPOI``` in POI verifier contracts, to avoid collisions in function names.
 5) Base contract setup:   
-Deploy ```Paymaster``` and ```AccountFactory``` using ```./contracts/scripts/deployPaymasterAndAccFactory.ts```    
+Deploy ```Paymaster``` and ```AccountFactory``` using ```npx hardhat run ./contracts/scripts/deployPaymasterAndAccFactory.ts```    
 6) Onboarding mixer setup (for version 1):   
-Deploy ```Hasher``` for onboarding mixer using ```./contracts/scripts/Onboarding/deployHasherForOnboardingMixer.ts```  
-Deploy ```Verifier``` for onboarding mixer using ```./contracts/scripts/Onboarding/deployVerifierOnboardingMixer.ts```  
-Deploy ```Onboarding mixers``` using ```./contracts/scripts/Onboarding/deployOnboardingMixers.ts```  
-Create file for caching using ```./contracts/scripts/Onboarding/createFileForMixerCaching.ts```
+Deploy ```Hasher``` for onboarding mixer using ```npx hardhat run ./contracts/scripts/Onboarding/deployHasherForOnboardingMixer.ts```  
+Deploy ```Verifier``` for onboarding mixer using ```npx hardhat run ./contracts/scripts/Onboarding/deployVerifierOnboardingMixer.ts```  
+Deploy ```Onboarding mixers``` using ```npx hardhat run ./contracts/scripts/Onboarding/deployOnboardingMixers.ts```  
+Create file for caching using ```npx hardhat run ./contracts/scripts/Onboarding/createFileForMixerCaching.ts```
 7) UTXOs pool setup (for version 2):   
-Deploy ```Pool-users``` using ```./contracts/scripts/Transfers/deployPoolUsers.ts```  
-Deploy ```Hasher``` for the UTXO-pool using ```./contracts/scripts/Transfers/deployHasherForTransactions.ts```  
-Deploy ```Verifier2``` and ```Verifier16``` using ```./contracts/scripts/Transfers/deployVerifiers.ts```  
-Deploy ```UTXOsPool``` using ```./contracts/scripts/Transfers/deployUTXOsPool.ts```  
-Deploy the ```relayer``` for version2 using  ```./contracts/scripts/Transfers/deployRelayer.ts```  
+Deploy ```Pool-users``` using ```npx hardhat run ./contracts/scripts/Transfers/deployPoolUsers.ts```  
+Deploy ```Hasher``` for the UTXO-pool using ```npx hardhat run ./contracts/scripts/Transfers/deployHasherForTransactions.ts```  
+Deploy ```Verifier2``` and ```Verifier16``` using ```npx hardhat run ./contracts/scripts/Transfers/deployVerifiers.ts```  
+Deploy ```UTXOsPool``` using ```npx hardhat run ./contracts/scripts/Transfers/deployUTXOsPool.ts```  
+Deploy the ```relayer``` for version2 using  ```npx hardhat run ./contracts/scripts/Transfers/deployRelayer.ts```  
 8) UTXOs pool with compliance setup (for version3):  
-Deploy ```VerifierPOI2``` and ```VerifierPOI16``` using ```./contracts/scripts/Compliance/deployPOIVerifiers.ts```  
-Deploy  ```UTXOsPoolWithCompliance``` with ```contracts/scripts/Compliance/deployUTXOsPoolWithCompliance.ts```  
-Deploy the ```relayer``` for version3 using  ```./contracts/scripts/Compliance/deployRelayer.ts```
+Deploy ```VerifierPOI2``` and ```VerifierPOI16``` using ```npx hardhat run ./contracts/scripts/Compliance/deployPOIVerifiers.ts```  
+Deploy  ```UTXOsPoolWithCompliance``` with ```npx hardhat run ./contracts/scripts/Compliance/deployUTXOsPoolWithCompliance.ts```  
+Deploy the ```relayer``` for version3 using  ```npx hardhat run ./contracts/scripts/Compliance/deployRelayer.ts```
 9) Initialize databases for each version with:   
-```npx hardhat run /apps/version1_onboarding/database/initialize_db.ts```  
-```npx hardhat run /apps/version2_private_transfers/database/initialize_db.ts```  
-```npx hardhat run /apps/version3_compliance/database/initialize_db.ts```  
+```npx hardhat run ./apps/version1_onboarding/database/initialize_db.ts```  
+```npx hardhat run ./apps/version2_private_transfers/database/initialize_db.ts```  
+```npx hardhat run ./apps/version3_compliance/database/initialize_db.ts```  
 Note: a ```.db``` file will be created inside ```/apps/versionX/data/```;  if you want initialize a new database, you just have to execute the script ```npx hardhat run /apps/versionX/database/deleteDB.ts``` and execute again one of the command above, for the version you want deploy the database.
 9) Start the version you prefer, from the root of the project, with:  
-version_1: ```npx hardhat run /apps/version1_onboarding/main.ts```  
-version_2: ```npx hardhat run /apps/version2_private_transfers/main.ts```  
-version_3: ```npx hardhat run /apps/version3_compliance/main.ts```
+version_1: ```npx hardhat run ./apps/version1_onboarding/main.ts```  
+version_2: ```npx hardhat run ./apps/version2_private_transfers/main.ts```  
+version_3: ```npx hardhat run ./apps/version3_compliance/main.ts```
 
 # Demo for version 2 (soon for version 3):
 This demo shows all the functionalities of version_1 and version_2.    

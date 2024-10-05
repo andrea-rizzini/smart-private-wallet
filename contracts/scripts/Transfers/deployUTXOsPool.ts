@@ -21,10 +21,10 @@ async function main() {
 
     envConfig.UTXOS_POOL_ADDRESS = utxosPool_.target.toString();
 
-    await run(`verify:verify`, {
-        address: utxosPool_.target,
-        constructorArguments: [VERIFIER_2, VERIFIER_16, 20, HASHER_TRANSFERS],
-    });
+    // await run(`verify:verify`, {
+    //     address: utxosPool_.target,
+    //     constructorArguments: [VERIFIER_2, VERIFIER_16, 20, HASHER_TRANSFERS],
+    // });
 
     const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');
     fs.writeFileSync('.env', updatedEnv);

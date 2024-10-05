@@ -2,7 +2,6 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import hre from "hardhat";
 import path from 'path';
-import { clearJsonFile } from '../../apps/version1_onboarding/src/utils/clearJsonFile';
 
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
 
