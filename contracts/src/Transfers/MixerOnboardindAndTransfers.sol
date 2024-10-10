@@ -1,25 +1,36 @@
 // SPDX-License-Identifier: UNLICENSED
-
-pragma solidity ^0.8.9;
-pragma experimental ABIEncoderV2;
+pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol"; 
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";   
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import { IVerifier } from "./interfaces/IVerifier.sol";
+import "../Onboarding/MerkleTreeWithHistoryOnboarding.sol";
 import "./MerkleTreeWithHistoryTransactions.sol";
+import { IVerifier } from "./interfaces/IVerifier.sol";
 
-contract UTXOsPool is MerkleTreeWithHistoryTransactions, ReentrancyGuard {
+interface IVerifierOnboarding {
+  function verifyOnboardingProof(bytes memory _proof, uint256[2] memory _input) external returns (bool);
+}
+
+contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleTreeWithHistoryTransactions, ReentrancyGuard {
 
   using SafeERC20 for IERC20;
 
-  IVerifier public immutable verifier2;
-  IVerifier public immutable verifier16;
-
   IERC20 public token;
 
-  uint256 public maximumDepositAmount = 100 * 10**6; // 100 USDC
+  // Variable declaration for onboarding
+  IVerifierOnboarding public immutable verifierOnboarding;
+
+  mapping(bytes32 => bool) public commitments;
   mapping(bytes32 => bool) public nullifierHashes;
+
+  // Variable and structures declaration for transactions
+  uint256 public maximumDepositAmount = 100 * 10**6; // 100 USDC
+  mapping(bytes32 => bool) public nullifierHashesTransfers;
+
+  IVerifier public immutable verifier2;
+  IVerifier public immutable verifier16;
 
   struct ExtData {
     address recipient;
@@ -37,29 +48,94 @@ contract UTXOsPool is MerkleTreeWithHistoryTransactions, ReentrancyGuard {
     bytes32 extDataHash;
   }
 
+  // Events for onboarding
+  event CommitmentCreated(
+    bytes32 indexed commitment,
+    uint32 leafIndex,
+    uint256 timestamp
+  );
+
+  event Withdrawal(
+    bytes32 indexed nullifierHash
+  );
+
+  // Events for transactions
+
   event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput);
   event NewNullifier(bytes32 nullifier);
 
   constructor(
+    IVerifierOnboarding _verifierOnboarding,
     IVerifier _verifier2,
     IVerifier _verifier16,
+    IHasherOnboarding _hasherOnboarding,
+    address _hasherTransactions,
     IERC20 _token,
-    uint32 _levels,
-    address _hasher
-  )
-    MerkleTreeWithHistoryTransactions(_levels, _hasher)
-  {
+    uint32 _merkleTreeHeightOnboarding,
+    uint32 _merkleTreeHeightTransactions
+  ) MerkleTreeWithHistoryOnboarding(_merkleTreeHeightOnboarding, _hasherOnboarding) 
+    MerkleTreeWithHistoryTransactions(_merkleTreeHeightTransactions, _hasherTransactions) {
+    verifierOnboarding = _verifierOnboarding;
     verifier2 = _verifier2;
     verifier16 = _verifier16;
     token = _token;
-    super._initialize();
   }
 
-  function deposit(Proof memory _args, ExtData memory _extData) external payable { 
-    if (_extData.extAmount > 0) {
-      require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
+  // Functions for onboarding
+  function createCommitment(bytes32 _commitment, uint256 extAmount) external nonReentrant{
+    require(!commitments[_commitment], "The commitment has been submitted");
+    uint32 insertedIndex = _insert(_commitment);
+    commitments[_commitment] = true;
+    emit CommitmentCreated(_commitment, insertedIndex, block.timestamp);
+    token.safeTransferFrom(msg.sender, address(this), /*denomination*/ extAmount);
+  }
+
+  function redeemCommitment(  
+    bytes calldata _proof,
+    bytes32 _root,
+    bytes32 _nullifierHash,
+    Proof memory _args, 
+    ExtData memory _extData
+  ) external payable nonReentrant {
+    require(!nullifierHashes[_nullifierHash], "The note has been already spent");
+    require(isKnownRoot(_root), "Cannot find your merkle root"); 
+
+    require(
+      verifierOnboarding.verifyOnboardingProof(
+        _proof,
+        [uint256(_root), uint256(_nullifierHash)]
+      ),
+      "Invalid withdraw proof"
+    );
+
+    _deposit_after_redeem(_args, _extData);
+
+    nullifierHashes[_nullifierHash] = true;
+
+    emit Withdrawal(_nullifierHash);
+
+  }
+
+  // Functions for transactions
+
+    function _deposit_after_redeem(Proof memory _args, ExtData memory _extData) internal nonReentrant {
+    require(isKnownRoot_(_args.root), "Invalid merkle root");
+    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
+      require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
     }
-     _deposit(_args, _extData);
+    require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
+    require(verifyProof(_args), "Invalid transaction proof");
+
+    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
+      nullifierHashes[_args.inputNullifiers[i]] = true;
+    }
+
+    _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);
+    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
+      emit NewNullifier(_args.inputNullifiers[i]);
+    }
   }
 
   function _deposit(Proof memory _args, ExtData memory _extData) internal nonReentrant {
@@ -116,6 +192,7 @@ contract UTXOsPool is MerkleTreeWithHistoryTransactions, ReentrancyGuard {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
   }
+
 
   function isSpent(bytes32 _nullifierHash) public view returns (bool) {
     return nullifierHashes[_nullifierHash];

@@ -7,7 +7,7 @@ import { call_userop } from "./userop/createUserOp";
 import { createNote } from "./note/createNote";
 import { checkSanctionedAddress } from "./poi/checkIfSanctioned";
 import { CommitmentEvents, GeneratePOIParams } from './pool/types';
-import { fetchCommitments } from './pool/poolFunctions';
+import { fetchCommitmentsUTXOPool, fetchEventsAssociationSet } from './pool/poolFunctions';
 import { generatePOI } from './poi/generatePOI';
 import { getAccountAddress, getTotalAmount } from "./pool/poolFunctions";
 import { getAddressOfContactOfUser, getContactsByUserId, getID, getUnredeemedNullifiersByUserId, insertContact, insertKeypair, insertUserNullifier, 
@@ -18,6 +18,7 @@ import { LinkNote, USDCStr } from "./types/link";
 import { prepareDeposit, prepareTransfer, prepareWithdrawal } from "./pool/poolPrepareActions";
 import { Utxo } from "./pool/utxo";
 
+const ASSOCIATION_SET = process.env.ASSOCIATION_SET || '';
 const INIT_CODE_RELAYER_V3 = process.env.INIT_CODE_RELAYER_V3 || '';
 const ONBOARDING_MIXER_ADDRESS_TEST = process.env.ONBOARDING_MIXER_ADDRESS_TEST || '';
 const ONBOARDING_MIXER_ADDRESS_LOW = process.env.ONBOARDING_MIXER_ADDRESS_LOW || '';
@@ -310,11 +311,14 @@ export async function send(username: string, account: string, initCode: string, 
 
         console.log("\nGenerating proof of innocence ...");
 
-        const events: CommitmentEvents = await fetchCommitments()
+        const events_mixer: CommitmentEvents = await fetchCommitmentsUTXOPool()
+
+        const events_association_set = await fetchEventsAssociationSet()
 
         const params: GeneratePOIParams = {
             inputs: result.unspentUtxo,
-            events: events,
+            events_mixer: events_mixer,
+            events_association_set: events_association_set,
             senderAddress: account
         }
 
@@ -328,6 +332,20 @@ export async function send(username: string, account: string, initCode: string, 
             try {
                 await call_userop("callTransact", [UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, args, args_poi, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
                 console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
+                await new Promise(resolve => setTimeout(resolve, 5000)); // wait for the previous transaction to be mined
+                
+                // if (args_poi && args_poi.POIcommitments) {
+                //     const hasNewCommitments = args_poi.POIcommitments.some(commitment => {
+                //         return !events_mixer.includes(commitment);
+                //     });
+
+                //     if (hasNewCommitments) {
+                //         return;
+                //     } else {
+                //         // we can propagate the new commitments to the association set
+                //         await call_userop("callAddToTheAssociationSet", [ASSOCIATION_SET, args.outputCommitments], account , initCode, signer);
+                //     }
+                // }
             }
             catch (error) {
                 console.error("\nSomething went wrong during the transfer transaction:", error);
@@ -420,27 +438,29 @@ export async function receive(signer: any, account: string, initCode: string) {
     } 
 
     else {
-        // add a new utxo with that value only if the address is not in the sacitonated list
-
-        console.log("\nChecking if the address is present in the sanctioned list");
-        console.log("Or if it has been involved in transactions with sanctioned addresses");
-        console.log("...")
-
-        const { sanction, message } = await checkSanctionedAddress(account, 2); // be carefull to increse the number of hops, complexity can increase exponentially
-
-        if (sanction) {
-            console.log("\nYou cannot fund the private amount.");
-            console.log(`\n${message}\n`);
-            return;
-        } else {
-            console.log(`\n${message}`);
-        }
         
         const result = await prepareDeposit(choiceAmount, account, signer);
         if (result) {
             const { args, extData } = result;
             try {
                 await call_userop("callDeposit", [UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, args, extData], account , initCode, signer);
+                
+                // sort of add with delay for the deposit
+                console.log("\nChecking if the address is present in the sanctioned list");
+                console.log("Or if it has been involved in transactions with sanctioned addresses");
+                console.log("...");
+                const { sanction, message } = await checkSanctionedAddress(account, 2); // be carefull to increse the number of hops, complexity can increase exponentially
+
+                if (sanction) {                   
+                    console.log(`\n${message}\n`);
+                    console.log("\nYour deposit won't be added to the association set.");
+                    return;
+                } else {
+                    console.log(`\n${message}`);
+                    console.log("\nYour deposit will be added to the association set.");
+                    await new Promise(resolve => setTimeout(resolve, 5000)); // wait for the previous transaction to be mined
+                    await call_userop("callAddToTheAssociationSet", [ASSOCIATION_SET, args.outputCommitments], account , initCode, signer);
+                }
                 console.log(`\nFunded private amount with ${choiceAmount} USDC\n`)
             }
             catch (error) {
@@ -558,11 +578,14 @@ export async function withdraw(username: string, account: string, initCode: stri
 
         console.log("\nGenerating proof of innocence ...");
 
-        const events: CommitmentEvents = await fetchCommitments()
+        const events_mixer: CommitmentEvents = await fetchCommitmentsUTXOPool()
+
+        const events_association_set = await fetchEventsAssociationSet()
 
         const params: GeneratePOIParams = {
             inputs: result.unspentUtxo,
-            events: events,
+            events_mixer: events_mixer,
+            events_association_set: events_association_set,
             senderAddress: account
         }
 

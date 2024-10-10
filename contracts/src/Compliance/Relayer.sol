@@ -7,6 +7,10 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+interface IAssociationSet{
+    function addToTheAssociationSet(bytes32[2] calldata _commitment) external;
+}
+
 interface IUTXOsPoolWithCompliance {
   struct ExtData {
     address recipient;
@@ -28,6 +32,7 @@ interface IUTXOsPoolWithCompliance {
     bytes proof;
     bytes32 root;
     bytes32[] inputNullifiers;
+    bytes32[] commitments;
   }
    
   function transact(Proof memory _args, POI memory _args_poi, ExtData memory _extData) external payable;
@@ -68,11 +73,14 @@ contract Relayer is IAccount {
     function callTransact(
         address poolAddress,
         IUTXOsPoolWithCompliance.Proof memory _proofArgs,
-        IUTXOsPoolWithCompliance.POI memory _proofArgs_poi,
+        IUTXOsPoolWithCompliance.POI memory _proof_poi,
         IUTXOsPoolWithCompliance.ExtData memory _extData
     ) external payable {
-        uint256 valueToSend = _extData.extAmount > 0 ? uint256(_extData.extAmount) : 0;
-        IUTXOsPoolWithCompliance(poolAddress).transact{value: valueToSend}(_proofArgs, _proofArgs_poi, _extData);
+        IUTXOsPoolWithCompliance(poolAddress).transact(_proofArgs, _proof_poi, _extData);
+    }
+
+    function callAddToTheAssociationSet(address associationSet, bytes32[2] calldata _commitments) external {
+        IAssociationSet(associationSet).addToTheAssociationSet(_commitments);
     }
 
 }

@@ -15,10 +15,11 @@ import { prepareDeposit, prepareTransfer, prepareWithdrawal } from "./pool/poolP
 import { Utxo } from "./pool/utxo";
 
 const INIT_CODE_RELAYER = process.env.INIT_CODE_RELAYER || '';
-const ONBOARDING_MIXER_ADDRESS_TEST = process.env.ONBOARDING_MIXER_ADDRESS_TEST || '';
-const ONBOARDING_MIXER_ADDRESS_LOW = process.env.ONBOARDING_MIXER_ADDRESS_LOW || '';
-const ONBOARDING_MIXER_ADDRESS_MEDIUM = process.env.ONBOARDING_MIXER_ADDRESS_MEDIUM || '';
-const ONBOARDING_MIXER_ADDRESS_HIGH = process.env.ONBOARDING_MIXER_ADDRESS_HIGH || '';
+const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
+// const ONBOARDING_MIXER_ADDRESS_TEST = process.env.ONBOARDING_MIXER_ADDRESS_TEST || '';
+// const ONBOARDING_MIXER_ADDRESS_LOW = process.env.ONBOARDING_MIXER_ADDRESS_LOW || '';
+// const ONBOARDING_MIXER_ADDRESS_MEDIUM = process.env.ONBOARDING_MIXER_ADDRESS_MEDIUM || '';
+// const ONBOARDING_MIXER_ADDRESS_HIGH = process.env.ONBOARDING_MIXER_ADDRESS_HIGH || '';
 const POOL_USERS_ADDRESS = process.env.POOL_USERS_ADDRESS || '';
 const RELAYER_ADDRESS = process.env.RELAYER_ADDRESS || '';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
@@ -43,7 +44,7 @@ export async function setup(username: string, account: string, initCode: string,
 
         insertKeypair(index, keypair.privkey, keypair.pubkey.toString(), keypair.encryptionKey);
 
-        console.log("\nRegistered successfully!\n")
+        // console.log("\nRegistered successfully!\n")
     }
 }
 
@@ -78,77 +79,96 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     const nameOnbUser: string = await inputFromCLI("\nEnter the name of the invited user to be added on your contacts: ", rl);
 
-    console.log("\nchoose the amount to send for onboarding:");
+    // console.log("\nchoose the amount to send for onboarding:");
 
-    const amountOptions = ['\n[1] 0.01 USDC', '[2] 0.1 USDC', '[3] 1 USDC', '[4] 10 USDC', '[5] Return to the menu'];
+    // const amountOptions = ['\n[1] 0.01 USDC', '[2] 0.1 USDC', '[3] 1 USDC', '[4] 10 USDC', '[5] Return to the menu'];
 
-    for (let i = 0; i < amountOptions.length; i++) {
-        console.log(amountOptions[i]);
-    }
+    // for (let i = 0; i < amountOptions.length; i++) {
+    //     console.log(amountOptions[i]);
+    // }
 
-    let choice: string;
+    // let choice: string;
+    let choiceAmount: string;
     let isValid: boolean = false; 
 
 
     const usdcContract = await hre.ethers.getContractAt("IERC20", USDC_ADDRESS);
     const usdcBalance = await usdcContract.balanceOf(account);
 
-    do {
-        console.log('\n\nChose an option:')
-        choice = await inputFromCLI(": ", rl);
-        if (choice === '1' || choice === '2' || choice === '3' || choice === '4') {
+    // do {
+    //     console.log('\n\nChose an option:')
+    //     choice = await inputFromCLI(": ", rl);
+    //     if (choice === '1' || choice === '2' || choice === '3' || choice === '4') {
 
-            const thresholds = {
-                '1': 10000, 
-                '2': 100000, 
-                '3': 1000000, 
-                '4': 10000000
-            };
+    //         const thresholds = {
+    //             '1': 10000, 
+    //             '2': 100000, 
+    //             '3': 1000000, 
+    //             '4': 10000000
+    //         };
     
-            if (usdcBalance >= thresholds[choice]) {
-                isValid = true;
-                rl.close();
-            } else {
-                console.log("\nInsufficient funds.");
-            }
+    //         if (usdcBalance >= thresholds[choice]) {
+    //             isValid = true;
+    //             rl.close();
+    //         } else {
+    //             console.log("\nInsufficient funds.");
+    //         }
     
+    //     }
+    //     else if (choice === '5') {
+    //         console.log("\n");
+    //         isValid = true;
+    //         rl.close();
+    //         return;
+    //     }
+    //     else {
+    //         console.log('\nInvalid input.');
+    //     }
+    // } while (!isValid);
+
+    do {
+        choiceAmount = await inputFromCLI("\nInsert the amount (or type exit to return to the menu): ", rl);
+
+        const parsedAmount = parseFloat(choiceAmount);
+
+        if (!isNaN(parsedAmount) && parsedAmount > 0 && usdcBalance >= hre.ethers.parseUnits(choiceAmount, 6)) {
+            isValid = true;
         }
-        else if (choice === '5') {
+        else if (choiceAmount === 'exit') {
             console.log("\n");
             isValid = true;
             rl.close();
             return;
         }
         else {
-            console.log('\nInvalid input.');
+            console.log("\nInvalid amount. Please enter a valid number.");
         }
     } while (!isValid);
 
-    let usdcValue: USDCStr;
-    let functionName: string = "append_commitment";
-    let id: string;
+    let usdcValue: USDCStr = `${parseFloat(choiceAmount)}` as USDCStr;
+    let id: string = MIXER_ONBOARDING_AND_TRANSFERS;
 
-    switch (choice) {
-        case '1':
-            usdcValue = "0.01";
-            id = ONBOARDING_MIXER_ADDRESS_TEST;
-            break;
-        case '2':
-            usdcValue = "0.1";
-            id = ONBOARDING_MIXER_ADDRESS_LOW;
-            break;
-        case '3':
-            usdcValue = "1";
-            id = ONBOARDING_MIXER_ADDRESS_MEDIUM;
-            break;
-        case '4':
-            usdcValue = "10";
-            id = ONBOARDING_MIXER_ADDRESS_HIGH;
-            break;
-        default:
-            usdcValue = "0"; 
-            id = "";
-    }
+    // switch (choice) {
+    //     case '1':
+    //         usdcValue = "0.01";
+    //         id = ONBOARDING_MIXER_ADDRESS_TEST;
+    //         break;
+    //     case '2':
+    //         usdcValue = "0.1";
+    //         id = ONBOARDING_MIXER_ADDRESS_LOW;
+    //         break;
+    //     case '3':
+    //         usdcValue = "1";
+    //         id = ONBOARDING_MIXER_ADDRESS_MEDIUM;
+    //         break;
+    //     case '4':
+    //         usdcValue = "10";
+    //         id = ONBOARDING_MIXER_ADDRESS_HIGH;
+    //         break;
+    //     default:
+    //         usdcValue = "0"; 
+    //         id = "";
+    // }
 
     // 2) create the note 
 
@@ -159,7 +179,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
         note: noteString,
         sender: name,
         sender_address: account,
-        usdc: usdcValue, // 0.01, 0.1, 1 or 10 usdc
+        usdc: usdcValue, // arbitrary denomination
         id: id // address of the onboarding mixer contract
     };
 
@@ -175,7 +195,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     const usdcAmount = hre.ethers.parseUnits(usdcValue, 6)
 
-    await call_userop(functionName, [id, commitmentHex, usdcAmount], account , initCode, signer);
+    await call_userop(/*"appendCommitment"*/ "appendCommitmentV2", [id, commitmentHex, usdcAmount], account , initCode, signer);
 
     // 4) send the link to the invited user
 

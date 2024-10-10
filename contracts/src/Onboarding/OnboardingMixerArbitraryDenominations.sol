@@ -11,11 +11,11 @@ interface IVerifier {
   function verifyProof(bytes memory _proof, uint256[2] memory _input) external returns (bool);
 }
 
-contract OnboardingMixer is MerkleTreeWithHistoryOnboarding, ReentrancyGuard {
+contract OnboardingMixerArbitraryDenomination is MerkleTreeWithHistoryOnboarding, ReentrancyGuard {
 
   using SafeERC20 for IERC20;
 
-  uint256 public denomination;
+//   uint256 public denomination;
 
   IVerifier public immutable verifier;
 
@@ -43,21 +43,20 @@ contract OnboardingMixer is MerkleTreeWithHistoryOnboarding, ReentrancyGuard {
     IVerifier _verifier,
     IHasherOnboarding _hasher,
     IERC20 _token,
-    uint256 _denomination,
     uint32 _merkleTreeHeight
   ) MerkleTreeWithHistoryOnboarding(_merkleTreeHeight, _hasher) {
-    require(_denomination > 0, "denomination should be greater than 0");
-    denomination = _denomination;
+    // require(_denomination > 0, "denomination should be greater than 0");
+    // denomination = _denomination;
     verifier = _verifier;
     token = _token;
   }
 
-  function createCommitment(bytes32 _commitment) external nonReentrant{
+  function createCommitment(bytes32 _commitment, uint256 extAmount) external nonReentrant{
     require(!commitments[_commitment], "The commitment has been submitted");
     uint32 insertedIndex = _insert(_commitment);
     commitments[_commitment] = true;
     emit CommitmentCreated(_commitment, insertedIndex, block.timestamp);
-    token.safeTransferFrom(msg.sender, address(this), denomination);
+    token.safeTransferFrom(msg.sender, address(this), /*denomination*/ extAmount);
   }
 
   function redeemCommitment(  
@@ -78,9 +77,9 @@ contract OnboardingMixer is MerkleTreeWithHistoryOnboarding, ReentrancyGuard {
 
     nullifierHashes[_nullifierHash] = true;
 
-    emit Withdrawal(msg.sender, _nullifierHash);
+    // emit Withdrawal(msg.sender, _nullifierHash);
 
-    token.safeTransfer(msg.sender, denomination);
+    // token.safeTransfer(msg.sender, denomination);
 
   }
 

@@ -3,14 +3,14 @@ pragma solidity ^0.8.12;
 
 // import "hardhat/console.sol";
 
-interface IHasher {
+interface IHasherOnboarding {
   function MiMCSponge(uint256 in_xL, uint256 in_xR, uint256 k) external pure returns (uint256 xL, uint256 xR);
 }
 
-contract MerkleTreeWithHistory {
+contract MerkleTreeWithHistoryOnboarding {
   uint256 public constant FIELD_SIZE = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
   uint256 public constant ZERO_VALUE = 21663839004416932945382355908790599225266501822907911457504978515578255421292; 
-  IHasher public immutable hasher;
+  IHasherOnboarding public immutable hasher;
 
   uint32 public levels;
 
@@ -20,29 +20,29 @@ contract MerkleTreeWithHistory {
   // filledSubtrees and roots could be bytes32[size], but using mappings makes it cheaper because
   // it removes index range check on every interaction
   mapping(uint256 => bytes32) public filledSubtrees;
-  mapping(uint256 => bytes32) public roots;
+  mapping(uint256 => bytes32) public roots_;
   uint32 public constant ROOT_HISTORY_SIZE = 30;
   uint32 public currentRootIndex = 0;
-  uint32 public nextIndex = 0;
+  uint32 public nextIndexT = 0;
 
-  constructor(uint32 _levels, IHasher _hasher) {
+  constructor(uint32 _levels, IHasherOnboarding _hasher) {
     require(_levels > 0, "_levels should be greater than zero");
     require(_levels < 32, "_levels should be less than 32");
     levels = _levels;
     hasher = _hasher;
 
     for (uint32 i = 0; i < _levels; i++) {
-      filledSubtrees[i] = zeros(i);
+      filledSubtrees[i] = zeros_(i);
     }
 
-    roots[0] = zeros(_levels - 1);
+    roots_[0] = zeros_(_levels - 1);
   }
 
   /**
     @dev Hash 2 tree leaves, returns MiMC(_left, _right)
   */
   function hashLeftRight(
-    IHasher _hasher,
+    IHasherOnboarding _hasher,
     bytes32 _left,
     bytes32 _right
   ) public pure returns (bytes32) {
@@ -57,7 +57,7 @@ contract MerkleTreeWithHistory {
   }
 
   function _insert(bytes32 _leaf) internal returns (uint32 index) {
-    uint32 _nextIndex = nextIndex;
+    uint32 _nextIndex = nextIndexT;
     require(_nextIndex != uint32(2)**levels, "Merkle tree is full. No more leaves can be added");
     uint32 currentIndex = _nextIndex;
     bytes32 currentLevelHash = _leaf;
@@ -67,7 +67,7 @@ contract MerkleTreeWithHistory {
     for (uint32 i = 0; i < levels; i++) {
       if (currentIndex % 2 == 0) {
         left = currentLevelHash;
-        right = zeros(i);
+        right = zeros_(i);
         filledSubtrees[i] = currentLevelHash;
       } else {
         left = filledSubtrees[i];
@@ -79,8 +79,8 @@ contract MerkleTreeWithHistory {
 
     uint32 newRootIndex = (currentRootIndex + 1) % ROOT_HISTORY_SIZE;
     currentRootIndex = newRootIndex;
-    roots[newRootIndex] = currentLevelHash;
-    nextIndex = _nextIndex + 1;
+    roots_[newRootIndex] = currentLevelHash;
+    nextIndexT = _nextIndex + 1;
     return _nextIndex;
   }
 
@@ -94,7 +94,7 @@ contract MerkleTreeWithHistory {
     uint32 _currentRootIndex = currentRootIndex;
     uint32 i = _currentRootIndex;
     do {
-      if (_root == roots[i]) {
+      if (_root == roots_[i]) {
         return true;
       }
       if (i == 0) {
@@ -109,11 +109,11 @@ contract MerkleTreeWithHistory {
     @dev Returns the last root
   */
   function getLastRoot() public view returns (bytes32) {
-    return roots[currentRootIndex];
+    return roots_[currentRootIndex];
   }
 
   /// @dev provides Zero (Empty) elements for a MiMC MerkleTree. Up to 32 levels
-  function zeros(uint256 i) public pure returns (bytes32) {
+  function zeros_(uint256 i) public pure returns (bytes32) {
     if (i == 0) return bytes32(0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c);
     else if (i == 1) return bytes32(0x256a6135777eee2fd26f54b8b7037a25439d5235caee224154186d2b8a52e31d);
     else if (i == 2) return bytes32(0x1151949895e82ab19924de92c40a3d6f7bcb60d92b00504b8199613683f0c200);

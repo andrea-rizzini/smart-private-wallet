@@ -4,7 +4,7 @@ import path from 'path';
 import { ArgsPOI } from '../pool/types';
 import { buildMerkleTree } from "../pool/poolFunctions";
 import { checkSanctionedAddress } from "./checkIfSanctioned";
-import { CommitmentEvents } from "../pool/types";
+import { CommitmentEvent, CommitmentEvents } from "../pool/types";
 import { toFixedHex } from "../utils/toHex";
 import { GeneratePOIParams } from "../pool/types";
 import  { prove } from "../proof/prover";
@@ -26,56 +26,51 @@ export function shuffleEvents(array: CommitmentEvents) {
     return array
 }
 
-export async function generatePOI(params: GeneratePOIParams, n: number = 5) { // n is the number of events to include in the merkle tree
-    
-    // first check if the sender is sanctioned, it may be that the sender address has become sanctioned in the meantime for illegal activities in other applications
-    // if that is the case, he can't generate a valid POI
-    // if that is not the case, we can include his utxos to build the POI
-    const { sanction, message } = await checkSanctionedAddress(params.senderAddress, 2);
-    
-    if (sanction) {
-        console.log(`\n${message}`);
-        return null;
-    }
+export async function generatePOI(params: GeneratePOIParams, n: number = 10) { // n is the cardinality of the assosiaction set
 
     const inputs = params.inputs;
-    const events = params.events;
+    const events_mixer = params.events_mixer;
+    const events_association_set = params.events_association_set;
 
-    let events_: CommitmentEvents = []; // this will be the array of events that will be used to build the POI
+    let events_: CommitmentEvents = []; // this is the array of events that will be used to build the POI, then also published on-chain
 
-    // here we add events only associated to deposits and with a not sanctioned address
-    for (const event of events) {
-        const transactionHash = event.transactionHash;
-        const receipt = await hre.ethers.provider.getTransactionReceipt(transactionHash);
-        receipt.logs.forEach(async (log: any, index: number) => {
-            if (index === 5 && log.topics.length === 4) { // length 4 means it's a deposit event
-                const address = '0x' + log.topics[2].slice(26)
-                if (address !== RELAYER_ADDRESS && address !== params.senderAddress && !(await checkSanctionedAddress(address, 2)).sanction) {
-                    events_.push(event);
-                }         
-            }
-        })
-    }
-
-    // shuffle and take first n events
-    events_ = shuffleEvents(events_).slice(0, n);
-
-    // here we add events associated with user's input utxos
-
+    // we take events associated to the user
+    const userEvent: CommitmentEvents = [];
     for (const input of inputs) {
-        //if (input.amount > 0) {
-            const event = events.find(event => event.commitment === toFixedHex(input.commitment));
-            
-            if (event) {
-                events_.push(event); 
-            }
-        //}
+   
+        const event: CommitmentEvent = events_mixer.find(event_mixer => event_mixer.commitment === toFixedHex(input.commitment)) as CommitmentEvent;
+        
+        if (event) {
+            userEvent.push(event); 
+        }
+
     }
 
-    // let nIns = events_.length;
+    // we take all the events which are also in the association set
+    for (const event of events_mixer) {
+        const association = events_association_set.find(association => association.commitment === event.commitment);
+        if (association) {
+            events_.push(event);
+        }
+    }    
 
-    // reshuffle after adding input utxos
+    // check if user events are inside events_, if so remove them from events_
+    for (const user of userEvent) {
+        const index = events_.findIndex(event => event.commitment === user.commitment);
+        if (index > -1) {
+            events_.splice(index, 1);
+        }
+    }
+
+    // take just n-2 events from the association set
     events_ = shuffleEvents(events_);
+    events_ = events_.slice(0, n-2);
+
+    // add user events
+    events_ = events_.concat(userEvent);
+    events_ = shuffleEvents(events_);
+
+    // console.log(events_);
 
     const tree = await buildMerkleTree({ events: events_ });
 
@@ -123,7 +118,8 @@ export async function generatePOI(params: GeneratePOIParams, n: number = 5) { //
     const argsPOI: ArgsPOI = {
         proof,
         root: toFixedHex(input.root),
-        inputNullifiers: inputs.map((x) => toFixedHex(x.getNullifier()))
+        inputNullifiers: inputs.map((x) => toFixedHex(x.getNullifier())),
+        commitments: events_.map((x) => toFixedHex(x.commitment))
     }
 
     return argsPOI;

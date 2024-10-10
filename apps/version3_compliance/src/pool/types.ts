@@ -14,6 +14,7 @@ export type ArgsPOI = {
   proof: BytesLike
   root: BytesLike
   inputNullifiers: string[]
+  commitments: string[]
 }
 
 export type ProofParams = {
@@ -25,7 +26,7 @@ export type ProofParams = {
   recipient: string | bigint
 }
 
-type CommitmentEvent = {
+export type CommitmentEvent = {
   blockNumber: number
   transactionHash: string
   index: number
@@ -34,6 +35,14 @@ type CommitmentEvent = {
 }
 
 export type CommitmentEvents = CommitmentEvent[]
+
+type CommitmentEventAssociationSet = {
+  blockNumber: number
+  transactionHash: string
+  commitment: string
+}
+
+export type CommitmentEventsAssociationSet = CommitmentEventAssociationSet[]
 
 export type CachedData = {
   latestBlock: number
@@ -60,7 +69,8 @@ export type CreateTransactionParams = {
 
 export type GeneratePOIParams = {
   inputs: BaseUtxo[]
-  events: CommitmentEvents
+  events_mixer: CommitmentEvents
+  events_association_set: CommitmentEventsAssociationSet
   senderAddress: string
 }
 

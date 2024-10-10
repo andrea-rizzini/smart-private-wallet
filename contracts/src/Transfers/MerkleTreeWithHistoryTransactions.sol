@@ -3,87 +3,87 @@ pragma solidity ^0.8.12;
 
 import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 
-interface IHasher {
+interface IHasherTransactions {
   function poseidon(bytes32[2] calldata inputs) external pure returns (bytes32);
 }
 
-contract MerkleTreeWithHistory is Initializable {
-  uint256 public constant FIELD_SIZE = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+contract MerkleTreeWithHistoryTransactions is Initializable {
+  uint256 public constant FIELD_SIZE_ = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
-  IHasher public immutable hasher;
-  uint32 public immutable levels;
+  IHasherTransactions public immutable hasherT;
+  uint32 public immutable levelsT;
 
-  mapping(uint256 => bytes32) public filledSubtrees;
+  mapping(uint256 => bytes32) public filledSubtrees_;
   mapping(uint256 => bytes32) public roots;
-  uint32 public constant ROOT_HISTORY_SIZE = 100;
-  uint32 public currentRootIndex = 0; // todo remove
+  uint32 public constant ROOT_HISTORY_SIZE_ = 100;
+  uint32 public currentRootIndexTransactions = 0; 
   uint32 public nextIndex = 0;
 
   constructor(uint32 _levels, address _hasher) {
     require(_levels > 0, "_levels should be greater than zero");
     require(_levels < 32, "_levels should be less than 32");
-    levels = _levels;
-    hasher = IHasher(_hasher);
+    levelsT = _levels;
+    hasherT = IHasherTransactions(_hasher);
   }
 
   function _initialize() internal {
-    for (uint32 i = 0; i < levels; i++) {
-      filledSubtrees[i] = zeros(i);
+    for (uint32 i = 0; i < levelsT; i++) {
+      filledSubtrees_[i] = zeros(i);
     }
 
-    roots[0] = zeros(levels);
+    roots[0] = zeros(levelsT);
   }
 
   function hashLeftRight(bytes32 _left, bytes32 _right) public view returns (bytes32) {
-    require(uint256(_left) < FIELD_SIZE, "_left should be inside the field");
-    require(uint256(_right) < FIELD_SIZE, "_right should be inside the field");
+    require(uint256(_left) < FIELD_SIZE_, "_left should be inside the field");
+    require(uint256(_right) < FIELD_SIZE_, "_right should be inside the field");
     bytes32[2] memory input;
     input[0] = _left;
     input[1] = _right;
-    return hasher.poseidon(input); 
+    return hasherT.poseidon(input); 
   }
 
   // this inserts pairs of leaves for better efficiency, since we have 2 outputs we insert them both at the same time
   function _insert(bytes32 _leaf1, bytes32 _leaf2) internal returns (uint32 index) {
     uint32 _nextIndex = nextIndex;
-    require(_nextIndex != uint32(2)**levels, "Merkle tree is full. No more leaves can be added");
+    require(_nextIndex != uint32(2)**levelsT, "Merkle tree is full. No more leaves can be added");
     uint32 currentIndex = _nextIndex / 2;
     bytes32 currentLevelHash = hashLeftRight(_leaf1, _leaf2);
     bytes32 left;
     bytes32 right;
 
-    for (uint32 i = 1; i < levels; i++) {
+    for (uint32 i = 1; i < levelsT; i++) {
       if (currentIndex % 2 == 0) {
         left = currentLevelHash;
         right = zeros(i);
-        filledSubtrees[i] = currentLevelHash;
+        filledSubtrees_[i] = currentLevelHash;
       } else {
-        left = filledSubtrees[i];
+        left = filledSubtrees_[i];
         right = currentLevelHash;
       }
       currentLevelHash = hashLeftRight(left, right);
       currentIndex /= 2;
     }
 
-    uint32 newRootIndex = (currentRootIndex + 1) % ROOT_HISTORY_SIZE;
-    currentRootIndex = newRootIndex;
+    uint32 newRootIndex = (currentRootIndexTransactions + 1) % ROOT_HISTORY_SIZE_;
+    currentRootIndexTransactions = newRootIndex;
     roots[newRootIndex] = currentLevelHash;
     nextIndex = _nextIndex + 2;
     return _nextIndex;
   }
   
-  function isKnownRoot(bytes32 _root) public view returns (bool) {
+  function isKnownRoot_(bytes32 _root) public view returns (bool) {
     if (_root == 0) {
       return false;
     }
-    uint32 _currentRootIndex = currentRootIndex;
+    uint32 _currentRootIndex = currentRootIndexTransactions;
     uint32 i = _currentRootIndex;
     do {
       if (_root == roots[i]) {
         return true;
       }
       if (i == 0) {
-        i = ROOT_HISTORY_SIZE;
+        i = ROOT_HISTORY_SIZE_;
       }
       i--;
     } while (i != _currentRootIndex);
@@ -91,8 +91,8 @@ contract MerkleTreeWithHistory is Initializable {
   }
 
   // return the last root inserted
-  function getLastRoot() public view returns (bytes32) {
-    return roots[currentRootIndex];
+  function getLastRoot_() public view returns (bytes32) {
+    return roots[currentRootIndexTransactions];
   }
 
   function zeros(uint256 i) public pure returns (bytes32) {

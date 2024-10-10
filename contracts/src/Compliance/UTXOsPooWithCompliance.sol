@@ -10,7 +10,7 @@ import { IVerifier } from "../Transfers/interfaces/IVerifier.sol";
 import { IVerifierPOI } from "./interfaces/IVerifierPOI.sol";
 import "../Transfers/MerkleTreeWithHistoryTransactions.sol";
 
-contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
+contract UTXOsPoolWithCompliance is MerkleTreeWithHistoryTransactions, ReentrancyGuard {
 
   using SafeERC20 for IERC20;
 
@@ -46,10 +46,12 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
     bytes proof;
     bytes32 root;
     bytes32[] inputNullifiers;
+    bytes32[] commitments;
   }
 
   event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput);
   event NewNullifier(bytes32 nullifier);
+  event UserCommitmentAssociationSet(bytes32 commitment);
 
   constructor(
     IVerifier _verifier2,
@@ -60,7 +62,7 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
     uint32 _levels,
     address _hasher
   )
-    MerkleTreeWithHistory(_levels, _hasher)
+    MerkleTreeWithHistoryTransactions(_levels, _hasher)
   {
     verifier2 = _verifier2;
     verifier16 = _verifier16;
@@ -79,11 +81,11 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
   }
 
   function _deposit(Proof memory _args, ExtData memory _extData) internal nonReentrant {
-    require(isKnownRoot(_args.root), "Invalid merkle root");
+    require(isKnownRoot_(_args.root), "Invalid merkle root");
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
     }
-    require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE, "Incorrect external data hash");
+    require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
     require(verifyProof(_args), "Invalid transaction proof");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
@@ -108,14 +110,17 @@ contract UTXOsPoolWithCompliance is MerkleTreeWithHistory, ReentrancyGuard {
     // first verify the POI, then the transaction
     require(verifyPOI(_args_poi), "Invalid POI proof");
      _transact(_args, _extData);
+    for (uint256 i = 0; i < _args_poi.commitments.length; i++) {
+      emit UserCommitmentAssociationSet(_args_poi.commitments[i]);
+    }
   }
 
   function _transact(Proof memory _args, ExtData memory _extData) internal nonReentrant {
-    require(isKnownRoot(_args.root), "Invalid merkle root");
+    require(isKnownRoot_(_args.root), "Invalid merkle root");
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
     }
-    require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE, "Incorrect external data hash");
+    require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
     require(verifyProof(_args), "Invalid transaction proof");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {

@@ -1,4 +1,4 @@
-import { BaseUtxo, CreateTransactionParams, CommitmentEvents, PrepareTxParams } from "./types";
+import { BaseUtxo, CreateTransactionParams, CommitmentEvents, CommitmentEventsAssociationSet, PrepareTxParams } from "./types";
 import { getKeyPairByUserId, getID } from "../../database/database";
 import { getProof } from "../proof/generateTransactionProof";
 import hre from "hardhat";
@@ -10,6 +10,7 @@ import { toFixedHex } from "../utils/toHex";
 import { Utxo } from "./utxo";
 
 const contractAddress = process.env.POOL_USERS_ADDRESS || '';
+const ASSOCIATION_SET = process.env.ASSOCIATION_SET || '';
 const MERKLE_TREE_HEIGHT = 20;
 const UTXOS_POOL_ADDRESS_WITH_COMPLIANCE = process.env.UTXOS_POOL_ADDRESS_WITH_COMPLIANCE || '';
 
@@ -193,7 +194,7 @@ async function prepareTransaction({
 
 }
 
-export async function fetchCommitments(): Promise<CommitmentEvents>{
+export async function fetchCommitmentsUTXOPool(): Promise<CommitmentEvents>{
   const contract = await hre.ethers.getContractAt("UTXOsPool", UTXOS_POOL_ADDRESS_WITH_COMPLIANCE);
   const filter = contract.filters.NewCommitment();
   const events = await contract.queryFilter(filter);
@@ -210,6 +211,21 @@ export async function fetchCommitments(): Promise<CommitmentEvents>{
   return commitments
 }
 
+export async function fetchEventsAssociationSet(): Promise<CommitmentEventsAssociationSet>{
+  const contract = await hre.ethers.getContractAt("AssociationSet", ASSOCIATION_SET);
+  const filter = contract.filters.CommitmentAdded();
+  const events = await contract.queryFilter(filter);
+  const association_set: CommitmentEventsAssociationSet = [];
+  events.forEach((event) => {
+    association_set.push({
+      blockNumber: event.blockNumber,
+      transactionHash: event.transactionHash,
+      commitment: event.args[0]
+    })
+  });
+  return association_set
+}
+
 export async function createTransactionData(params: CreateTransactionParams, keypair: Keypair, signer: any){
   if (!params.inputs || !params.inputs.length) { // enter here if it's a deposit
     const contract = await hre.ethers.getContractAt("UTXOsPool", UTXOS_POOL_ADDRESS_WITH_COMPLIANCE, signer);
@@ -219,7 +235,7 @@ export async function createTransactionData(params: CreateTransactionParams, key
     params.rootHex = toFixedHex(root)
   } else {
 
-    params.events = await fetchCommitments()
+    params.events = await fetchCommitmentsUTXOPool()
   }
   const { extData, args, amount } = await prepareTransaction(params)
   return { extData, args, amount }

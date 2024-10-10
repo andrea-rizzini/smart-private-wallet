@@ -8,13 +8,37 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-interface IOnboardingMixer {
-    function createCommitment(bytes32 _commitment) external;
+interface IMixerOnboardingAndTransfers {
+
+    struct ExtData {
+        address recipient;
+        int256 extAmount;
+        bytes encryptedOutput1;
+        bytes encryptedOutput2;
+    }
+
+    struct Proof {
+        bytes proof;
+        bytes32 root;
+        bytes32[] inputNullifiers;
+        bytes32[2] outputCommitments;
+        uint256 publicAmount;
+        bytes32 extDataHash;
+    }
+
+
+    function createCommitment(bytes32 _commitment, uint256 extAmount) external;
     function redeemCommitment(    
         bytes calldata _proof,
         bytes32 _root,
-        bytes32 _nullifierHash
+        bytes32 _nullifierHash,
+        Proof memory _proofArgs,
+        ExtData memory _extData
     ) external ;
+
+    function deposit(Proof memory _args, ExtData memory _extData) external;
+    function transact(Proof memory _args, ExtData memory _extData) external;
+    
 } 
 
 interface IPoolUsers {
@@ -24,27 +48,6 @@ interface IPoolUsers {
     }
 
     function register(Account_ memory _account) external;
-}
-
-interface IUTXOsPool {
-    struct ExtData {
-    address recipient;
-    int256 extAmount;
-    bytes encryptedOutput1;
-    bytes encryptedOutput2;
-  }
-
-  struct Proof {
-    bytes proof;
-    bytes32 root;
-    bytes32[] inputNullifiers;
-    bytes32[2] outputCommitments;
-    uint256 publicAmount;
-    bytes32 extDataHash;
-  }
-
-  function deposit(Proof memory _args, ExtData memory _extData) external;
-  function transact(Proof memory _args, ExtData memory _extData) external;
 }
 
 // Account contract
@@ -81,18 +84,29 @@ contract Account is IAccount {
         return owner == recovered ? 0 : 1; //return 0 if signature is valid, 1 otherwise
     }
 
-    function append_commitment(address contract_address, bytes32 _commitment, uint256 denomination) external {
-        IERC20(usdcToken).approve(contract_address, denomination);
-        IOnboardingMixer(contract_address).createCommitment(_commitment);
+    function append_commitment(address contract_address, bytes32 _commitment, uint256 extValue) external {
+        IERC20(usdcToken).approve(contract_address, extValue);
+        IMixerOnboardingAndTransfers(contract_address).createCommitment(_commitment, extValue);
+    }
+
+    function appendCommitmentV2(
+        address contract_address,
+        bytes32 _commitment,
+        uint256 extAmount
+    ) external {
+        IERC20(usdcToken).approve(contract_address, extAmount);
+        IMixerOnboardingAndTransfers(contract_address).createCommitment(_commitment, extAmount);
     }
 
     function redeem_commitment(
         address contract_address,
         bytes calldata _proof,
         bytes32 _root,
-        bytes32 _nullifierHash
+        bytes32 _nullifierHash,
+        IMixerOnboardingAndTransfers.Proof memory _proofArgs,
+        IMixerOnboardingAndTransfers.ExtData memory _extData
     ) external payable {
-        IOnboardingMixer(contract_address).redeemCommitment(_proof, _root, _nullifierHash);
+        IMixerOnboardingAndTransfers(contract_address).redeemCommitment(_proof, _root, _nullifierHash, _proofArgs, _extData);
     }
 
     function insertIntoPoolUsers(address poolUsersContract, bytes memory publicKey) public {
@@ -106,20 +120,20 @@ contract Account is IAccount {
 
     function callDeposit(
         address poolAddress,
-        IUTXOsPool.Proof memory _proofArgs,
-        IUTXOsPool.ExtData memory _extData
+        IMixerOnboardingAndTransfers.Proof memory _proofArgs,
+        IMixerOnboardingAndTransfers.ExtData memory _extData
     ) external payable {
         uint256 valueToSend = _extData.extAmount > 0 ? uint256(_extData.extAmount) : 0;
         IERC20(usdcToken).approve(poolAddress, valueToSend);
-        IUTXOsPool(poolAddress).deposit(_proofArgs, _extData);
+        IMixerOnboardingAndTransfers(poolAddress).deposit(_proofArgs, _extData);
     }
 
     function callTransact(
         address poolAddress,
-        IUTXOsPool.Proof memory _proofArgs,
-        IUTXOsPool.ExtData memory _extData
+        IMixerOnboardingAndTransfers.Proof memory _proofArgs,
+        IMixerOnboardingAndTransfers.ExtData memory _extData
     ) external payable {
-        IUTXOsPool(poolAddress).transact(_proofArgs, _extData);
+        IMixerOnboardingAndTransfers(poolAddress).transact(_proofArgs, _extData);
     }
 
 }

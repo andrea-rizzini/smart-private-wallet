@@ -13,6 +13,7 @@ async function main() {
     const VERIFIER_16 = process.env.VERIFIER_16 || '';
     const VERIFIER_POI_2 = process.env.VERIFIER_POI_2 || '';
     const VERIFIER_POI_16 = process.env.VERIFIER_POI_16 || '';
+    const ASSOCIATION_SET = process.env.ASSOCIATION_SET || '';
 
     const signers = await hre.ethers.getSigners();
     const faucet = signers[2];  
@@ -26,7 +27,7 @@ async function main() {
 
     // await run(`verify:verify`, {
     //     address: utxosPool_.target,
-    //     constructorArguments: [VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, USDC_ADDRESS, 20, HASHER_TRANSFERS],
+    //     constructorArguments: [VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, ASSOCIATION_SET, USDC_ADDRESS, 20, HASHER_TRANSFERS],
     // }); 
 
     const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');

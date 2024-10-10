@@ -8,6 +8,10 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
+interface IAssociationSet{
+    function addToTheAssociationSet(bytes32[2] calldata _commitment) external;
+}
+
 interface IOnboardingMixer {
     function createCommitment(bytes32 _commitment) external;
     function redeemCommitment(    
@@ -47,6 +51,7 @@ interface IUTXOsPoolWithCompliance {
     bytes proof;
     bytes32 root;
     bytes32[] inputNullifiers;
+    bytes32[] commitments;
   }
    
   function deposit(Proof memory _args, ExtData memory _extData) external ;
@@ -121,6 +126,10 @@ contract AccountForV3 is IAccount {
         IUTXOsPoolWithCompliance.ExtData memory _extData
     ) external payable {
         IUTXOsPoolWithCompliance(poolAddress).transact(_proofArgs, _proof_poi, _extData);
+    }
+
+    function callAddToTheAssociationSet(address associationSet, bytes32[2] calldata _commitments) external {
+        IAssociationSet(associationSet).addToTheAssociationSet(_commitments);
     }
 
 }

@@ -34,38 +34,34 @@ export async function acceptInvite() {
   async function executeAction(action: string) {
     switch (action) {
       case '1':
-        await setup(username, account, initCode, signers[index]);
-        currentAction = '1';
-        break;
-      case '2':
         await checkAccountBalance(username, account);
         currentAction = '2';
         break;
-      case '3':
+      case '2':
         await inviteUsingLink(username, account, initCode, signers[index]);
         currentAction = '3';
         break;
-      case '4':
+      case '3':
         currentAction = '4';
         await receive(signers[index], account, initCode); 
         break;
-      case '5':
+      case '4':
         currentAction = '5'; 
         await send(username, account, initCode, signers[index]);  
         break;
-      case '6':
+      case '5':
         currentAction = '6';
         await withdraw(username, account, initCode, signers[index]);
         break;
-      case '7':
+      case '6':
         currentAction = '7';
         await showContacts(username);
         break;
-      case '8':
+      case '7':
         currentAction = '8';
         await refresh(username);
         break
-      case '9':
+      case '8':
         currentAction = '9';
         await exit(username);
         break;
@@ -160,6 +156,8 @@ export async function acceptInvite() {
 
   const _account = await hre.ethers.getContractAt("Account", account);
 
+  await setup(username, account, initCode, signers[index]);
+
   console.log('\nSome USDC will be sent to your account soon ...');
   
   const signer = await hre.ethers.getSigners();
@@ -171,7 +169,6 @@ export async function acceptInvite() {
 
   const transferTx = await usdc.transfer(account, usdcAmount);
   await transferTx.wait();
-  console.log(`\nFunded account with 0.01 USDC: ${transferTx.hash}`);
   console.log('\nWelcome !\n');
 
   // menu options
@@ -197,38 +194,34 @@ export async function login() {
   async function executeAction(action: string) {
     switch (action) {
       case '1':
-        await setup(username, account, initCode, signers[index]);
-        currentAction = '1';
-        break;
-      case '2':
         await checkAccountBalance(username, account);
         currentAction = '2';
         break;
-      case '3':
+      case '2':
         await inviteUsingLink(username, account, initCode, signers[index]);
         currentAction = '3';
         break;
-      case '4':
+      case '3':
         currentAction = '4';
         await receive(signers[index], account, initCode); 
         break;
-      case '5':
+      case '4':
         currentAction = '5'; 
         await send(username, account, initCode, signers[index]);  
         break;
-      case '6':
+      case '5':
         currentAction = '6';
         await withdraw(username, account, initCode, signers[index]);
         break;
-      case '7':
+      case '6':
         currentAction = '7';
         await showContacts(username);
         break;
-      case '8':
+      case '7':
         currentAction = '8';
         await refresh(username);
         break
-      case '9':
+      case '8':
         currentAction = '9';
         await exit(username);
         break;
@@ -329,38 +322,34 @@ export async function onboardViaLink() {
   async function executeAction(action: string) {
     switch (action) {
       case '1':
-        await setup(username, account, initCode, signers[index]);
-        currentAction = '1';
-        break;
-      case '2':
         await checkAccountBalance(username, account);
         currentAction = '2';
         break;
-      case '3':
+      case '2':
         await inviteUsingLink(username, account, initCode, signers[index]);
         currentAction = '3';
         break;
-      case '4':
+      case '3':
         currentAction = '4';
         await receive(signers[index], account, initCode); 
         break;
-      case '5':
+      case '4':
         currentAction = '5'; 
         await send(username, account, initCode, signers[index]);  
         break;
-      case '6':
+      case '5':
         currentAction = '6';
         await withdraw(username, account, initCode, signers[index]);
         break;
-      case '7':
+      case '6':
         currentAction = '7';
         await showContacts(username);
         break;
-      case '8':
+      case '7':
         currentAction = '8';
         await refresh(username);
         break
-      case '9':
+      case '8':
         currentAction = '9';
         await exit(username);
         break;
@@ -436,6 +425,9 @@ export async function onboardViaLink() {
   }
 
   const _account = await hre.ethers.getContractAt("Account", account);
+
+  // generate pubKey and register it in the pool
+  await setup(username, account, initCode, signers[index]);
 
   try {
     await redeem(link, account, initCode, signers[index]);

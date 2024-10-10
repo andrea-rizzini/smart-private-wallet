@@ -50,13 +50,13 @@ export async function fetchSanctionedAddresses(): Promise<{ address: string }[]>
 export async function checkSanctionedAddress(address: string, maxHops = 3): Promise<{ sanction: boolean; message: string }> {
     
     // we leave this just for testing
-    // const dirPath = path.join(__dirname, '../../sanctioned_addresses/');
-    // const filePath = path.join(dirPath, 'sanctioned_addresses.json');
-    // const fileContent = fs.readFileSync(filePath, 'utf-8');
-    // const sanctionedAddresses: { address: string }[] = JSON.parse(fileContent);
+    const dirPath = path.join(__dirname, '../../sanctioned_addresses/');
+    const filePath = path.join(dirPath, 'sanctioned_addresses.json');
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    const sanctionedAddresses: { address: string }[] = JSON.parse(fileContent);
 
     // if you want use the local list, comment the next line and uncomment the previous block
-    const sanctionedAddresses = await fetchSanctionedAddresses();
+    //const sanctionedAddresses = await fetchSanctionedAddresses();
 
     const isSanctioned = (address: string): boolean => {
         return sanctionedAddresses.some(entry => entry.address.toLowerCase() === address.toLowerCase());
