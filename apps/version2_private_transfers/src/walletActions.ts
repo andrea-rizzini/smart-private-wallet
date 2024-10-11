@@ -148,11 +148,11 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     fs.writeFileSync(filePath, jsonString);
 
-    // 5) append the OnbUser to the contacts.json file of the sender and append <nameOnbUser, nullifierHex, amount, redeemed> to the nullifiers.json file
+    // 5) append the OnbUser to the contacts table of the sender and append <nameOnbUser, nullifierHex, amount, redeemed> to the nullifiers table
     
     insertContact(getID(name), nameOnbUser, "0x");
 
-    insertUserNullifier(getID(name), nameOnbUser, nullifierHex, Number(usdcValue));
+    insertUserNullifier(getID(name), nameOnbUser, nullifierHex, Number(usdcValue)); // default to redeemed = false
 
 }
 
@@ -385,8 +385,8 @@ export async function refresh(username: string) {
         contractAddress = MIXER_ONBOARDING_AND_TRANSFERS;
 
         // fetching Withdrawal events from the mixer contract
-        const contract = await hre.ethers.getContractAt("OnboardingMixer", contractAddress);
-        const filter = contract.filters.Withdrawal();
+        const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", contractAddress);
+        const filter = contract.filters.Redeemed();
         const events = await contract.queryFilter(filter);
         events.forEach(event => {
             if (event.args.nullifierHash === nullifierHash) {

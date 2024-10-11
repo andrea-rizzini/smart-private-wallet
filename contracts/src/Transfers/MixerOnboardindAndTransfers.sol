@@ -57,7 +57,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleT
     uint256 timestamp
   );
 
-  event Withdrawal(
+  event Redeemed(
+    address to, 
     bytes32 indexed nullifierHash
   );
 
@@ -113,9 +114,9 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleT
 
     _deposit_after_redeem(_args, _extData);
 
-    // nullifierHashes[_nullifierHash] = true;
+    nullifierHashes[_nullifierHash] = true;
 
-    // emit Withdrawal(_nullifierHash);
+    emit Redeemed(msg.sender, _nullifierHash);
 
   }
 
@@ -139,6 +140,13 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleT
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
+  }
+
+  function deposit(Proof memory _args, ExtData memory _extData) external payable { 
+    if (_extData.extAmount > 0) {
+      require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
+    }
+    _deposit(_args, _extData);
   }
 
   function _deposit(Proof memory _args, ExtData memory _extData) internal nonReentrant {
