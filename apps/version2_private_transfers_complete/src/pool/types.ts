@@ -44,7 +44,7 @@ export type PrepareTxParams = {
 }
 
 export type CreateTransactionParams = {
-  outputs?: any[]
+  outputs?: BaseUtxo[]
   inputs?: BaseUtxo[]
   fee?: bigint
   relayer?: string | bigint

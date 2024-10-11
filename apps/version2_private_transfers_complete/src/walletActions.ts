@@ -98,28 +98,13 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     let id: string = MIXER_ONBOARDING_AND_TRANSFERS;
 
     // 2) create the utxo 
-    const result = await prepareTransferForOnboarding(choiceAmount, account, account, signer);
-
-    // if (result) {
-    //     const signers = await hre.ethers.getSigners();
-    //     const { args, extData } = result;
-    //     try {
-    //         await call_userop("contracts/src/Transfers/Relayer.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
-    //         console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
-    //     }
-    //     catch (error) {
-    //         console.error("\nSomething went wrong during the transfer transaction:", error);
-    //         console.log("\n");
-    //     }
-        
-    // }
-    // else {
-    //     console.log("\nTransfer preparation failed\n");
-    // }
+    const recipientUtxoOnboarding = new Utxo({
+        amount: hre.ethers.parseUnits(usdcValue, 6)
+    })
 
     const link: LinkNote = {
         type: "notev1",
-        symmetric_key: "0x",
+        keyPair: recipientUtxoOnboarding.keypair,
         sender: name,
         sender_address: account,
         recevier: nameOnbUser,
@@ -127,19 +112,26 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
         id: id // address of the onboarding mixer contract
     };
 
-    // 3) append the commitment to the mixer contract
+    // 3) append the utxo to the mixer contract
 
-    const code = await hre.ethers.provider.getCode(account); // get the bytecode of the smart account
-    if (code !== "0x") {
-      initCode = "0x";
+    const result = await prepareTransferForOnboarding(choiceAmount, recipientUtxoOnboarding, name, account, signer);
+
+    if (result) {
+        const signers = await hre.ethers.getSigners();
+        const { args, extData } = result;
+        try {
+            await call_userop("contracts/src/Transfers/Relayer.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
+            console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
+        }
+        catch (error) {
+            console.error("\nSomething went wrong during the transfer transaction:", error);
+            console.log("\n");
+        }
+        
     }
-
-    const signers = await hre.ethers.getSigners();
-    const faucet = signers[2];
-
-    const usdcAmount = hre.ethers.parseUnits(usdcValue, 6)
-
-    await call_userop("Account", "appendCommitmentV2", [id, commitmentHex, usdcAmount], account , initCode, signer);
+    else {
+        console.log("\nTransfer preparation failed\n");
+    }
 
     // 4) send the link to the invited user
 
@@ -161,8 +153,6 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     // 5) append the OnbUser to the contacts table of the sender and append <nameOnbUser, nullifierHex, amount, redeemed> to the nullifiers table
     
     insertContact(getID(name), nameOnbUser, "0x");
-
-    insertUserNullifier(getID(name), nameOnbUser, nullifierHex, Number(usdcValue)); // default to redeemed = false
 
 }
 

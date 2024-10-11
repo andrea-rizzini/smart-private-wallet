@@ -21,17 +21,10 @@ export async function prepareDeposit(amount: string, address: string, signer: an
   }  
 }
 
-export async function prepareTransferForOnboarding(amount: string, username: string, addressSender: string, signer: any) {
-  const recipientUtxoOnboarding = {
-    amount: hre.ethers.parseUnits(amount, 6),
-    blinding:  randomBN()
-  }
+export async function prepareTransferForOnboarding(amount: string, recipientUtxoOnboarding: Utxo, username: string, addressSender: string, signer: any) {
+
 
   const { unspentUtxo, totalAmount, senderKeyPair } = await getUserAccountInfo(username, addressSender, {amount: hre.ethers.parseUnits(amount, 6)})
-
-  if (totalAmount < (hre.ethers.parseUnits(amount, 6))) {
-    throw new Error(`Insufficient funds!`)
-  }
 
   const senderChangeUtxo = new Utxo({
     keypair: senderKeyPair,

@@ -1,8 +1,10 @@
+import { Keypair } from "../pool/keypair";
+
 export type USDCStr = `${number}`;
 
 export type LinkNote = {
     type: "notev1";
-    symmetric_key: string;
+    keyPair: Keypair;
     sender: string;
     sender_address: string;
     recevier: string;
