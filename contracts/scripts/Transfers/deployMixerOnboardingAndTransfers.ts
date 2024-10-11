@@ -1,10 +1,17 @@
 import dotenv from 'dotenv';
 import fs from 'fs';
 import hre from 'hardhat';
-
+import path from 'path';
+import { clearJsonFile } from '../../../apps/version2_private_transfers/src/utils/clearsonFile';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
 async function main () {
+
+    // delete cache files content, for the moment files are just for 0.01 eth commitments
+    let dirPath = path.join(__dirname, '../../../apps/version2_private_transfers/cache/');
+    let fileName = `CommitmentCreated_arbitrary_denom.json`;
+    let filePath = path.join(dirPath, fileName);
+    clearJsonFile(filePath);
     
     const envConfig = dotenv.parse(fs.readFileSync('.env'));
 

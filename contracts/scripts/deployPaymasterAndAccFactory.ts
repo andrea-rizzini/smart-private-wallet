@@ -40,10 +40,10 @@ async function main() {
   envConfig.ACCOUNT_FACTORY_ADDRESS = af.target.toString();
 
   // deploy account-factory for v3
-  const af_v3 = await hre.ethers.deployContract("contracts/src/AccountForV3.sol:AccountFactory", [], { signer: faucet }); 
-  await af_v3.waitForDeployment(); 
-  console.log(`\nAF_V3: ${af_v3.target}`); 
-  envConfig.ACCOUNT_FACTORY_V3_ADDRESS = af_v3.target.toString();
+  // const af_v3 = await hre.ethers.deployContract("contracts/src/AccountForV3.sol:AccountFactory", [], { signer: faucet }); 
+  // await af_v3.waitForDeployment(); 
+  // console.log(`\nAF_V3: ${af_v3.target}`); 
+  // envConfig.ACCOUNT_FACTORY_V3_ADDRESS = af_v3.target.toString();
 
   // write new addresses to .env file
   const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');

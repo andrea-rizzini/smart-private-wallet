@@ -11,12 +11,12 @@ import { Utxo } from "./utxo";
 
 const contractAddress = process.env.POOL_USERS_ADDRESS || '';
 const MERKLE_TREE_HEIGHT = 20;
-const UTXOS_POOL_ADDRESS = process.env.UTXOS_POOL_ADDRESS || '';
+const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
 
 export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){ // this function has to return just unspentUtxo
 
   // 1) fetch all nullifiers
-  const contract = await hre.ethers.getContractAt("UTXOsPool", UTXOS_POOL_ADDRESS);
+  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
   let filter = contract.filters.NewNullifier();
   const eventsNullifiers = await contract.queryFilter(filter);
 
@@ -194,7 +194,7 @@ async function prepareTransaction({
 }
 
 async function fetchCommitments(): Promise<CommitmentEvents>{
-  const contract = await hre.ethers.getContractAt("UTXOsPool", UTXOS_POOL_ADDRESS);
+  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
   const filter = contract.filters.NewCommitment();
   const events = await contract.queryFilter(filter);
   const commitments: CommitmentEvents = [];
@@ -211,9 +211,9 @@ async function fetchCommitments(): Promise<CommitmentEvents>{
 }
 
 export async function createTransactionData(params: CreateTransactionParams, keypair: Keypair, signer: any){
-  if (!params.inputs || !params.inputs.length) {
-    const contract = await hre.ethers.getContractAt("UTXOsPool", UTXOS_POOL_ADDRESS, signer);
-    const root = await contract.getLastRoot();
+  if (!params.inputs || !params.inputs.length) { // enter here for the deposit
+    const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS, signer);
+    const root = await contract.getLastRoot_();
 
     params.events = []
     params.rootHex = toFixedHex(root)

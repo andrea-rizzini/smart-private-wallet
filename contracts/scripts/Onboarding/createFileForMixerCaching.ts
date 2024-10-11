@@ -37,11 +37,13 @@ async function createAllCacheFiles() {
     { directory: '../../../apps/version2_private_transfers/cache/', fileName: 'CommitmentCreated_usdc_0.1.json' },
     { directory: '../../../apps/version2_private_transfers/cache/', fileName: 'CommitmentCreated_usdc_1.json' },
     { directory: '../../../apps/version2_private_transfers/cache/', fileName: 'CommitmentCreated_usdc_10.json' },
+    { directory: '../../../apps/version2_private_transfers/cache/', fileName: 'CommitmentCreated_arbitrary_denom.json' },
 
     { directory: '../../../apps/version3_compliance/cache/', fileName: 'CommitmentCreated_usdc_0.01.json' },
     { directory: '../../../apps/version3_compliance/cache/', fileName: 'CommitmentCreated_usdc_0.1.json' },
     { directory: '../../../apps/version3_compliance/cache/', fileName: 'CommitmentCreated_usdc_1.json' },
     { directory: '../../../apps/version3_compliance/cache/', fileName: 'CommitmentCreated_usdc_10.json' },
+
 
   ];
 

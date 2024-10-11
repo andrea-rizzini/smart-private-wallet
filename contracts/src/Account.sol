@@ -67,6 +67,8 @@ contract Account is IAccount {
     /// The ERC-4337 entry point singleton
     address public entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
 
+    event Log(string message);
+
     modifier onlyEntryPoint() {
         require(msg.sender == address(entryPoint), "only entry point");
         _;

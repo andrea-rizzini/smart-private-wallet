@@ -9,11 +9,11 @@ import MerkleTree from 'fixed-merkle-tree';
 
 const MERKLE_TREE_HEIGHT = 20;
 
-async function generateMerkleProof(deposit: any, currency: string, amount: number) {
+async function generateMerkleProof(deposit: any) {
     let leafIndex = -1;
   
     // fetching 'CommitmentCreated' events
-    const cachedEvents = await fetchEvents({ type: 'CommitmentCreated', currency, amount });
+    const cachedEvents = await fetchEvents({ type: 'CommitmentCreated'});
   
     // prepare the leaves for the merkle tree
     const leaves = cachedEvents
@@ -38,9 +38,9 @@ async function generateMerkleProof(deposit: any, currency: string, amount: numbe
     return { root, pathElements, pathIndices };
 }
 
-export async function generateMixerProof({ deposit, currency, amount, account}: any) {
+export async function generateMixerProof({ deposit, account}: any) {
 
-    const { root, pathElements, pathIndices } = await generateMerkleProof(deposit, currency, amount);
+    const { root, pathElements, pathIndices } = await generateMerkleProof(deposit);
 
     let input;
 

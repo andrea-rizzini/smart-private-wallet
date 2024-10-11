@@ -4,10 +4,7 @@ import hre from "hardhat";
 import { get_deployment_block } from './getDeploymentBlock';
 require("dotenv").config();
 
-const ONBOARDING_MIXER_ADDRESS_TEST = process.env.ONBOARDING_MIXER_ADDRESS_TEST || '';
-const ONBOARDING_MIXER_ADDRESS_LOW = process.env.ONBOARDING_MIXER_ADDRESS_LOW || '';
-const ONBOARDING_MIXER_ADDRESS_MEDIUM = process.env.ONBOARDING_MIXER_ADDRESS_MEDIUM || '';
-const ONBOARDING_MIXER_ADDRESS_HIGH = process.env.ONBOARDING_MIXER_ADDRESS_HIGH || '';
+const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
 
 let contract: any, deployedBlockNumber: number | undefined;
 
@@ -30,31 +27,17 @@ function capitalizeFirstLetter(str: string) {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-async function loadCachedEvents({ type, currency, amount }: { type: string, currency: string, amount: number }) {
+async function loadCachedEvents() {
     try {
 
       const dirPath = path.join(__dirname, '../../cache/');
-      const fileName = `${type}_${currency}_${amount}.json`;
+      const fileName = `CommitmentCreated_arbitrary_denom.json`;
       const filePath = path.join(dirPath, fileName);
       const module = require(filePath);
   
       if (module) {
         const events = module;
-
-        switch(amount) { 
-          case 0.01:
-            contract = await hre.ethers.getContractAt("OnboardingMixer", ONBOARDING_MIXER_ADDRESS_TEST);
-              break;
-          case 0.1:
-              contract = await hre.ethers.getContractAt("OnboardingMixer", ONBOARDING_MIXER_ADDRESS_LOW);
-              break;
-          case 1:
-              contract = await hre.ethers.getContractAt("OnboardingMixer", ONBOARDING_MIXER_ADDRESS_MEDIUM);
-              break;
-          case 10:
-              contract = await hre.ethers.getContractAt("OnboardingMixer", ONBOARDING_MIXER_ADDRESS_HIGH);
-              break;
-        }
+        contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
 
         return {
           events,
@@ -62,24 +45,8 @@ async function loadCachedEvents({ type, currency, amount }: { type: string, curr
         }
       }
     } catch (err) {
-      switch(amount) {
-        case 0.01:
-            deployedBlockNumber = await get_deployment_block(ONBOARDING_MIXER_ADDRESS_TEST); 
-            contract = await hre.ethers.getContractAt("OnboardingMixer", ONBOARDING_MIXER_ADDRESS_TEST);
-            break;
-        case 0.1:
-            deployedBlockNumber = await get_deployment_block(ONBOARDING_MIXER_ADDRESS_LOW);
-            contract = await hre.ethers.getContractAt("OnboardingMixer", ONBOARDING_MIXER_ADDRESS_LOW);
-            break;
-        case 1:
-            deployedBlockNumber = await get_deployment_block(ONBOARDING_MIXER_ADDRESS_MEDIUM);
-            contract = await hre.ethers.getContractAt("OnboardingMixer", ONBOARDING_MIXER_ADDRESS_MEDIUM);
-            break;
-        case 10:
-            deployedBlockNumber = await get_deployment_block(ONBOARDING_MIXER_ADDRESS_HIGH);
-            contract = await hre.ethers.getContractAt("OnboardingMixer", ONBOARDING_MIXER_ADDRESS_HIGH);
-            break;
-      }
+      deployedBlockNumber = await get_deployment_block(MIXER_ONBOARDING_AND_TRANSFERS);
+      contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
       console.log("\nError fetching cached files, syncing from block", deployedBlockNumber);
       return {
         events: [],
@@ -88,9 +55,8 @@ async function loadCachedEvents({ type, currency, amount }: { type: string, curr
     }
   }
 
-// todo: add a control of the last block number (if present) in the cache file, and statrt fetching from there
 
-export async function fetchEvents({ type, currency, amount }: { type: string, currency: string, amount: number }) {
+export async function fetchEvents({ type}: { type: string}) {
 
     console.log("\nFetching events ...")
 
@@ -98,7 +64,7 @@ export async function fetchEvents({ type, currency, amount }: { type: string, cu
       type = "CommitmentCreated";
     }
   
-    const cachedEvents: any = await loadCachedEvents({ type, currency, amount }) ;
+    const cachedEvents: any = await loadCachedEvents() ;
 
     let startBlock: number;
 
@@ -173,7 +139,7 @@ export async function fetchEvents({ type, currency, amount }: { type: string, cu
           async function updateCache() {
             try {
               const dirPath = path.join(__dirname, '../../cache/');
-              const fileName = `${type}_${currency}_${amount}.json`;
+              const fileName = `CommitmentCreated_arbitrary_denom.json`;
               const filePath = path.join(dirPath, fileName);
               
               const localEvents: any = await initJson(filePath);
@@ -196,7 +162,7 @@ export async function fetchEvents({ type, currency, amount }: { type: string, cu
   
     async function loadUpdatedEvents() {
       const dirPath = path.join(__dirname, '../../cache/');
-      const fileName = `${type}_${currency}_${amount}.json`;
+      const fileName = `CommitmentCreated_arbitrary_denom.json`;
       const filePath = path.join(dirPath, fileName);
       const updatedEvents: any = await initJson(filePath);
       const updatedBlock = updatedEvents[updatedEvents.length - 1].blockNumber;

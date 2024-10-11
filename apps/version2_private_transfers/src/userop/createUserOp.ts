@@ -3,7 +3,7 @@ import hre from 'hardhat';
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
 const PAYMASTER_ADDRESS: string = process.env.PAYMASTER_ADDRESS || '';
 
-export async function call_userop(which_function: string, args: any[], sender: string, initCode: string, signer: any) {
+export async function call_userop(contract:string, which_function: string, args: any[], sender: string, initCode: string, signer: any) {
 
   const code = await hre.ethers.provider.getCode(sender); // get the bytecode of the smart account
   if (code !== "0x") {
@@ -11,7 +11,7 @@ export async function call_userop(which_function: string, args: any[], sender: s
   }
 
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS);
-  const Account = await hre.ethers.getContractFactory("Account"); 
+  const Account = await hre.ethers.getContractFactory(contract); 
   const userOp = {
     sender: sender, // smart account address
     nonce: "0x" + (await ep.getNonce(sender, 0)).toString(16), // converted into an exadecimal string

@@ -429,6 +429,8 @@ export async function onboardViaLink() {
   // generate pubKey and register it in the pool
   await setup(username, account, initCode, signers[index]);
 
+  await new Promise(resolve => setTimeout(resolve, 7000));
+
   try {
     await redeem(link, account, initCode, signers[index]);
   } catch (error) {

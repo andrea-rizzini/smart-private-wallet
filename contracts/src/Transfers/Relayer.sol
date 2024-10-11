@@ -26,30 +26,9 @@ interface IMixerOnboardingAndTransfers {
         bytes32 extDataHash;
     }
 
-
-    function createCommitment(bytes32 _commitment, uint256 extAmount) external;
-    function redeemCommitment(    
-        bytes calldata _proof,
-        bytes32 _root,
-        bytes32 _nullifierHash,
-        Proof memory _proofArgs,
-        ExtData memory _extData
-    ) external ;
-
-    function deposit(Proof memory _args, ExtData memory _extData) external;
     function transact(Proof memory _args, ExtData memory _extData) external;
 
-    
 } 
-
-interface IPoolUsers {
-    struct Account_ {
-        address owner;
-        bytes publicKey;
-    }
-
-    function register(Account_ memory _account) external;
-}
 
 // Account contract
 
@@ -85,49 +64,7 @@ contract Relayer is IAccount {
         return owner == recovered ? 0 : 1; //return 0 if signature is valid, 1 otherwise
     }
 
-    function append_commitment(address contract_address, bytes32 _commitment, uint256 extValue) external {
-        IERC20(usdcToken).approve(contract_address, extValue);
-        IMixerOnboardingAndTransfers(contract_address).createCommitment(_commitment, extValue);
-    }
-
-    function appendCommitmentV2(
-        address contract_address,
-        bytes32 _commitment,
-        uint256 extAmount
-    ) external {
-        IERC20(usdcToken).approve(contract_address, extAmount);
-        IMixerOnboardingAndTransfers(contract_address).createCommitment(_commitment, extAmount);
-    }
-
-    function redeem_commitment(
-        address contract_address,
-        bytes calldata _proof,
-        bytes32 _root,
-        bytes32 _nullifierHash,
-        IMixerOnboardingAndTransfers.Proof memory _proofArgs,
-        IMixerOnboardingAndTransfers.ExtData memory _extData
-    ) external payable {
-        IMixerOnboardingAndTransfers(contract_address).redeemCommitment(_proof, _root, _nullifierHash, _proofArgs, _extData);
-    }
-
-    function insertIntoPoolUsers(address poolUsersContract, bytes memory publicKey) public {
-        IPoolUsers.Account_ memory account_ = IPoolUsers.Account_({
-            owner: address(this),
-            publicKey: publicKey
-        });
-
-        IPoolUsers(poolUsersContract).register(account_);
-    }
-
-    function callDeposit(
-        address poolAddress,
-        IMixerOnboardingAndTransfers.Proof memory _proofArgs,
-        IMixerOnboardingAndTransfers.ExtData memory _extData
-    ) external payable {
-        uint256 valueToSend = _extData.extAmount > 0 ? uint256(_extData.extAmount) : 0;
-        IERC20(usdcToken).approve(poolAddress, valueToSend);
-        IMixerOnboardingAndTransfers(poolAddress).deposit(_proofArgs, _extData);
-    }
+    event Log(string message);
 
     function callTransact(
         address poolAddress,

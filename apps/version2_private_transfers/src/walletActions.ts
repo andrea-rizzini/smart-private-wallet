@@ -16,14 +16,9 @@ import { Utxo } from "./pool/utxo";
 
 const INIT_CODE_RELAYER = process.env.INIT_CODE_RELAYER || '';
 const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
-// const ONBOARDING_MIXER_ADDRESS_TEST = process.env.ONBOARDING_MIXER_ADDRESS_TEST || '';
-// const ONBOARDING_MIXER_ADDRESS_LOW = process.env.ONBOARDING_MIXER_ADDRESS_LOW || '';
-// const ONBOARDING_MIXER_ADDRESS_MEDIUM = process.env.ONBOARDING_MIXER_ADDRESS_MEDIUM || '';
-// const ONBOARDING_MIXER_ADDRESS_HIGH = process.env.ONBOARDING_MIXER_ADDRESS_HIGH || '';
 const POOL_USERS_ADDRESS = process.env.POOL_USERS_ADDRESS || '';
 const RELAYER_ADDRESS = process.env.RELAYER_ADDRESS || '';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
-const UTXOS_POOL_ADDRESS = process.env.UTXOS_POOL_ADDRESS || '';
 
 export async function setup(username: string, account: string, initCode: string, signer: any) {
 
@@ -38,7 +33,7 @@ export async function setup(username: string, account: string, initCode: string,
         const output = new Utxo({ keypair })
 
         // register in poolUsers
-        await call_userop("insertIntoPoolUsers", [POOL_USERS_ADDRESS, output.keypair.address()], account , initCode, signer);
+        await call_userop("Account", "insertIntoPoolUsers", [POOL_USERS_ADDRESS, output.keypair.address()], account , initCode, signer);
 
         const index = getID(username);
 
@@ -79,14 +74,6 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     const nameOnbUser: string = await inputFromCLI("\nEnter the name of the invited user to be added on your contacts: ", rl);
 
-    // console.log("\nchoose the amount to send for onboarding:");
-
-    // const amountOptions = ['\n[1] 0.01 USDC', '[2] 0.1 USDC', '[3] 1 USDC', '[4] 10 USDC', '[5] Return to the menu'];
-
-    // for (let i = 0; i < amountOptions.length; i++) {
-    //     console.log(amountOptions[i]);
-    // }
-
     // let choice: string;
     let choiceAmount: string;
     let isValid: boolean = false; 
@@ -94,37 +81,6 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     const usdcContract = await hre.ethers.getContractAt("IERC20", USDC_ADDRESS);
     const usdcBalance = await usdcContract.balanceOf(account);
-
-    // do {
-    //     console.log('\n\nChose an option:')
-    //     choice = await inputFromCLI(": ", rl);
-    //     if (choice === '1' || choice === '2' || choice === '3' || choice === '4') {
-
-    //         const thresholds = {
-    //             '1': 10000, 
-    //             '2': 100000, 
-    //             '3': 1000000, 
-    //             '4': 10000000
-    //         };
-    
-    //         if (usdcBalance >= thresholds[choice]) {
-    //             isValid = true;
-    //             rl.close();
-    //         } else {
-    //             console.log("\nInsufficient funds.");
-    //         }
-    
-    //     }
-    //     else if (choice === '5') {
-    //         console.log("\n");
-    //         isValid = true;
-    //         rl.close();
-    //         return;
-    //     }
-    //     else {
-    //         console.log('\nInvalid input.');
-    //     }
-    // } while (!isValid);
 
     do {
         choiceAmount = await inputFromCLI("\nInsert the amount (or type exit to return to the menu): ", rl);
@@ -147,28 +103,6 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     let usdcValue: USDCStr = `${parseFloat(choiceAmount)}` as USDCStr;
     let id: string = MIXER_ONBOARDING_AND_TRANSFERS;
-
-    // switch (choice) {
-    //     case '1':
-    //         usdcValue = "0.01";
-    //         id = ONBOARDING_MIXER_ADDRESS_TEST;
-    //         break;
-    //     case '2':
-    //         usdcValue = "0.1";
-    //         id = ONBOARDING_MIXER_ADDRESS_LOW;
-    //         break;
-    //     case '3':
-    //         usdcValue = "1";
-    //         id = ONBOARDING_MIXER_ADDRESS_MEDIUM;
-    //         break;
-    //     case '4':
-    //         usdcValue = "10";
-    //         id = ONBOARDING_MIXER_ADDRESS_HIGH;
-    //         break;
-    //     default:
-    //         usdcValue = "0"; 
-    //         id = "";
-    // }
 
     // 2) create the note 
 
@@ -195,7 +129,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     const usdcAmount = hre.ethers.parseUnits(usdcValue, 6)
 
-    await call_userop(/*"appendCommitment"*/ "appendCommitmentV2", [id, commitmentHex, usdcAmount], account , initCode, signer);
+    await call_userop("Account", "appendCommitmentV2", [id, commitmentHex, usdcAmount], account , initCode, signer);
 
     // 4) send the link to the invited user
 
@@ -322,7 +256,7 @@ export async function send(username: string, account: string, initCode: string, 
         const signers = await hre.ethers.getSigners();
         const { args, extData } = result;
         try {
-            await call_userop("callTransact", [UTXOS_POOL_ADDRESS, args, extData], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
+            await call_userop("contracts/src/Transfers/Relayer.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -414,7 +348,7 @@ export async function receive(signer: any, account: string, initCode: string) {
         if (result) {
             const { args, extData } = result;
             try {
-                await call_userop("callDeposit", [UTXOS_POOL_ADDRESS, args, extData], account , initCode, signer);
+                await call_userop("Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], account , initCode, signer);
                 console.log(`\nFunded private amount with ${choiceAmount} USDC\n`)
             }
             catch (error) {
@@ -446,29 +380,12 @@ export async function refresh(username: string) {
     for (let i = 0; i < unredeemedNullifiers.length; i++) {
         const name = unredeemedNullifiers[i].name;
         const nullifierHash = unredeemedNullifiers[i].nullifier;
-        const amount = unredeemedNullifiers[i].amount;
-        let contactAddress = "0x";
+        let contractAddress = "0x";
 
-        // selecting the mixer contract address based on the amount
-        switch (amount) {
-            case 0.01:
-                contactAddress = ONBOARDING_MIXER_ADDRESS_TEST;
-                break;
-            case 0.1:
-                contactAddress = ONBOARDING_MIXER_ADDRESS_LOW;
-                break;
-            case 1:
-                contactAddress = ONBOARDING_MIXER_ADDRESS_MEDIUM;
-                break;
-            case 10:
-                contactAddress = ONBOARDING_MIXER_ADDRESS_HIGH;
-                break;
-            default:
-                contactAddress = "0x";
-        }
+        contractAddress = MIXER_ONBOARDING_AND_TRANSFERS;
 
         // fetching Withdrawal events from the mixer contract
-        const contract = await hre.ethers.getContractAt("OnboardingMixer", contactAddress);
+        const contract = await hre.ethers.getContractAt("OnboardingMixer", contractAddress);
         const filter = contract.filters.Withdrawal();
         const events = await contract.queryFilter(filter);
         events.forEach(event => {
@@ -531,7 +448,7 @@ export async function showContacts(name: string) {
     if (result) {
         const { args, extData } = result;
         try {
-            await call_userop("callTransact", [UTXOS_POOL_ADDRESS, args, extData], account , initCode, signer);
+            await call_userop("Accpunt", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], account , initCode, signer);
             console.log(`\nWithdrawal of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {

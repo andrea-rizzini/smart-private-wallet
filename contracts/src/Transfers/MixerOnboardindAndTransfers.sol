@@ -10,7 +10,7 @@ import "./MerkleTreeWithHistoryTransactions.sol";
 import { IVerifier } from "./interfaces/IVerifier.sol";
 
 interface IVerifierOnboarding {
-  function verifyOnboardingProof(bytes memory _proof, uint256[2] memory _input) external returns (bool);
+  function verifyProof(bytes memory _proof, uint256[2] memory _input) external returns (bool);
 }
 
 contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleTreeWithHistoryTransactions, ReentrancyGuard {
@@ -48,6 +48,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleT
     bytes32 extDataHash;
   }
 
+  event Log(string message);
+
   // Events for onboarding
   event CommitmentCreated(
     bytes32 indexed commitment,
@@ -79,6 +81,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleT
     verifier2 = _verifier2;
     verifier16 = _verifier16;
     token = _token;
+    super._initialize();
   }
 
   // Functions for onboarding
@@ -101,7 +104,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleT
     require(isKnownRoot(_root), "Cannot find your merkle root"); 
 
     require(
-      verifierOnboarding.verifyOnboardingProof(
+      verifierOnboarding.verifyProof(
         _proof,
         [uint256(_root), uint256(_nullifierHash)]
       ),
@@ -110,15 +113,15 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleT
 
     _deposit_after_redeem(_args, _extData);
 
-    nullifierHashes[_nullifierHash] = true;
+    // nullifierHashes[_nullifierHash] = true;
 
-    emit Withdrawal(_nullifierHash);
+    // emit Withdrawal(_nullifierHash);
 
   }
 
   // Functions for transactions
 
-    function _deposit_after_redeem(Proof memory _args, ExtData memory _extData) internal nonReentrant {
+  function _deposit_after_redeem(Proof memory _args, ExtData memory _extData) internal {
     require(isKnownRoot_(_args.root), "Invalid merkle root");
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
