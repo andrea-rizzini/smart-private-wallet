@@ -23,15 +23,15 @@ async function main() {
   }); 
   console.log("\nPM funded successfully"); // tofix
 
-  const amountInWei = await ep.balanceOf(pm.target.toString());
-  console.log("\nPM balance in Wei:",
-      amountInWei
-  );
-  const amountInEther = Number(amountInWei) / Number(BigInt("1000000000000000000"));
-  const amountInEtherWithDecimals = amountInEther.toFixed(18);
-  console.log("PM balance in Eth:",
-      amountInEtherWithDecimals
-  );
+  // const amountInWei = await ep.balanceOf(pm.target.toString());
+  // console.log("\nPM balance in Wei:",
+  //     amountInWei
+  // );
+  // const amountInEther = Number(amountInWei) / Number(BigInt("1000000000000000000"));
+  // const amountInEtherWithDecimals = amountInEther.toFixed(18);
+  // console.log("PM balance in Eth:",
+  //     amountInEtherWithDecimals
+  // );
 
   // deploy account-factory for v1 and v2
   const af = await hre.ethers.deployContract("contracts/src/Account.sol:AccountFactory", [], { signer: faucet }); 

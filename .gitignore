@@ -29,10 +29,11 @@ apps/version1_onboarding/links/linkNote.json
 /apps/version2_private_transfers/links/linkNote.json
 apps/version2_private_transfers/links/linkNote.json
 
-/apps/version3_compliance/link/*
-/apps/version3_compliance/cache/*
-/apps/version3_compliance/data/*
-apps/version3_compliance/links/linkNote.json
+/apps/version2_private_transfers_complete/links/*
+/apps/version2_private_transfers_complete/cache/*
+/apps/version2_private_transfers_complete/data/*
+/apps/version2_private_transfers_complete/links/linkNote.json
+apps/version2_private_transfers_complete/links/linkNote.json
 
 # circuits files
 /home/andrea/Desktop/smart-private-wallet/circuits/artifacts/circuits/ptau18

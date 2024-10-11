@@ -1,7 +1,13 @@
-import { getAccountAddress, createTransactionData, getUserAccountInfo } from "./poolFunctions";
+import crypto from 'crypto'
 import hre from "hardhat";
+
+import { createOnboardingData, createTransactionData, getAccountAddress, getUserAccountInfo } from "./poolFunctions";
 import { Keypair } from "./keypair";
 import { Utxo } from "./utxo";
+
+function randomBN(nbytes = 31) {
+  return BigInt('0x' + crypto.randomBytes(nbytes).toString('hex'))
+}
 
 export async function prepareDeposit(amount: string, address: string, signer: any){
   const recipientAddress = await getAccountAddress(address)
@@ -13,6 +19,29 @@ export async function prepareDeposit(amount: string, address: string, signer: an
   } else {
     console.log('Recipient not found');
   }  
+}
+
+export async function prepareTransferForOnboarding(amount: string, username: string, addressSender: string, signer: any) {
+  const recipientUtxoOnboarding = {
+    amount: hre.ethers.parseUnits(amount, 6),
+    blinding:  randomBN()
+  }
+
+  const { unspentUtxo, totalAmount, senderKeyPair } = await getUserAccountInfo(username, addressSender, {amount: hre.ethers.parseUnits(amount, 6)})
+
+  if (totalAmount < (hre.ethers.parseUnits(amount, 6))) {
+    throw new Error(`Insufficient funds!`)
+  }
+
+  const senderChangeUtxo = new Utxo({
+    keypair: senderKeyPair,
+    amount: totalAmount - (hre.ethers.parseUnits(amount, 6)),
+  })
+
+  const outputs = (totalAmount - (hre.ethers.parseUnits(amount, 6))) == BigInt(0) ? [recipientUtxoOnboarding] : [recipientUtxoOnboarding, senderChangeUtxo]
+
+  const { extData, args } = await createOnboardingData({ outputs, inputs: unspentUtxo }, senderKeyPair, signer)
+  return { args, extData }
 }
 
 export async function prepareTransfer(amount: string, username: string, addressSender: string, addressReceiver: string, signer: any) {
