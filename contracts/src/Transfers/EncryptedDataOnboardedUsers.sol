@@ -5,7 +5,7 @@ contract EncryptedDataOnboardedUsers {
 
     event EncryptedData(bytes encryptedNameAndAddress);
 
-    function register(bytes memory data) public {
+    function addEncryptedData(bytes memory data) public {
         emit EncryptedData(data);
     }
 

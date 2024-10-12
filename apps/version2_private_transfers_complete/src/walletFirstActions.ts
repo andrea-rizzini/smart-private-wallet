@@ -15,12 +15,12 @@ import { prepareDeposit } from './pool/poolPrepareActions';
 import { setup, checkAccountBalance, inviteUsingLink, send, receive, refresh, showContacts, withdraw, exit } from './walletActions';
 import { showMenu } from './menu/menu';
 import { toBuffer } from './pool/utxo';
+import { toFixedHex } from './utils/toHex';
 
 const ENCRYPTED_DATA_ADDRESS: string = process.env.ENCRYPTED_DATA_ADDRESS || '';
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
 const FACTORY_ADDRESS: string = process.env.ACCOUNT_FACTORY_ADDRESS || '';
 const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
-const POOL_USERS_ADDRESS: string = process.env.POOL_USERS_ADDRESS || '';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
 export async function acceptInvite() { 
@@ -488,7 +488,7 @@ export async function onboardViaLink() {
   
       const bytes = Buffer.concat([toBuffer(dataToEncrypt.name, 31), toBuffer(dataToEncrypt.blinding, 31)])
   
-      call_userop("Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, keypair.encrypt(bytes)], account, initCode, signers[index]);
+      // call_userop("Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, toFixedHex(keypair.encrypt(bytes))], account, initCode, signers[index]);
     }
     
     // start the wallet
