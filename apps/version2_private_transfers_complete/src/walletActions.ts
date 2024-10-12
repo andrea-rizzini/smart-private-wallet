@@ -51,7 +51,7 @@ export async function checkAccountBalance(username: string, account: string) {
 
     try {
         let keyPair: Keypair = getKeyPairOnboardingByUserId(getID(username)) as Keypair;
-        const keypair_link = Keypair.fromString(keyPair.privkey);
+        const keypair_link: Keypair = new Keypair(keyPair.privkey);
         if (keypair_link) {
             const { unspentUtxo } = await getUtxoFromKeypair(keypair_link, account);
             let totalAmountLink = BigInt(0);
@@ -97,13 +97,14 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
         else if (choiceAmount === 'exit') {
             console.log("\n");
             isValid = true;
-            rl.close();
             return;
         }
         else {
             console.log("\nInvalid amount. Please enter a valid number.");
         }
     } while (!isValid);
+
+    rl.close();
 
     let usdcValue: USDCStr = `${parseFloat(choiceAmount)}` as USDCStr;
     let id: string = MIXER_ONBOARDING_AND_TRANSFERS;

@@ -7,13 +7,14 @@ import * as readlineSync from 'readline-sync';
 
 import { call_userop } from './userop/createUserOp';
 import { deleteUser, getID, getUserByUsername, insertContact, insertKeypairOnboarding, insertUser, usernameExists } from '../database/database';
-import { getUtxoFromKeypair } from './pool/poolFunctions';
+import { getAccountAddress, getUtxoFromKeypair } from './pool/poolFunctions';
 import { inputFromCLI } from './utils/inputFromCLI';
 import { Keypair } from './pool/keypair';
 import { LinkNote } from './types/link';
 import { prepareDeposit } from './pool/poolPrepareActions';
 import { setup, checkAccountBalance, inviteUsingLink, send, receive, refresh, showContacts, withdraw, exit } from './walletActions';
 import { showMenu } from './menu/menu';
+import { toBuffer } from './pool/utxo';
 
 const ENCRYPTED_DATA_ADDRESS: string = process.env.ENCRYPTED_DATA_ADDRESS || '';
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
@@ -475,18 +476,20 @@ export async function onboardViaLink() {
     // Send encrypted data to the EncryptedAddresses contract, needed once the sendere of the note refreshs 
 
     //fetch sender public key
-    const userPool = await hre.ethers.getContractAt("PoolUsers", POOL_USERS_ADDRESS, signers[2]);
+    const recipientAddress = await getAccountAddress(link.sender_address)
 
-    // dataToEncrypt = {
-    //   name: link.recevier,
-    //   blinding: unspentUtxo[0].blinding
-    // }
-
-    // const keypair: Keypair = Keypair.fromString(link.sender_address);
-
-    // const bytes = Buffer.concat([toBuffer(dataToEncrypt.name, 31), toBuffer(dataToEncrypt.blinding, 31)])
-
-    // call_userop("Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS ,keypair.encrypt(bytes)], account, initCode, signers[index]);
+    if (recipientAddress) {
+      dataToEncrypt = {
+        name: link.recevier,
+        blinding: unspentUtxo[0].blinding
+      }
+  
+      const keypair: Keypair = Keypair.fromString(recipientAddress);
+  
+      const bytes = Buffer.concat([toBuffer(dataToEncrypt.name, 31), toBuffer(dataToEncrypt.blinding, 31)])
+  
+      call_userop("Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, keypair.encrypt(bytes)], account, initCode, signers[index]);
+    }
     
     // start the wallet
   
