@@ -4,7 +4,7 @@ export type USDCStr = `${number}`;
 
 export type LinkNote = {
     type: "notev1";
-    keyPair: Keypair;
+    key: string;
     sender: string;
     sender_address: string;
     recevier: string;

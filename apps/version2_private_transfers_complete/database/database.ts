@@ -31,6 +31,17 @@ export const createTables = () => {
         );
     `;
 
+    const createKeypairOnboardingTableSQL = `
+        CREATE TABLE IF NOT EXISTS keypairOnboarding (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            userId INTEGER UNIQUE, 
+            privkey TEXT NOT NULL,  
+            pubkey TEXT NOT NULL,   
+            encryptionKey TEXT NOT NULL, 
+            FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE 
+        );
+    `;
+
     const createContactsTableSQL = `
         CREATE TABLE IF NOT EXISTS contacts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,6 +68,8 @@ export const createTables = () => {
 
     db.exec(createKeypairTableSQL);
 
+    db.exec(createKeypairOnboardingTableSQL);
+
     db.exec(createContactsTableSQL);
 
     db.exec(createUserNullifiersTableSQL);
@@ -74,6 +87,12 @@ export const insertUser = (username: string, passwordHash: string) => {
 
 export const insertKeypair = (userId: number, privkey: string, pubkey: string, encryptionKey: string) => {
     const insertSQL = `INSERT INTO keypair (userId, privkey, pubkey, encryptionKey) VALUES (?, ?, ?, ?);`;
+    const stmt = db.prepare(insertSQL);
+    stmt.run(userId, privkey, pubkey, encryptionKey); 
+}
+
+export const insertKeypairOnboarding = (userId: number, privkey: string, pubkey: string, encryptionKey: string) => {
+    const insertSQL = `INSERT INTO keypairOnboarding (userId, privkey, pubkey, encryptionKey) VALUES (?, ?, ?, ?);`;
     const stmt = db.prepare(insertSQL);
     stmt.run(userId, privkey, pubkey, encryptionKey); 
 }
@@ -98,6 +117,12 @@ export const getUsers = () => {
 
 export const getKeypairs = () => {
     const selectSQL = `SELECT * FROM keypair;`;
+    const stmt = db.prepare(selectSQL);
+    return stmt.all();
+}
+
+export const getKeypairsOnboarding = () => {
+    const selectSQL = `SELECT * FROM keypairOnboarding;`;
     const stmt = db.prepare(selectSQL);
     return stmt.all();
 }
@@ -141,6 +166,12 @@ export const getUserNullifiers = () => {
 
 export const getKeyPairByUserId = (userId: number) => {
     const selectSQL = `SELECT privkey, pubkey, encryptionKey FROM keypair WHERE userId = ?;`;
+    const stmt = db.prepare(selectSQL);
+    return stmt.get(userId);
+}
+
+export const getKeyPairOnboardingByUserId = (userId: number) => {
+    const selectSQL = `SELECT privkey, pubkey, encryptionKey FROM keypairOnboarding WHERE userId = ?;`;
     const stmt = db.prepare(selectSQL);
     return stmt.get(userId);
 }
@@ -205,6 +236,11 @@ export const deleteUsers = () => {
 
 export const deleteKeypairs = () => {
     const deleteSQL = `DELETE FROM keypair;`;
+    db.exec(deleteSQL);
+}
+
+export const deleteKeypairsOnboarding = () => {
+    const deleteSQL = `DELETE FROM keypairOnboarding;`;
     db.exec(deleteSQL);
 }
 

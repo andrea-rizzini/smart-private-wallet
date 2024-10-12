@@ -50,6 +50,10 @@ interface IPoolUsers {
     function register(Account_ memory _account) external;
 }
 
+interface IEncryptedDataOnboardedUsers {
+    function addEncryptedData(bytes memory data) external;
+}
+
 // Account contract
 
 contract Account is IAccount {
@@ -120,6 +124,10 @@ contract Account is IAccount {
         IPoolUsers(poolUsersContract).register(account_);
     }
 
+    function insertIntoEncryptedData(address contract_address, bytes memory data) public {
+        IEncryptedDataOnboardedUsers(contract_address).addEncryptedData(data);
+    }
+
     function callDeposit(
         address poolAddress,
         IMixerOnboardingAndTransfers.Proof memory _proofArgs,
@@ -129,14 +137,6 @@ contract Account is IAccount {
         IERC20(usdcToken).approve(poolAddress, valueToSend);
         IMixerOnboardingAndTransfers(poolAddress).deposit(_proofArgs, _extData);
     }
-
-    // function callTransact(
-    //     address poolAddress,
-    //     IMixerOnboardingAndTransfers.Proof memory _proofArgs,
-    //     IMixerOnboardingAndTransfers.ExtData memory _extData
-    // ) external payable {
-    //     IMixerOnboardingAndTransfers(poolAddress).transact(_proofArgs, _extData);
-    // }
 
 }
 

@@ -149,12 +149,12 @@ export async function getProofOnboarding({ inputs, outputs, tree, extAmount, rec
     }
   }
   
-  const [output1, output2] = outputs // first is for the onboarding, second may bee the change or a zero amount output
+  const [output1, output2] = outputs 
 
   const extData = {
     recipient: toFixedHex(recipient, ADDRESS_BYTES_LENGTH),
     extAmount: toFixedHex(extAmount),
-    encryptedOutput1: output1.encrypt(), // to be encrypted with a symmetric key
+    encryptedOutput1: output1.encrypt(),
     encryptedOutput2: output2.encrypt(),
   }
   

@@ -5,10 +5,6 @@ import { createOnboardingData, createTransactionData, getAccountAddress, getUser
 import { Keypair } from "./keypair";
 import { Utxo } from "./utxo";
 
-function randomBN(nbytes = 31) {
-  return BigInt('0x' + crypto.randomBytes(nbytes).toString('hex'))
-}
-
 export async function prepareDeposit(amount: string, address: string, signer: any){
   const recipientAddress = await getAccountAddress(address)
   if (recipientAddress) {
@@ -22,7 +18,6 @@ export async function prepareDeposit(amount: string, address: string, signer: an
 }
 
 export async function prepareTransferForOnboarding(amount: string, recipientUtxoOnboarding: Utxo, username: string, addressSender: string, signer: any) {
-
 
   const { unspentUtxo, totalAmount, senderKeyPair } = await getUserAccountInfo(username, addressSender, {amount: hre.ethers.parseUnits(amount, 6)})
 

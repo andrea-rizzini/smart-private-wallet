@@ -4,16 +4,15 @@ import path from 'path';
 import * as readline from 'readline';
 
 import { call_userop } from "./userop/createUserOp";
-import { createNote } from "./note/createNote";
-import { getAccountAddress, getTotalAmount } from "./pool/poolFunctions";
-import { getAddressOfContactOfUser, getContactsByUserId, getID, getUnredeemedNullifiersByUserId, insertContact, insertKeypair, insertUserNullifier, 
-    updateContact, updateNullifierRedeemed } from '../database/database';
+import { getAccountAddress, getUtxoFromKeypair, getTotalAmount } from "./pool/poolFunctions";
+import { getAddressOfContactOfUser, getContactsByUserId, getID, getKeyPairOnboardingByUserId, insertContact, insertKeypair} from '../database/database';
 import { inputFromCLI } from "./utils/inputFromCLI";
 import { Keypair } from "./pool/keypair";
 import { LinkNote, USDCStr } from "./types/link";
 import { prepareDeposit, prepareTransfer, prepareTransferForOnboarding, prepareWithdrawal } from "./pool/poolPrepareActions";
 import { Utxo } from "./pool/utxo";
 
+const ENCRYPTED_DATA_ADDRESS = process.env.ENCRYPTED_DATA_ADDRESS || '';
 const INIT_CODE_RELAYER = process.env.INIT_CODE_RELAYER || '';
 const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
 const POOL_USERS_ADDRESS = process.env.POOL_USERS_ADDRESS || '';
@@ -48,13 +47,25 @@ export async function checkAccountBalance(username: string, account: string) {
     
     console.log("\nAddress:", account);
 
+    let poolAmount = BigInt(await getTotalAmount(username, account) as bigint);
+
     try {
-        const poolAmount = await getTotalAmount(username, account);
-        const poolAmountFormatted = Number(poolAmount) / (10 ** 6);
-        console.log(`\nPrivate account balance: ${poolAmountFormatted.toString()} USDC\n`, );
+        let keyPair: Keypair = getKeyPairOnboardingByUserId(getID(username)) as Keypair;
+        const keypair_link = Keypair.fromString(keyPair.privkey);
+        if (keypair_link) {
+            const { unspentUtxo } = await getUtxoFromKeypair(keypair_link, account);
+            let totalAmountLink = BigInt(0);
+            unspentUtxo.forEach(utxo => {
+                totalAmountLink = totalAmountLink + (utxo.amount);
+            })
+            poolAmount = poolAmount + totalAmountLink;
+        }
     } catch (error) {
-        console.error("\nCannot show private amount, user not yet registered in the pool\n");
+        // console.error("");
     }
+
+    const poolAmountFormatted = Number(poolAmount) / (10 ** 6);
+    console.log(`\nPrivate account balance: ${poolAmountFormatted.toString()} USDC\n`, );
     
 }
 
@@ -99,12 +110,12 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     // 2) create the utxo 
     const recipientUtxoOnboarding = new Utxo({
-        amount: hre.ethers.parseUnits(usdcValue, 6)
+        amount: hre.ethers.parseUnits(usdcValue, 6),
     })
 
     const link: LinkNote = {
         type: "notev1",
-        keyPair: recipientUtxoOnboarding.keypair,
+        key: recipientUtxoOnboarding.keypair.privkey,
         sender: name,
         sender_address: account,
         recevier: nameOnbUser,
@@ -140,7 +151,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     console.log(link);
     console.log("\n");
 
-    let jsonString = JSON.stringify(link, null, 2);
+    let jsonString = JSON.stringify(link);
     let dirPath = path.join(__dirname, '../links/');
     let filePath = path.join(dirPath, 'linkNote.json');
 
@@ -340,34 +351,14 @@ export async function refresh(username: string) {
     console.log('\nRefreshing ...');
     console.log('\n');
 
-    let unredeemedNullifiers: any;
+    const contacts = getContactsByUserId(getID(username));
+    
+    // 1) fetch all the events of EncryptedData
+    const contract = await hre.ethers.getContractAt("EncryptedDataOnboardedUsers", ENCRYPTED_DATA_ADDRESS);
+    let filter = contract.filters.EncryptedData();
+    const events= await contract.queryFilter(filter);
 
-    try {
-        unredeemedNullifiers = getUnredeemedNullifiersByUserId(getID(username));
-    } catch (error) {
-        unredeemedNullifiers = [];
-        console.error(`Error during refresh:`, error);
-    }
 
-    for (let i = 0; i < unredeemedNullifiers.length; i++) {
-        const name = unredeemedNullifiers[i].name;
-        const nullifierHash = unredeemedNullifiers[i].nullifier;
-        let contractAddress = "0x";
-
-        contractAddress = MIXER_ONBOARDING_AND_TRANSFERS;
-
-        // fetching Withdrawal events from the mixer contract
-        const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", contractAddress);
-        const filter = contract.filters.Redeemed();
-        const events = await contract.queryFilter(filter);
-        events.forEach(event => {
-            if (event.args.nullifierHash === nullifierHash) {
-
-                updateNullifierRedeemed(getID(username), nullifierHash);
-                updateContact(getID(username), name, event.args.to);           
-            }
-        });
-    }  
 }
 
 export async function showContacts(name: string) {

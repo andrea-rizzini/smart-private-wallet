@@ -1,8 +1,9 @@
 import { deleteDir } from "../src/utils/deleteDir";
-import { deleteUsers, deleteKeypairs, deleteContacts, deleteNullifiers } from "./database";
+import { deleteUsers, deleteKeypairs, deleteKeypairsOnboarding, deleteContacts, deleteNullifiers } from "./database";
 
 deleteUsers();
 deleteKeypairs();
+deleteKeypairsOnboarding();
 deleteContacts();
 deleteNullifiers();
 

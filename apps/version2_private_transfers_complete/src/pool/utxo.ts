@@ -7,7 +7,7 @@ function randomBN(nbytes = 31) {
     return BigInt('0x' + crypto.randomBytes(nbytes).toString('hex'))
 }
 
-function toBuffer(value: string | number | BigInt, length: number) {
+export function toBuffer(value: string | number | BigInt, length: number) {
   let hexString = value.toString(16);
   hexString = hexString.padStart(length * 2, '0');
   return Buffer.from(hexString, 'hex');

@@ -6,17 +6,20 @@ import * as readline from 'readline';
 import * as readlineSync from 'readline-sync';
 
 import { call_userop } from './userop/createUserOp';
-import { deleteUser, getID, getUserByUsername, insertContact, insertUser, usernameExists } from '../database/database';
+import { deleteUser, getID, getUserByUsername, insertContact, insertKeypairOnboarding, insertUser, usernameExists } from '../database/database';
+import { getUtxoFromKeypair } from './pool/poolFunctions';
 import { inputFromCLI } from './utils/inputFromCLI';
+import { Keypair } from './pool/keypair';
 import { LinkNote } from './types/link';
 import { prepareDeposit } from './pool/poolPrepareActions';
-import { redeem } from './note/redeemNote';
 import { setup, checkAccountBalance, inviteUsingLink, send, receive, refresh, showContacts, withdraw, exit } from './walletActions';
 import { showMenu } from './menu/menu';
 
-const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
+const ENCRYPTED_DATA_ADDRESS: string = process.env.ENCRYPTED_DATA_ADDRESS || '';
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
 const FACTORY_ADDRESS: string = process.env.ACCOUNT_FACTORY_ADDRESS || '';
+const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
+const POOL_USERS_ADDRESS: string = process.env.POOL_USERS_ADDRESS || '';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
 export async function acceptInvite() { 
@@ -178,11 +181,10 @@ export async function acceptInvite() {
       const { args, extData } = result;
       try {
           await call_userop("Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], account , initCode, signers[index]);
-          console.log(`\nFunded private amount with 0.01 USDC\n`)
+          console.log(`\nFunded private amount with 0.01 USDC`)
       }
       catch (error) {
-          console.error("\nSomething went wrong during the deposit transaction: ", error);
-          console.log("\n");
+          console.error("\nSomething went wrong during the deposit transaction\n",);
       }
   }
   else {
@@ -451,20 +453,49 @@ export async function onboardViaLink() {
 
   await new Promise(resolve => setTimeout(resolve, 7000));
 
+  let dataToEncrypt;
+
+  const keypair_link: Keypair = new Keypair(link.key);
+
   try {
-    await redeem(link, account, initCode, signers[index]);
+    const { unspentUtxo } = await getUtxoFromKeypair(keypair_link, account);
+    let totalAmount = BigInt(0);
+    unspentUtxo.forEach(utxo => {
+      totalAmount = totalAmount + (utxo.amount)
+    })
+
+    // Update contacts with the sender of the note, once redeemed
+    insertContact(getID(username), link.sender, link.sender_address);
+
+    console.log(`\nYou have been onboarded with ${Number(totalAmount) / (10 ** 6)} USDC`);
+
+    // insert the new keypair which allows to read the utxo related with onboarding
+    insertKeypairOnboarding(getID(username), keypair_link.privkey, keypair_link.pubkey.toString(), keypair_link.encryptionKey);
+
+    // Send encrypted data to the EncryptedAddresses contract, needed once the sendere of the note refreshs 
+
+    //fetch sender public key
+    const userPool = await hre.ethers.getContractAt("PoolUsers", POOL_USERS_ADDRESS, signers[2]);
+
+    // dataToEncrypt = {
+    //   name: link.recevier,
+    //   blinding: unspentUtxo[0].blinding
+    // }
+
+    // const keypair: Keypair = Keypair.fromString(link.sender_address);
+
+    // const bytes = Buffer.concat([toBuffer(dataToEncrypt.name, 31), toBuffer(dataToEncrypt.blinding, 31)])
+
+    // call_userop("Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS ,keypair.encrypt(bytes)], account, initCode, signers[index]);
+    
+    // start the wallet
+  
+    console.log('\nWelcome !\n');
+
+    await getChoice();
   } catch (error) {
-    console.log('\nError redeeming the link: ', error);
+    console.log('\nError with the link: ', error);
     deleteUser(index + 1);
   }
-
-  // Update contacts with the sender of the note, once redeemed
-
-  insertContact(getID(username), link.sender, link.sender_address);
-
-  // start the wallet
-  
-  console.log('\nWelcome !\n');
-
-  await getChoice();
+ 
 }

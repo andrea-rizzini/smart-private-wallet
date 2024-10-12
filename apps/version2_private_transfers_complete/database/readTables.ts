@@ -1,4 +1,4 @@
-import { getUsers, getContacts, getKeypairs, getNullifiers } from "./database";
+import { getUsers, getContacts, getKeypairs, getKeypairsOnboarding, getNullifiers } from "./database";
 
 console.log('Users:\n');
 getUsers().forEach(user => {
@@ -12,6 +12,11 @@ getContacts().forEach(contact => {
 
 console.log('\nKeypairs:\n');
 getKeypairs().forEach(keypair => {
+    console.log(keypair);
+});
+
+console.log('\nKeypairs Onboarding:\n');
+getKeypairsOnboarding().forEach(keypair => {
     console.log(keypair);
 });
 

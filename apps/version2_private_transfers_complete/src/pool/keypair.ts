@@ -11,7 +11,7 @@ const ENCRYPTION_KEY_LENGTH = 128
 
 class Keypair extends KeypairStatic implements BaseKeypair {
   public privkey: string
-  public pubkey: bigint // check if it is still working, previously it was BigInt
+  public pubkey: bigint 
   public encryptionKey: string
 
   public constructor(privkey = Wallet.createRandom().privateKey) { // generated using ethers
