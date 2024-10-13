@@ -7,6 +7,7 @@ export type LinkNote = {
     key: string;
     sender: string;
     sender_address: string;
+    receiver: string;
     usdc: USDCStr;
     id: string;
     challenge: bigint;

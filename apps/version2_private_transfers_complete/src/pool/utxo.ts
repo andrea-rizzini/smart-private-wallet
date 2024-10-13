@@ -8,7 +8,14 @@ export function randomBN(nbytes = 31) {
 }
 
 export function toBuffer(value: string | number | BigInt, length: number) {
-  let hexString = value.toString(16);
+  // let hexString = value.toString(16);
+  let hexString;
+  if (typeof value === 'string') {
+    const buffer = Buffer.from(value, 'utf-8');
+    hexString = buffer.toString('hex');
+  } else {
+    hexString = value.toString(16);
+  }
   hexString = hexString.padStart(length * 2, '0');
   return Buffer.from(hexString, 'hex');
 }

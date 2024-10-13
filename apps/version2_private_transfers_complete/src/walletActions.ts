@@ -6,7 +6,7 @@ import * as readline from 'readline';
 import { call_userop } from "./userop/createUserOp";
 import { getAccountAddress, getAccountKeyPair, getUtxoFromKeypair, getTotalAmount } from "./pool/poolFunctions";
 import { getAddressOfContactOfUser, getContactsByUserId, getID, getKeyPairOnboardingByUserId, insertChallenge, insertContact, 
-    insertKeypair, isChallengeRedeemed, updateChallengeRedeemed} from '../database/database';
+    insertKeypair, isChallengeRedeemed, updateContact, updateChallengeRedeemed} from '../database/database';
 import { inputFromCLI } from "./utils/inputFromCLI";
 import { Keypair } from "./pool/keypair";
 import { LinkNote, USDCStr } from "./types/link";
@@ -121,6 +121,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
         key: recipientUtxoOnboarding.keypair.privkey,
         sender: name,
         sender_address: account,
+        receiver: nameOnbUser,
         usdc: usdcValue, // arbitrary denomination
         id: id, // address of the onboarding mixer contract
         challenge: randomBN()
@@ -377,22 +378,18 @@ export async function refresh(username: string, account: string) {
             try {
                 const decryptedData = keypair_.decrypt(encryptedData);
                 let challenge = BigInt('0x' + decryptedData.slice(0,31).toString('hex'))
-                let address = ('0x' + decryptedData.slice(31).toString('hex'));
-                // console.log(challenge);
-                // console.log(address);
-                // if (!isChallengeRedeemed(getID(username), challenge.toString())) {
-                //     updateChallengeRedeemed(getID(username), challenge.toString());
-                    
-                // }
+                let address = ('0x' + decryptedData.slice(31, 51).toString('hex'));
+                let name = decryptedData.slice(51).toString('utf-8');
+                if (!isChallengeRedeemed(getID(username), challenge.toString())) {
+                    updateChallengeRedeemed(getID(username), challenge.toString());
+                    updateContact(getID(username), name, address);
+                }
+
             }
             catch (error) {
             }
         })
 
-        // data.forEach((element: any) => {
-        //     let challenge = BigInt('0x' + element.toString('hex'))
-        //     console.log(challenge);
-        // })
     }   
     
 }
