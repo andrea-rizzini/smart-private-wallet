@@ -46,7 +46,7 @@ export const createTables = () => {
         CREATE TABLE IF NOT EXISTS contacts (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             userId INTEGER,
-            name TEXT NOT NULL, 
+            name TEXT NOT NULL UNIQUE, 
             address TEXT NOT NULL, 
             FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE
         );
@@ -64,6 +64,16 @@ export const createTables = () => {
         );
     `;
 
+    const createChallengeTableSQL = `
+        CREATE TABLE IF NOT EXISTS challenges (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            challenge TEXT NOT NULL, 
+            redeemed BOOLEAN NOT NULL DEFAULT FALSE,
+            FOREIGN KEY (name) REFERENCES contacts(name) 
+        );
+    `;
+
     db.exec(createTableSQL); 
 
     db.exec(createKeypairTableSQL);
@@ -73,6 +83,8 @@ export const createTables = () => {
     db.exec(createContactsTableSQL);
 
     db.exec(createUserNullifiersTableSQL);
+
+    db.exec(createChallengeTableSQL);
 };
 
 
@@ -101,6 +113,12 @@ export const insertContact = (userId: number, name: string, address: string) => 
     const insertSQL = `INSERT INTO contacts (userId, name, address) VALUES (?, ?, ?);`;
     const stmt = db.prepare(insertSQL);
     stmt.run(userId, name, address); 
+}
+
+export const insertChallenge = (name: string, challenge: string) => {
+    const insertSQL = `INSERT INTO challenges (name, challenge) VALUES (?, ?);`;
+    const stmt = db.prepare(insertSQL);
+    stmt.run(name, challenge); 
 }
 
 export const insertUserNullifier = (userId: number, name: string, nullifier: string, amount: number) => {
@@ -135,6 +153,12 @@ export const getContacts = () => {
 
 export const getNullifiers = () => {
     const selectSQL = `SELECT * FROM user_nullifiers;`;
+    const stmt = db.prepare(selectSQL);
+    return stmt.all();
+}
+
+export const getChallenges = () => {
+    const selectSQL = `SELECT * FROM challenges;`;
     const stmt = db.prepare(selectSQL);
     return stmt.all();
 }
@@ -200,6 +224,18 @@ export const updateNullifierRedeemed = (userId: number, nullifier: string) => {
     stmt.run(userId, nullifier);
 }
 
+export const updateChallengeRedeemed = (name: string) => {
+    const updateSQL = `UPDATE challenges SET redeemed = TRUE WHERE name = ?;`;
+    const stmt = db.prepare(updateSQL);
+    stmt.run(name);
+}
+
+export const getChallengeByName = (name: string) => {
+    const selectSQL = `SELECT challenge FROM challenges WHERE name = ?;`;
+    const stmt = db.prepare(selectSQL);
+    return stmt.get(name);
+}
+
 export const usernameExists = (username: string): boolean => {
     const query = `SELECT COUNT(*) as count FROM users WHERE username = ?;`
     const stmt = db.prepare(query);
@@ -251,5 +287,10 @@ export const deleteContacts = () => {
 
 export const deleteNullifiers = () => {
     const deleteSQL = `DELETE FROM user_nullifiers;`;
+    db.exec(deleteSQL);
+}
+
+export const deleteChallenges = () => {
+    const deleteSQL = `DELETE FROM challenges;`;
     db.exec(deleteSQL);
 }

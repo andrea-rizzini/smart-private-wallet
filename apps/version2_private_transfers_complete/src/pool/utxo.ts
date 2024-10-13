@@ -3,7 +3,7 @@ import { Keypair } from './keypair'
 import crypto from 'crypto'
 import { poseidonHash } from '../utils/hashFunctions'
 
-function randomBN(nbytes = 31) {
+export function randomBN(nbytes = 31) {
     return BigInt('0x' + crypto.randomBytes(nbytes).toString('hex'))
 }
 

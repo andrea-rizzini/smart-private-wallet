@@ -66,7 +66,7 @@ export async function acceptInvite() {
         break;
       case '7':
         currentAction = '8';
-        await refresh(username);
+        await refresh(username, account);
         break
       case '8':
         currentAction = '9';
@@ -242,7 +242,7 @@ export async function login() {
         break;
       case '7':
         currentAction = '8';
-        await refresh(username);
+        await refresh(username, account);
         break
       case '8':
         currentAction = '9';
@@ -370,7 +370,7 @@ export async function onboardViaLink() {
         break;
       case '7':
         currentAction = '8';
-        await refresh(username);
+        await refresh(username, account);
         break
       case '8':
         currentAction = '9';
@@ -389,8 +389,13 @@ export async function onboardViaLink() {
   let dirPath = path.join(__dirname, '../links/');
   let filePath = path.join(dirPath, 'linkNote.json');
 
+  function bigIntReviver(key: string, value: any) {
+    // Controlla se il valore è una stringa e contiene solo numeri
+    return typeof value === 'string' && /^\d+$/.test(value) ? BigInt(value) : value;
+  }
+
   const jsonData = fs.readFileSync(filePath, 'utf-8');
-  const link: LinkNote = JSON.parse(jsonData); 
+  const link: LinkNote = JSON.parse(jsonData, bigIntReviver); 
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -481,14 +486,14 @@ export async function onboardViaLink() {
     if (recipientAddress) {
       dataToEncrypt = {
         name: link.recevier,
-        blinding: unspentUtxo[0].blinding
+        challenge: link.challenge,
       }
   
       const keypair: Keypair = Keypair.fromString(recipientAddress);
   
-      const bytes = Buffer.concat([toBuffer(dataToEncrypt.name, 31), toBuffer(dataToEncrypt.blinding, 31)])
+      const bytes = Buffer.concat([toBuffer(dataToEncrypt.name, dataToEncrypt.name.length), toBuffer(dataToEncrypt.challenge, 31)])
   
-      // call_userop("Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, toFixedHex(keypair.encrypt(bytes))], account, initCode, signers[index]);
+      call_userop("Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, keypair.encrypt(bytes)], account, initCode, signers[index]);
     }
     
     // start the wallet

@@ -10,4 +10,5 @@ export type LinkNote = {
     recevier: string;
     usdc: USDCStr;
     id: string;
+    challenge: bigint;
   };

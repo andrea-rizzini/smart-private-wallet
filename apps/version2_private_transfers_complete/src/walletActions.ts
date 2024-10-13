@@ -4,12 +4,13 @@ import path from 'path';
 import * as readline from 'readline';
 
 import { call_userop } from "./userop/createUserOp";
-import { getAccountAddress, getUtxoFromKeypair, getTotalAmount } from "./pool/poolFunctions";
-import { getAddressOfContactOfUser, getContactsByUserId, getID, getKeyPairOnboardingByUserId, insertContact, insertKeypair} from '../database/database';
+import { getAccountAddress, getAccountKeyPair, getUtxoFromKeypair, getTotalAmount } from "./pool/poolFunctions";
+import { getAddressOfContactOfUser, getContactsByUserId, getID, getKeyPairByUserId, getKeyPairOnboardingByUserId, insertChallenge, insertContact, insertKeypair} from '../database/database';
 import { inputFromCLI } from "./utils/inputFromCLI";
 import { Keypair } from "./pool/keypair";
 import { LinkNote, USDCStr } from "./types/link";
 import { prepareDeposit, prepareTransfer, prepareTransferForOnboarding, prepareWithdrawal } from "./pool/poolPrepareActions";
+import { randomBN } from './pool/utxo';
 import { Utxo } from "./pool/utxo";
 
 const ENCRYPTED_DATA_ADDRESS = process.env.ENCRYPTED_DATA_ADDRESS || '';
@@ -74,7 +75,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
-      });
+    });
 
     // 1) chose the name and the amount
 
@@ -121,7 +122,8 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
         sender_address: account,
         recevier: nameOnbUser,
         usdc: usdcValue, // arbitrary denomination
-        id: id // address of the onboarding mixer contract
+        id: id, // address of the onboarding mixer contract
+        challenge: randomBN()
     };
 
     // 3) append the utxo to the mixer contract
@@ -152,7 +154,11 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     console.log(link);
     console.log("\n");
 
-    let jsonString = JSON.stringify(link);
+    function bigIntReplacer(key: string, value: any) {
+        return typeof value === 'bigint' ? value.toString() : value;
+    }
+
+    let jsonString = JSON.stringify(link, bigIntReplacer, 2);
     let dirPath = path.join(__dirname, '../links/');
     let filePath = path.join(dirPath, 'linkNote.json');
 
@@ -166,6 +172,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     
     insertContact(getID(name), nameOnbUser, "0x");
 
+    insertChallenge(nameOnbUser, link.challenge.toString());
 }
 
 export async function send(username: string, account: string, initCode: string, signer: any) {
@@ -348,18 +355,47 @@ export async function receive(signer: any, account: string, initCode: string) {
     
 }
 
-export async function refresh(username: string) {
+export async function refresh(username: string, account: string) {
     console.log('\nRefreshing ...');
     console.log('\n');
 
     const contacts = getContactsByUserId(getID(username));
+
+    const address = await getAccountAddress(account) 
+
+    if (address) {
+        const keyPair = await getAccountKeyPair(username, address)
+        const keypair_ = new Keypair(keyPair?.privkey)
+
+        // 1) fetch all the events of EncryptedData
+        const contract = await hre.ethers.getContractAt("EncryptedDataOnboardedUsers", ENCRYPTED_DATA_ADDRESS);
+        let filter = contract.filters.EncryptedData();
+        const events= await contract.queryFilter(filter);
+
+        // 2) filter the events of the user
+        let data: any = [];
+
+        events.forEach((event) => {
+            const encryptedData = event.args[0];
+            try {
+                const decryptedData = keypair_.decrypt(encryptedData);
+                data.push(decryptedData);
+            }
+            catch (error) {
+            }
+        })
+
+        data.forEach((element: any) => {
+            // let d = {
+            //     name: ('0x' + element.slice(0, 31).toString('hex')),
+            //     challenge: BigInt('0x' + element.slice(31, 62).toString('hex')),
+            // }
+            // console.log(d);
+            console.log(element.toString('hex'));
+
+        })
+    }   
     
-    // 1) fetch all the events of EncryptedData
-    const contract = await hre.ethers.getContractAt("EncryptedDataOnboardedUsers", ENCRYPTED_DATA_ADDRESS);
-    let filter = contract.filters.EncryptedData();
-    const events= await contract.queryFilter(filter);
-
-
 }
 
 export async function showContacts(name: string) {

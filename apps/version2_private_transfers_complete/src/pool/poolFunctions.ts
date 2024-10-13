@@ -1,5 +1,5 @@
 import { BaseUtxo, CreateTransactionParams, CommitmentEvents, PrepareTxParams } from "./types";
-import { getKeyPairByUserId, getID } from "../../database/database";
+import { getKeyPairByUserId, getKeyPairOnboardingByUserId, getID } from "../../database/database";
 import { getProof, getProofOnboarding } from "../proof/generateTransactionProof";
 import hre from "hardhat";
 import { Keypair } from "./keypair";
@@ -52,6 +52,46 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
   return { unspentUtxo }
 }
 
+export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){ // this function has to return just unspentUtxo
+
+  // 1) fetch all nullifiers
+  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
+  let filter = contract.filters.NewNullifier();
+  const eventsNullifiers = await contract.queryFilter(filter);
+
+  // 2) fetch all commitment events
+  filter = contract.filters.NewCommitment();
+  const eventsCommitments = await contract.queryFilter(filter);
+
+  // 3) for each event, take the encrypted output field, decrypt it and if it's owned by the sender, add it to the myUtxo array
+  let myUtxo: BaseUtxo[] = []
+
+  eventsCommitments.forEach(event => {
+    const index = Number(event.args[1])
+    const encryptedOutput = event.args[2]
+    try {
+      const utxo = Utxo.decrypt(senderKeyPair, encryptedOutput, index);
+      myUtxo.push(utxo)
+    } catch (e) {
+      // do nothing, we are trying to decrypt an utxo which is not owned by the sender
+    }    
+  })
+
+  // 4) create the nullifier and if it was not spent yet consider it as an unspent utxo
+  let unspentUtxoOnb: BaseUtxo[] = []
+
+  myUtxo.forEach(utxo => {
+    const nullifier = utxo.getNullifier();
+    const isSpent = eventsNullifiers.some(event => toFixedHex(event.args[0]) === toFixedHex(nullifier));
+    if (!isSpent) {
+      unspentUtxoOnb.push(utxo);
+    }
+  })
+
+  return { unspentUtxoOnb }
+}
+
+
 export async function getAccountAddress(account: string){
   const contract = await hre.ethers.getContractAt("PoolUsers", contractAddress);
   const filter = contract.filters.PublicKey();
@@ -83,8 +123,71 @@ export async function getAccountKeyPair(username: string, addressSender: string)
 export async function getUserAccountInfo(username: string, addressSender: string, {amount}: {amount: any}){
   const senderKeyPair_ = await getAccountKeyPair(username, addressSender);
   const senderKeyPair = senderKeyPair_ ? new Keypair(senderKeyPair_.privkey) : undefined;
+  
+  let key_pair_onb_: Keypair | undefined;
+  
+  try {
+    key_pair_onb_ = getKeyPairOnboardingByUserId(getID(username)) as Keypair;
+  } catch (e) {
+    key_pair_onb_ = undefined;
+  }
+  
+  const key_pair_onb = key_pair_onb_ ? new Keypair(key_pair_onb_.privkey) : undefined;
 
-  if (senderKeyPair) {
+  if (senderKeyPair && key_pair_onb) {
+    const { unspentUtxo } = await getUtxoFromKeypair(senderKeyPair, addressSender);
+    const { unspentUtxoOnb } = await getOnbUtxoFromKeypair(key_pair_onb, addressSender);
+    const result = [];
+    let requiredAmount = BigInt(0);
+    for (const utxo of unspentUtxo) {
+      if (requiredAmount < (amount) && result.length < 16) {
+        requiredAmount = requiredAmount + (utxo.amount)
+        result.push(utxo)
+      } else if (
+        requiredAmount >= (amount) &&
+        result.length > 2 &&
+        result.length < 16
+      ) {
+        requiredAmount = requiredAmount + (utxo.amount)
+        result.push(utxo)
+      } else {
+        break
+      }
+    }
+    for (const utxo of unspentUtxoOnb) {
+      if (requiredAmount < (amount) && result.length < 16) {
+        requiredAmount = requiredAmount + (utxo.amount)
+        result.push(utxo)
+      } else if (
+        requiredAmount >= (amount) &&
+        result.length > 2 &&
+        result.length < 16
+      ) {
+        requiredAmount = requiredAmount + (utxo.amount)
+        result.push(utxo)
+      } else {
+        break
+      }
+    }
+
+    if (unspentUtxo.length !== result.length && result.length === 16 && requiredAmount < (amount)) {
+      const utxo = unspentUtxo.slice(0, 16 * 2 - 1)
+
+      // @ts-expect-error
+      const availableBalanceAfterMerge = utxo.reduce((acc, curr) => acc.add(curr.amount), BigInt(0))
+
+      throw new Error(
+        `Insufficient inputs`,
+      )
+    }
+
+    return {
+      senderKeyPair,
+      unspentUtxo: result,
+      totalAmount: requiredAmount,
+    }
+  }
+  else if (senderKeyPair) {
     const { unspentUtxo } = await getUtxoFromKeypair(senderKeyPair, addressSender);
     const result = [];
     let requiredAmount = BigInt(0);

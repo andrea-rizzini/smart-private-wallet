@@ -1,4 +1,4 @@
-import { getUsers, getContacts, getKeypairs, getKeypairsOnboarding, getNullifiers } from "./database";
+import { getUsers, getContacts, getChallenges, getKeypairs, getKeypairsOnboarding, getNullifiers } from "./database";
 
 console.log('Users:\n');
 getUsers().forEach(user => {
@@ -24,3 +24,9 @@ console.log('\nNullifiers:\n');
 getNullifiers().forEach(nullifier => {
     console.log(nullifier);
 });
+
+console.log('\nChallenges:\n');
+getChallenges().forEach(challenge => {
+    console.log(challenge);
+});
+
