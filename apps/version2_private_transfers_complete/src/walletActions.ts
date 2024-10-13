@@ -408,9 +408,10 @@ export async function showContacts(name: string) {
     }
 
     console.log("\n");
- }
+ 
+}
 
- export async function withdraw(username: string, account: string, initCode: string, signer: any) {
+export async function withdraw(username: string, account: string, initCode: string, signer: any) {
     console.log("\nYou can withdraw utxos with arbitrary denomination !");
     const rl = readline.createInterface({
         input: process.stdin,
@@ -444,7 +445,7 @@ export async function showContacts(name: string) {
     if (result) {
         const { args, extData } = result;
         try {
-            await call_userop("Accpunt", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], account , initCode, signer);
+            await call_userop("Account", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], account , initCode, signer);
             console.log(`\nWithdrawal of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -455,7 +456,7 @@ export async function showContacts(name: string) {
     else {
         console.log("\nWithdraw preparation failed");
     } 
- }
+}
 
 export async function exit(name: string) {
     console.log('\nExiting ...');

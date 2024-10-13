@@ -15,7 +15,6 @@ import { prepareDeposit } from './pool/poolPrepareActions';
 import { setup, checkAccountBalance, inviteUsingLink, send, receive, refresh, showContacts, withdraw, exit } from './walletActions';
 import { showMenu } from './menu/menu';
 import { toBuffer } from './pool/utxo';
-import { toFixedHex } from './utils/toHex';
 
 const ENCRYPTED_DATA_ADDRESS: string = process.env.ENCRYPTED_DATA_ADDRESS || '';
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
