@@ -13,7 +13,7 @@ const contractAddress = process.env.POOL_USERS_ADDRESS || '';
 const MERKLE_TREE_HEIGHT = 20;
 const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
 
-export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){ // this function has to return just unspentUtxo
+export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){
 
   // 1) fetch all nullifiers
   const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
@@ -52,7 +52,7 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
   return { unspentUtxo }
 }
 
-export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){ // this function has to return just unspentUtxo
+export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){ 
 
   // 1) fetch all nullifiers
   const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
@@ -91,7 +91,6 @@ export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSende
   return { unspentUtxoOnb }
 }
 
-
 export async function getAccountAddress(account: string){
   const contract = await hre.ethers.getContractAt("PoolUsers", contractAddress);
   const filter = contract.filters.PublicKey();
@@ -125,7 +124,7 @@ export async function getUserAccountInfo(username: string, addressSender: string
   const senderKeyPair = senderKeyPair_ ? new Keypair(senderKeyPair_.privkey) : undefined;
   
   let key_pair_onb_: Keypair | undefined;
-  
+
   try {
     key_pair_onb_ = getKeyPairOnboardingByUserId(getID(username)) as Keypair;
   } catch (e) {

@@ -484,14 +484,10 @@ export async function onboardViaLink() {
     const recipientAddress = await getAccountAddress(link.sender_address)
 
     if (recipientAddress) {
-      dataToEncrypt = {
-        name: link.recevier,
-        challenge: link.challenge,
-      }
   
       const keypair: Keypair = Keypair.fromString(recipientAddress);
   
-      const bytes = Buffer.concat([toBuffer(dataToEncrypt.name, dataToEncrypt.name.length), toBuffer(dataToEncrypt.challenge, 31)])
+      const bytes = Buffer.concat([toBuffer(link.challenge, 31), toBuffer(BigInt(account), 20)]);
   
       call_userop("Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, keypair.encrypt(bytes)], account, initCode, signers[index]);
     }

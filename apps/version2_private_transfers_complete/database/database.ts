@@ -67,10 +67,11 @@ export const createTables = () => {
     const createChallengeTableSQL = `
         CREATE TABLE IF NOT EXISTS challenges (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            userId INTEGER,
             name TEXT NOT NULL,
             challenge TEXT NOT NULL, 
             redeemed BOOLEAN NOT NULL DEFAULT FALSE,
-            FOREIGN KEY (name) REFERENCES contacts(name) 
+            FOREIGN KEY (userId) REFERENCES users(id) ON DELETE CASCADE 
         );
     `;
 
@@ -115,10 +116,10 @@ export const insertContact = (userId: number, name: string, address: string) => 
     stmt.run(userId, name, address); 
 }
 
-export const insertChallenge = (name: string, challenge: string) => {
-    const insertSQL = `INSERT INTO challenges (name, challenge) VALUES (?, ?);`;
+export const insertChallenge = (userId: number, name: string, challenge: string) => {
+    const insertSQL = `INSERT INTO challenges (userId, name, challenge) VALUES (?, ?, ?);`;
     const stmt = db.prepare(insertSQL);
-    stmt.run(name, challenge); 
+    stmt.run(userId, name, challenge); 
 }
 
 export const insertUserNullifier = (userId: number, name: string, nullifier: string, amount: number) => {
@@ -224,16 +225,24 @@ export const updateNullifierRedeemed = (userId: number, nullifier: string) => {
     stmt.run(userId, nullifier);
 }
 
-export const updateChallengeRedeemed = (name: string) => {
-    const updateSQL = `UPDATE challenges SET redeemed = TRUE WHERE name = ?;`;
+export const updateChallengeRedeemed = (userID: number, challenge: string) => {
+    const updateSQL = `UPDATE challenges SET redeemed = TRUE WHERE userId = ? AND challenge = ?;`;
     const stmt = db.prepare(updateSQL);
-    stmt.run(name);
+    stmt.run(userID, challenge);
 }
 
-export const getChallengeByName = (name: string) => {
+export const getChallengeByNameAndUserID = (userId: number, name: string) => {
     const selectSQL = `SELECT challenge FROM challenges WHERE name = ?;`;
     const stmt = db.prepare(selectSQL);
-    return stmt.get(name);
+    return stmt.get(userId, name);
+}
+
+export const isChallengeRedeemed = (userId: number, challenge: string) => {
+    const selectSQL = `SELECT redeemed FROM challenges WHERE userId = ? AND challenge = ?;`;
+    const stmt = db.prepare(selectSQL);
+    const result = stmt.get(userId, challenge);
+    // @ts-ignore
+    return result.redeemed;
 }
 
 export const usernameExists = (username: string): boolean => {

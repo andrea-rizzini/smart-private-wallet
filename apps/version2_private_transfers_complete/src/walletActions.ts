@@ -5,7 +5,8 @@ import * as readline from 'readline';
 
 import { call_userop } from "./userop/createUserOp";
 import { getAccountAddress, getAccountKeyPair, getUtxoFromKeypair, getTotalAmount } from "./pool/poolFunctions";
-import { getAddressOfContactOfUser, getContactsByUserId, getID, getKeyPairByUserId, getKeyPairOnboardingByUserId, insertChallenge, insertContact, insertKeypair} from '../database/database';
+import { getAddressOfContactOfUser, getContactsByUserId, getID, getKeyPairOnboardingByUserId, insertChallenge, insertContact, 
+    insertKeypair, isChallengeRedeemed, updateChallengeRedeemed} from '../database/database';
 import { inputFromCLI } from "./utils/inputFromCLI";
 import { Keypair } from "./pool/keypair";
 import { LinkNote, USDCStr } from "./types/link";
@@ -120,7 +121,6 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
         key: recipientUtxoOnboarding.keypair.privkey,
         sender: name,
         sender_address: account,
-        recevier: nameOnbUser,
         usdc: usdcValue, // arbitrary denomination
         id: id, // address of the onboarding mixer contract
         challenge: randomBN()
@@ -172,7 +172,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     
     insertContact(getID(name), nameOnbUser, "0x");
 
-    insertChallenge(nameOnbUser, link.challenge.toString());
+    insertChallenge(getID(name), nameOnbUser, link.challenge.toString());
 }
 
 export async function send(username: string, account: string, initCode: string, signer: any) {
@@ -359,8 +359,6 @@ export async function refresh(username: string, account: string) {
     console.log('\nRefreshing ...');
     console.log('\n');
 
-    const contacts = getContactsByUserId(getID(username));
-
     const address = await getAccountAddress(account) 
 
     if (address) {
@@ -373,27 +371,28 @@ export async function refresh(username: string, account: string) {
         const events= await contract.queryFilter(filter);
 
         // 2) filter the events of the user
-        let data: any = [];
 
         events.forEach((event) => {
             const encryptedData = event.args[0];
             try {
                 const decryptedData = keypair_.decrypt(encryptedData);
-                data.push(decryptedData);
+                let challenge = BigInt('0x' + decryptedData.slice(0,31).toString('hex'))
+                let address = ('0x' + decryptedData.slice(31).toString('hex'));
+                // console.log(challenge);
+                // console.log(address);
+                // if (!isChallengeRedeemed(getID(username), challenge.toString())) {
+                //     updateChallengeRedeemed(getID(username), challenge.toString());
+                    
+                // }
             }
             catch (error) {
             }
         })
 
-        data.forEach((element: any) => {
-            // let d = {
-            //     name: ('0x' + element.slice(0, 31).toString('hex')),
-            //     challenge: BigInt('0x' + element.slice(31, 62).toString('hex')),
-            // }
-            // console.log(d);
-            console.log(element.toString('hex'));
-
-        })
+        // data.forEach((element: any) => {
+        //     let challenge = BigInt('0x' + element.toString('hex'))
+        //     console.log(challenge);
+        // })
     }   
     
 }
