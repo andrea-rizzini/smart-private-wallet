@@ -63,7 +63,7 @@ export async function prepareTransfer(amount: string, username: string, addressS
   }  
 } 
 
-export async function prepareWithdrawal(amount: string, username: string, addressSender: string, signer: any) {
+export async function prepareWithdrawal(amount: string, username: string, addressSender: string, addressReceiver: string, signer: any) {
 
   const { unspentUtxo, totalAmount, senderKeyPair } = await getUserAccountInfo(username, addressSender, {amount: hre.ethers.parseUnits(amount, 6)})
 
@@ -73,7 +73,7 @@ export async function prepareWithdrawal(amount: string, username: string, addres
     {
       outputs,
       inputs: unspentUtxo,
-      recipient: addressSender,
+      recipient: addressReceiver,
     },
     senderKeyPair,
     signer

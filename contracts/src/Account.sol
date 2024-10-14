@@ -26,8 +26,8 @@ interface IMixerOnboardingAndTransfers {
         bytes32 extDataHash;
     }
 
-
     function createCommitment(bytes32 _commitment, uint256 extAmount) external;
+    
     function redeemCommitment(    
         bytes calldata _proof,
         bytes32 _root,

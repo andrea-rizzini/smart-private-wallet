@@ -193,7 +193,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleT
 
     if (_extData.extAmount < 0) { // we enter here only if the operation is a withdrawal
       require(_extData.recipient != address(0), "Can't withdraw to zero address");
-      token.safeTransfer(msg.sender, uint256(-_extData.extAmount));
+      token.safeTransfer(/*msg.sender*/_extData.recipient, uint256(-_extData.extAmount));
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
