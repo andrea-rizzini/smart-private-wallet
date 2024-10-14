@@ -440,12 +440,27 @@ export async function withdraw(username: string, account: string, initCode: stri
         }
     } while (!amountValid);
 
+    let addresswIthdrawal: string = await inputFromCLI("\nEnter the address to which you want to withdraw (or type exit to return to the menu): ", rl);
+
     rl.close();
     const result = await prepareWithdrawal(choiceAmount, username, account, signer);
     if (result) {
         const { args, extData } = result;
         try {
             await call_userop("Account", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], account , initCode, signer);
+
+            console.log ('\nTransfering USDC to the withdrawal address ...');
+            await new Promise(resolve => setTimeout(resolve, 7000));
+
+            const signers = await hre.ethers.getSigners();
+            const usdc = await hre.ethers.getContractAt("IERC20", USDC_ADDRESS, signers[2]); // the faucet
+            const usdcAmount = hre.ethers.parseUnits(choiceAmount, 6);
+
+            await usdc.approve(account, usdcAmount);
+
+            const transferTx = await usdc.transferFrom(account, addresswIthdrawal, usdcAmount);
+            await transferTx.wait();
+
             console.log(`\nWithdrawal of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {

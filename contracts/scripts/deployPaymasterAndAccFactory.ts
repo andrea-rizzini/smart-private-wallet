@@ -19,7 +19,7 @@ async function main() {
   
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, faucet);
   await ep.depositTo(pm.target.toString(), { 
-    value: hre.ethers.parseEther(".01"), // this is gonna take base-sep eth from our metamask wallet and deposit it into the paymaster
+    value: hre.ethers.parseEther(".015"), // this is gonna take base-sep eth from our metamask wallet and deposit it into the paymaster
   }); 
   console.log("\nPM funded successfully"); // tofix
 

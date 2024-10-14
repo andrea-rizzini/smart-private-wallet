@@ -38,6 +38,8 @@ interface IMixerOnboardingAndTransfers {
 
     function deposit(Proof memory _proofArgs, ExtData memory _extData) external;
     // function transact(Proof memory _proofArgs, ExtData memory _extData) external;
+
+    function transact(Proof memory _args, ExtData memory _extData) external;
     
 } 
 
@@ -136,6 +138,14 @@ contract Account is IAccount {
         uint256 valueToSend = _extData.extAmount > 0 ? uint256(_extData.extAmount) : 0;
         IERC20(usdcToken).approve(poolAddress, valueToSend);
         IMixerOnboardingAndTransfers(poolAddress).deposit(_proofArgs, _extData);
+    }
+
+    function callTransact(
+        address poolAddress,
+        IMixerOnboardingAndTransfers.Proof memory _proofArgs,
+        IMixerOnboardingAndTransfers.ExtData memory _extData
+    ) external payable {
+        IMixerOnboardingAndTransfers(poolAddress).transact(_proofArgs, _extData);
     }
 
 }
