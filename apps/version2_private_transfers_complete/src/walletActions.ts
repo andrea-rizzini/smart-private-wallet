@@ -471,13 +471,17 @@ export async function withdraw(username: string, account: string, initCode: stri
     rl.close();
     const result = await prepareWithdrawal(choiceAmount, username, account, addressWithdrawal, signer);
 
+    const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
+
+    const POIcommitment = poseidonHash([allowed]);
+
     if (result) {
         const { args, extData } = result;
         try {
 
             console.log ('\nTransfering USDC to the withdrawal address ...');
             
-            await call_userop("Account", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], account, initCode, signer);
+            await call_userop("Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account, initCode, signer);
 
             console.log(`\nWithdrawal of ${choiceAmount} USDC completed succesfully!\n`);
         }

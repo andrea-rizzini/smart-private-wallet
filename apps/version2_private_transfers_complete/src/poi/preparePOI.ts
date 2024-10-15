@@ -32,7 +32,7 @@ export async function preparePOI(amount: string, username: string, addressSender
             if (utxo.index === POIevent.index) {
                 inputMerklePathIndicesPOI.push(POIevent.index)
                 inputMerklePathElementsPOI.push(tree.path(POIevent.index).pathElements)
-                preimages.push(1)
+                preimages.push(allowed)
             }
         }
     }

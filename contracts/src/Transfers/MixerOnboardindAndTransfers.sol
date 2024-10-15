@@ -109,7 +109,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryTransactions, Merkl
     emit NewCommitmentPOI(commitmentsPOI[1], nextIndexP - 1);
   }
 
-  // function that allows deposits, transfers and withdrawal.
+  // function that allows transfers
   function transact(Proof memory _args, ExtData memory _extData, bytes32[2] memory commitmentsPOI) external payable { 
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
@@ -130,9 +130,38 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryTransactions, Merkl
       nullifierHashes[_args.inputNullifiers[i]] = true;
     }
 
-    if (_extData.extAmount < 0) { // we enter here only if the operation is a withdrawal
+    _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);
+    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
+      emit NewNullifier(_args.inputNullifiers[i]);
+    }
+  }
+
+  // function that allows transfers
+  function withdraw(Proof memory _args, ExtData memory _extData, bytes32[2] memory commitmentsPOI) external payable { 
+    if (_extData.extAmount > 0) {
+      require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
+    }
+    _withdraw(_args, _extData); 
+    _depositPOI(commitmentsPOI); 
+  }
+
+  function _withdraw(Proof memory _args, ExtData memory _extData) internal nonReentrant {
+    require(isKnownRoot_(_args.root), "Invalid merkle root");
+    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
+      require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
+    }
+    require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
+    require(verifyProof(_args), "Invalid transaction proof");
+
+    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
+      nullifierHashes[_args.inputNullifiers[i]] = true;
+    }
+
+    if (_extData.extAmount < 0) { // we should always enter here
       require(_extData.recipient != address(0), "Can't withdraw to zero address");
-      token.safeTransfer(/*msg.sender*/_extData.recipient, uint256(-_extData.extAmount));
+      token.safeTransfer(_extData.recipient, uint256(-_extData.extAmount));
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
