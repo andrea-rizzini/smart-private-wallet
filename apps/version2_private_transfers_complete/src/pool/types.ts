@@ -29,6 +29,15 @@ type CommitmentEvent = {
 
 export type CommitmentEvents = CommitmentEvent[]
 
+type CommitmentPOIEvent = {
+  blockNumber: number
+  transactionHash: string
+  index: number
+  commitment: string
+}
+
+export type CommitmentPOIEvents = CommitmentPOIEvent[]
+
 export type CachedData = {
   latestBlock: number
   commitments: CommitmentEvents

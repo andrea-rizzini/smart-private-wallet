@@ -1,4 +1,4 @@
-import { BaseUtxo, CreateTransactionParams, CommitmentEvents, PrepareTxParams } from "./types";
+import { BaseUtxo, CreateTransactionParams, CommitmentEvents, CommitmentPOIEvents, PrepareTxParams } from "./types";
 import { getKeyPairByUserId, getKeyPairOnboardingByUserId, getID } from "../../database/database";
 import { getProof, getProofOnboarding } from "../proof/generateTransactionProof";
 import hre from "hardhat";
@@ -350,6 +350,22 @@ async function fetchCommitments(): Promise<CommitmentEvents>{
       commitment: event.args[0],
       index: Number(event.args[1]),
       encryptedOutput: event.args[2]
+    })
+  });
+  return commitments
+}
+
+export async function fetchCommitmentsPOI(): Promise<CommitmentPOIEvents>{
+  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
+  const filter = contract.filters.NewCommitmentPOI();
+  const events = await contract.queryFilter(filter);
+  const commitments: CommitmentPOIEvents = [];  
+  events.forEach((event) => {
+    commitments.push({
+      blockNumber: event.blockNumber,
+      transactionHash: event.transactionHash,
+      commitment: event.args[0],
+      index: Number(event.args[1])
     })
   });
   return commitments

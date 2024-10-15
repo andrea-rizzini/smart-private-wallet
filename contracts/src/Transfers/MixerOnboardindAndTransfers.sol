@@ -5,29 +5,19 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";   
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "../Onboarding/MerkleTreeWithHistoryOnboarding.sol";
 import "./MerkleTreeWithHistoryTransactions.sol";
+import "./MerkleTreeWithHistoryPOI.sol";
 import { IVerifier } from "./interfaces/IVerifier.sol";
 
-interface IVerifierOnboarding {
-  function verifyProof(bytes memory _proof, uint256[2] memory _input) external returns (bool);
-}
-
-contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleTreeWithHistoryTransactions, ReentrancyGuard {
+contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryTransactions, MerkleTreeWithHistoryPOI, ReentrancyGuard {
 
   using SafeERC20 for IERC20;
 
   IERC20 public token;
 
-  // Variable declaration for onboarding
-  IVerifierOnboarding public immutable verifierOnboarding;
-
-  mapping(bytes32 => bool) public commitments;
-  mapping(bytes32 => bool) public nullifierHashes;
-
   // Variable and structures declaration for transactions
   uint256 public maximumDepositAmount = 100 * 10**6; // 100 USDC
-  mapping(bytes32 => bool) public nullifierHashesTransfers;
+  mapping(bytes32 => bool) public nullifierHashes;
 
   IVerifier public immutable verifier2;
   IVerifier public immutable verifier16;
@@ -65,88 +55,30 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleT
   // Events for transactions
 
   event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput);
+  event NewCommitmentPOI(bytes32 commitment, uint256 index);
   event NewNullifier(bytes32 nullifier);
 
   constructor(
-    IVerifierOnboarding _verifierOnboarding,
     IVerifier _verifier2,
     IVerifier _verifier16,
-    IHasherOnboarding _hasherOnboarding,
     address _hasherTransactions,
     IERC20 _token,
-    uint32 _merkleTreeHeightOnboarding,
-    uint32 _merkleTreeHeightTransactions
-  ) MerkleTreeWithHistoryOnboarding(_merkleTreeHeightOnboarding, _hasherOnboarding) 
-    MerkleTreeWithHistoryTransactions(_merkleTreeHeightTransactions, _hasherTransactions) {
-    verifierOnboarding = _verifierOnboarding;
+    uint32 _merkleTreesHeight
+  )  MerkleTreeWithHistoryTransactions(_merkleTreesHeight, _hasherTransactions)
+     MerkleTreeWithHistoryPOI(_merkleTreesHeight, _hasherTransactions) {
     verifier2 = _verifier2;
     verifier16 = _verifier16;
     token = _token;
     super._initialize();
+    super._initializePOI();
   }
 
-  // Functions for onboarding
-  function createCommitment(bytes32 _commitment, uint256 extAmount) external nonReentrant{
-    require(!commitments[_commitment], "The commitment has been submitted");
-    uint32 insertedIndex = _insert(_commitment);
-    commitments[_commitment] = true;
-    emit CommitmentCreated(_commitment, insertedIndex, block.timestamp);
-    token.safeTransferFrom(msg.sender, address(this), /*denomination*/ extAmount);
-  }
-
-  function redeemCommitment(  
-    bytes calldata _proof,
-    bytes32 _root,
-    bytes32 _nullifierHash,
-    Proof memory _args, 
-    ExtData memory _extData
-  ) external payable nonReentrant {
-    require(!nullifierHashes[_nullifierHash], "The note has been already spent");
-    require(isKnownRoot(_root), "Cannot find your merkle root"); 
-
-    require(
-      verifierOnboarding.verifyProof(
-        _proof,
-        [uint256(_root), uint256(_nullifierHash)]
-      ),
-      "Invalid withdraw proof"
-    );
-
-    _deposit_after_redeem(_args, _extData);
-
-    nullifierHashes[_nullifierHash] = true;
-
-    emit Redeemed(msg.sender, _nullifierHash);
-
-  }
-
-  // Functions for transactions
-
-  function _deposit_after_redeem(Proof memory _args, ExtData memory _extData) internal {
-    require(isKnownRoot_(_args.root), "Invalid merkle root");
-    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
-      require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
-    }
-    require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
-    require(verifyProof(_args), "Invalid transaction proof");
-
-    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
-      nullifierHashes[_args.inputNullifiers[i]] = true;
-    }
-
-    _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);
-    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
-      emit NewNullifier(_args.inputNullifiers[i]);
-    }
-  }
-
-  function deposit(Proof memory _args, ExtData memory _extData) external payable { 
+  function deposit(Proof memory _args, ExtData memory _extData, bytes32[2] memory commitmentsPOI) external payable {
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
     _deposit(_args, _extData);
+    _depositPOI(commitmentsPOI);
   }
 
   function _deposit(Proof memory _args, ExtData memory _extData) internal nonReentrant {
@@ -171,12 +103,19 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryOnboarding, MerkleT
     token.safeTransferFrom(msg.sender, address(this), uint256(_extData.extAmount));
   }
 
+  function _depositPOI(bytes32[2] memory commitmentsPOI) internal {
+    _insertPOI(commitmentsPOI[0], commitmentsPOI[1]);
+    emit NewCommitmentPOI(commitmentsPOI[0], nextIndexP - 2);
+    emit NewCommitmentPOI(commitmentsPOI[1], nextIndexP - 1);
+  }
+
   // function that allows deposits, transfers and withdrawal.
-  function transact(Proof memory _args, ExtData memory _extData) external payable { 
+  function transact(Proof memory _args, ExtData memory _extData, bytes32[2] memory commitmentsPOI) external payable { 
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
     _transact(_args, _extData);
+    _depositPOI(commitmentsPOI); // in future add with delay, to check the funds before append to the tree
   }
 
   function _transact(Proof memory _args, ExtData memory _extData) internal nonReentrant {

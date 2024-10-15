@@ -4,14 +4,17 @@ import path from 'path';
 import * as readline from 'readline';
 
 import { call_userop } from "./userop/createUserOp";
+import { checkSanctionedAddress } from './poi/checkIfSanctioned';
 import { getAccountAddress, getAccountKeyPair, getUtxoFromKeypair, getTotalAmount } from "./pool/poolFunctions";
 import { getAddressOfContactOfUser, getContactsByUserId, getID, getKeyPairOnboardingByUserId, insertChallenge, insertContact, 
     insertKeypair, isChallengeRedeemed, updateContact, updateChallengeRedeemed} from '../database/database';
 import { inputFromCLI } from "./utils/inputFromCLI";
 import { Keypair } from "./pool/keypair";
 import { LinkNote, USDCStr } from "./types/link";
+import { poseidonHash } from "./utils/hashFunctions";
 import { prepareDeposit, prepareTransfer, prepareTransferForOnboarding, prepareWithdrawal } from "./pool/poolPrepareActions";
 import { randomBN } from './pool/utxo';
+import { toFixedHex } from './utils/toHex';
 import { Utxo } from "./pool/utxo";
 
 const ENCRYPTED_DATA_ADDRESS = process.env.ENCRYPTED_DATA_ADDRESS || '';
@@ -272,11 +275,15 @@ export async function send(username: string, account: string, initCode: string, 
 
     const result = await prepareTransfer(choiceAmount, username, account, addressReceiver, signer);
 
+    const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
+
+    const POIcommitment = poseidonHash([allowed]);
+
     if (result) {
         const signers = await hre.ethers.getSigners();
         const { args, extData } = result;
         try {
-            await call_userop("contracts/src/Transfers/Relayer.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
+            await call_userop("contracts/src/Transfers/Relayer.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData,[toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -328,6 +335,20 @@ export async function receive(signer: any, account: string, initCode: string) {
 
     rl.close();
 
+    console.log("\nChecking if the address is present in the sanctioned list");
+    console.log("Or if it has been involved in transactions with sanctioned addresses");
+    console.log("...")
+  
+    const { sanction, message } = await checkSanctionedAddress(account, 2); // be carefull to increse the number of hops, complexity can increase exponentially
+          
+    if (sanction) {
+        console.log("\nYou cannot fund the private amount.");
+        console.log(`\n${message}\n`);
+        return;
+    } else {
+        console.log(`\n${message}`);
+    }
+
     const usdc = await hre.ethers.getContractAt("IERC20", USDC_ADDRESS, signer);
     const usdcAmount = hre.ethers.parseUnits(choiceAmount, 6);
   
@@ -338,10 +359,15 @@ export async function receive(signer: any, account: string, initCode: string) {
 
     // add a new utxo with that value
     const result = await prepareDeposit(choiceAmount, account, signer);
+
+    const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
+
+    const POIcommitment = poseidonHash([allowed]);
+
     if (result) {
         const { args, extData } = result;
         try {
-            await call_userop("Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], account , initCode, signer);
+            await call_userop("Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account , initCode, signer);
             console.log(`\nFunded private amount with ${choiceAmount} USDC\n`)
         }
         catch (error) {
@@ -444,6 +470,7 @@ export async function withdraw(username: string, account: string, initCode: stri
 
     rl.close();
     const result = await prepareWithdrawal(choiceAmount, username, account, addressWithdrawal, signer);
+
     if (result) {
         const { args, extData } = result;
         try {

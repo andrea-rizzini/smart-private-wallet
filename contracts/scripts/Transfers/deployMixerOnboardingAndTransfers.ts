@@ -26,7 +26,7 @@ async function main () {
 
     const mixer = await hre.ethers.getContractFactory("MixerOnboardingAndTransfers", faucet);
 
-    const mixer_onb_and_transf = await mixer.deploy(VERIFIER_ONBOARDING, VERIFIER_2, VERIFIER_16, HASHER_ONBOARDING, HASHER_TRANSFERS, USDC_ADDRESS, 20, 20);
+    const mixer_onb_and_transf = await mixer.deploy(VERIFIER_2, VERIFIER_16, HASHER_TRANSFERS, USDC_ADDRESS, 20);
     await mixer_onb_and_transf.waitForDeployment();
     console.log(`Mixer for oboarding and transfers deployed at: ${mixer_onb_and_transf.target}`);
     envConfig.MIXER_ONBOARDING_AND_TRANSFERS = mixer_onb_and_transf.target.toString();

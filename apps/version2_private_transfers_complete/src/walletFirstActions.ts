@@ -11,10 +11,12 @@ import { getAccountAddress, getUtxoFromKeypair } from './pool/poolFunctions';
 import { inputFromCLI } from './utils/inputFromCLI';
 import { Keypair } from './pool/keypair';
 import { LinkNote } from './types/link';
+import { poseidonHash } from './utils/hashFunctions';
 import { prepareDeposit } from './pool/poolPrepareActions';
 import { setup, checkAccountBalance, inviteUsingLink, send, receive, refresh, showContacts, withdraw, exit } from './walletActions';
 import { showMenu } from './menu/menu';
 import { toBuffer } from './pool/utxo';
+import { toFixedHex } from './utils/toHex';
 
 const ENCRYPTED_DATA_ADDRESS: string = process.env.ENCRYPTED_DATA_ADDRESS || '';
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
@@ -176,15 +178,22 @@ export async function acceptInvite() {
   const transferTx = await usdc.transfer(account, usdcAmount);
   await transferTx.wait();
 
+  // here we assume the fresh address just created is not sanctioned, hence the check is not needed and it's allowed to proceed with the deposit
+
   const result = await prepareDeposit("0.01", account, signers[index]);
+
+  const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
+ 
+  const POIcommitment = poseidonHash([allowed]); // 2dbc9ff9b5f0afb7a41a828987d17354b28410b26e54f94390b01efe786abc19
+
   if (result) {
       const { args, extData } = result;
       try {
-          await call_userop("Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], account , initCode, signers[index]);
+          await call_userop("Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account , initCode, signers[index]);
           console.log(`\nFunded private amount with 0.01 USDC`)
       }
       catch (error) {
-          console.error("\nSomething went wrong during the deposit transaction\n",);
+        console.error("\nSomething went wrong during the deposit transaction:", error);
       }
   }
   else {
@@ -274,7 +283,7 @@ export async function login() {
 
     rl.close();
 
-    password = readlineSync.question('\nChose a password: ', {
+    password = readlineSync.question('\Insert the password: ', {
       hideEchoBack: true 
     });
     
@@ -457,8 +466,6 @@ export async function onboardViaLink() {
   await setup(username, account, initCode, signers[index]);
 
   await new Promise(resolve => setTimeout(resolve, 7000));
-
-  let dataToEncrypt;
 
   const keypair_link: Keypair = new Keypair(link.key);
 
