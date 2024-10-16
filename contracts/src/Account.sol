@@ -32,7 +32,7 @@ interface IMixerOnboardingAndTransfers {
     }
 
     function deposit(Proof memory _proofArgs, ExtData memory _extData, bytes32[2] memory commitmentsPOI) external;
-    function withdraw(Proof memory _args, ExtData memory _extData, POI memory poi, bytes32[2] memory commitmentsPOI) external;
+    function withdraw(Proof memory _args, ExtData memory _extData, POI memory _poi, bytes32[2] memory commitmentsPOI) external;
     
 } 
 

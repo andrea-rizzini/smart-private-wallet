@@ -8,6 +8,7 @@ import { fetchCommitmentsPOI } from "../pool/poolFunctions"
 import { getUserAccountInfo } from "../pool/poolFunctions"
 // @ts-ignore
 import MerkleTree from 'fixed-merkle-tree';
+import { prove } from "../proof/prover"
 import { poseidonHash2 } from "../utils/hashFunctions"
 import { toFixedHex } from "../utils/toHex"
 import { Utxo } from "../pool/utxo";
@@ -17,7 +18,7 @@ const MERKLE_TREE_HEIGHT = 20;
 function buildMerkleTree({ POIevents }: { POIevents: CommitmentPOIEvents }): typeof MerkleTree {
     const leaves = POIevents.sort((a, b) => a.index - b.index).map((e) => toFixedHex(e.commitment))
     return new MerkleTree(MERKLE_TREE_HEIGHT, leaves, { hashFunction: poseidonHash2 })
-  }
+}
 
 export async function preparePOI(amount: string, username: string, addressSender: string, signer: any) {
     const { unspentUtxo, totalAmount, senderKeyPair } = await getUserAccountInfo(username, addressSender, {amount: hre.ethers.parseUnits(amount, 6)})
@@ -46,9 +47,10 @@ export async function preparePOI(amount: string, username: string, addressSender
         }
     }
 
-    while (POIevents.length !== 2 && POIevents.length < 16) {
+    while (preimages.length !== 2 && preimages.length < 16) {
         inputMerklePathIndicesPOI.push(0)
         inputMerklePathElementsPOI.push(new Array(MERKLE_TREE_HEIGHT).fill(0))
+        preimages.push(0) // any value, since in the check these will be skipped
         inAmount.push(0) // this is a flag to to indicate circom not to check merkle path of this
     }
 
@@ -66,11 +68,11 @@ export async function preparePOI(amount: string, username: string, addressSender
     }
 
     let dirPath = path.join(__dirname, `../../../../circuits/artifacts/circuits/`);
-    let fileName = `POI${POIevents.length}.wasm`;
+    let fileName = `poi${preimages.length}.wasm`;
     let filePath = path.join(dirPath, fileName);
     let wasmBuffer = fs.readFileSync(filePath);
     
-    fileName = `POI${POIevents.length}.zkey`;
+    fileName = `poi${preimages.length}.zkey`;
     filePath = path.join(dirPath, fileName);
     let zKeyBuffer = fs.readFileSync(filePath);
 

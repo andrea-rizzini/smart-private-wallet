@@ -283,7 +283,7 @@ export async function login() {
 
     rl.close();
 
-    password = readlineSync.question('\Insert the password: ', {
+    password = readlineSync.question('\nInsert the password: ', {
       hideEchoBack: true 
     });
     

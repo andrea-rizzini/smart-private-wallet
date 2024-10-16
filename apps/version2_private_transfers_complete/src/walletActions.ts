@@ -135,11 +135,15 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     const result = await prepareTransferForOnboarding(choiceAmount, recipientUtxoOnboarding, name, account, signer);
 
+    const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
+
+    const POIcommitment = poseidonHash([allowed]);
+
     if (result) {
         const signers = await hre.ethers.getSigners();
         const { args, extData } = result;
         try {
-            await call_userop("contracts/src/Transfers/Relayer.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
+            await call_userop("Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -284,7 +288,7 @@ export async function send(username: string, account: string, initCode: string, 
         const signers = await hre.ethers.getSigners();
         const { args, extData } = result;
         try {
-            await call_userop("contracts/src/Transfers/Relayer.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData,[toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
+            await call_userop("Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData,[toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -472,7 +476,7 @@ export async function withdraw(username: string, account: string, initCode: stri
     rl.close();
     const result = await prepareWithdrawal(choiceAmount, username, account, addressWithdrawal, signer);
 
-    const argsPOI = await preparePOI(choiceAmount, username, account, signer);
+    const { argsPOI } = await preparePOI(choiceAmount, username, account, signer);
 
     const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
 

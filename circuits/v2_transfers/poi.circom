@@ -1,6 +1,6 @@
 include "../../node_modules/circomlib/circuits/poseidon.circom";
-include "../v2_transfers/merkleProof.circom"
-include "../v2_transfers/keypair.circom"
+include "./v2_transfers/merkleProof.circom"
+include "./v2_transfers/keypair.circom"
 
 template poi(levels, nIns) {
     signal         input rootPOI;

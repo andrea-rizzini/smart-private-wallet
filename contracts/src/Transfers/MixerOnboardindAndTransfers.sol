@@ -163,21 +163,21 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryTransactions, Merkl
     require(verifyProof(_args), "Invalid transaction proof");
     require(verifyPOI(_args, poi), "Invalid POI proof");
 
-    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
-      nullifierHashes[_args.inputNullifiers[i]] = true;
-    }
+    // for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
+    //   nullifierHashes[_args.inputNullifiers[i]] = true;
+    // }
 
-    if (_extData.extAmount < 0) { // we should always enter here
-      require(_extData.recipient != address(0), "Can't withdraw to zero address");
-      token.safeTransfer(_extData.recipient, uint256(-_extData.extAmount));
-    }
+    // if (_extData.extAmount < 0) { // we should always enter here
+    //   require(_extData.recipient != address(0), "Can't withdraw to zero address");
+    //   token.safeTransfer(_extData.recipient, uint256(-_extData.extAmount));
+    // }
 
-    _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);
-    for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
-      emit NewNullifier(_args.inputNullifiers[i]);
-    }
+    // _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
+    // emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
+    // emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);
+    // for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
+    //   emit NewNullifier(_args.inputNullifiers[i]);
+    // }
   }
 
   function _depositPOI(bytes32[2] memory commitmentsPOI) internal {

@@ -72,6 +72,7 @@ contract Relayer is IAccount {
         IMixerOnboardingAndTransfers.ExtData memory _extData,
         bytes32[2] memory commitmentsPOI
     ) external payable {
+        emit Log("Calling transact");
         IMixerOnboardingAndTransfers(poolAddress).transact(_proofArgs, _extData, commitmentsPOI);
     }
 
