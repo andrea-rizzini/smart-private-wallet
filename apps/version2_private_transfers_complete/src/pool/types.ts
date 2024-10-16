@@ -10,6 +10,11 @@ export type ArgsProof = {
   extDataHash: string
 }
 
+export type ArgsPOI = {
+  proof: BytesLike
+  root: BytesLike
+}
+
 export type ProofParams = {
   inputs: BaseUtxo[]
   outputs: BaseUtxo[]

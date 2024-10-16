@@ -1,12 +1,16 @@
 import hre from "hardhat"
+import fs from 'fs'
+import path from 'path'
 
+import { ArgsPOI } from "../pool/types"
 import { CommitmentPOIEvents } from "../pool/types"
 import { fetchCommitmentsPOI } from "../pool/poolFunctions"
 import { getUserAccountInfo } from "../pool/poolFunctions"
 // @ts-ignore
 import MerkleTree from 'fixed-merkle-tree';
-import { poseidonHash, poseidonHash2 } from "../utils/hashFunctions"
+import { poseidonHash2 } from "../utils/hashFunctions"
 import { toFixedHex } from "../utils/toHex"
+import { Utxo } from "../pool/utxo";
 
 const MERKLE_TREE_HEIGHT = 20;
 
@@ -17,6 +21,9 @@ function buildMerkleTree({ POIevents }: { POIevents: CommitmentPOIEvents }): typ
 
 export async function preparePOI(amount: string, username: string, addressSender: string, signer: any) {
     const { unspentUtxo, totalAmount, senderKeyPair } = await getUserAccountInfo(username, addressSender, {amount: hre.ethers.parseUnits(amount, 6)})
+    while (unspentUtxo.length !== 2 && unspentUtxo.length < 16) {
+        unspentUtxo.push(new Utxo())
+    }
     const POIevents = await fetchCommitmentsPOI();
     const allowed = 1;
 
@@ -26,6 +33,7 @@ export async function preparePOI(amount: string, username: string, addressSender
     const inputMerklePathElementsPOI = []
 
     const preimages = []
+    const inAmount = []
 
     for (const utxo of unspentUtxo) {
         for (const POIevent of POIevents) {
@@ -33,20 +41,49 @@ export async function preparePOI(amount: string, username: string, addressSender
                 inputMerklePathIndicesPOI.push(POIevent.index)
                 inputMerklePathElementsPOI.push(tree.path(POIevent.index).pathElements)
                 preimages.push(allowed)
+                inAmount.push(utxo.amount)
             }
         }
+    }
+
+    while (POIevents.length !== 2 && POIevents.length < 16) {
+        inputMerklePathIndicesPOI.push(0)
+        inputMerklePathElementsPOI.push(new Array(MERKLE_TREE_HEIGHT).fill(0))
+        inAmount.push(0) // this is a flag to to indicate circom not to check merkle path of this
     }
 
     const root = tree.root();
 
     const input = {
         // public input
-        root: root,
+        rootPOI: root,
 
         // private input
-        inPreimages: preimages,
-        inPathIndices: inputMerklePathIndicesPOI,
-        inPathElements: inputMerklePathElementsPOI,
+        inPathIndicesPOI: inputMerklePathIndicesPOI,
+        inPathElementsPOI: inputMerklePathElementsPOI,
+        inAmountPOI: inAmount,
+        inPreimagesPOI: preimages,
+    }
+
+    let dirPath = path.join(__dirname, `../../../../circuits/artifacts/circuits/`);
+    let fileName = `POI${POIevents.length}.wasm`;
+    let filePath = path.join(dirPath, fileName);
+    let wasmBuffer = fs.readFileSync(filePath);
+    
+    fileName = `POI${POIevents.length}.zkey`;
+    filePath = path.join(dirPath, fileName);
+    let zKeyBuffer = fs.readFileSync(filePath);
+
+    // @ts-ignore
+    const proof = await prove(input, wasmBuffer, zKeyBuffer)
+
+    const argsPOI: ArgsPOI = {
+        proof,
+        root: toFixedHex(root),
+    }
+
+    return {
+        argsPOI,
     }
 
 }

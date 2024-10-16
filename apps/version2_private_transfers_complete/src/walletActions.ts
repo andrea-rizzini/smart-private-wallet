@@ -13,6 +13,7 @@ import { Keypair } from "./pool/keypair";
 import { LinkNote, USDCStr } from "./types/link";
 import { poseidonHash } from "./utils/hashFunctions";
 import { prepareDeposit, prepareTransfer, prepareTransferForOnboarding, prepareWithdrawal } from "./pool/poolPrepareActions";
+import { preparePOI } from "./poi/preparePOI";
 import { randomBN } from './pool/utxo';
 import { toFixedHex } from './utils/toHex';
 import { Utxo } from "./pool/utxo";
@@ -471,6 +472,8 @@ export async function withdraw(username: string, account: string, initCode: stri
     rl.close();
     const result = await prepareWithdrawal(choiceAmount, username, account, addressWithdrawal, signer);
 
+    const argsPOI = await preparePOI(choiceAmount, username, account, signer);
+
     const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
 
     const POIcommitment = poseidonHash([allowed]);
@@ -481,7 +484,7 @@ export async function withdraw(username: string, account: string, initCode: stri
 
             console.log ('\nTransfering USDC to the withdrawal address ...');
             
-            await call_userop("Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account, initCode, signer);
+            await call_userop("Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, argsPOI, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account, initCode, signer);
 
             console.log(`\nWithdrawal of ${choiceAmount} USDC completed succesfully!\n`);
         }
