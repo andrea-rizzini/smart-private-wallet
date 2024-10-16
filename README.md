@@ -1,7 +1,7 @@
 # Smart-private-wallet
 This project comprises two demos, originally there were three but the one showing the onboarding feature has been removed for redundancy, since the feature is present in both ```version2_private_transfers``` and ```version2_private_transfers_complete```
 1) ```version2_private_transfers```, which allows private transfers and private onboarding in Ethereum.
-2) ```version2_private_transfers_complete```, which allows private transfers and private onboarding in Ethereum as ```version2_private_transfers```, but the onboarding happens directly inside the mixer, without the need to shield the fund once redeemed.
+2) ```version2_private_transfers_complete```, which allows private transfers and private onboarding in Ethereum as ```version2_private_transfers```, but the onboarding happens directly inside the mixer, without the need to shield the fund once redeemed. Also a Proof of Innocence check is present.
 
 # How version2_complete works:
 This version relies on a Mixer that is used both for Onboarding and Transfers, both are UTXO-based with UTXOs being appended on the same Merkle Tree.  
@@ -19,10 +19,13 @@ To test the demo you need at least: two users, a faucet and a relayer; hence at 
 ```cd circuits```  
 Execute ```./script_v2.sh 2```  
 Execute ```./script_v2.sh 16```   
-A folder ```/artifacts``` inside ```/circuits``` will be created with the compiled circom stuff needed to generate zk-proofs and verification, from that folder move ```VerifierPOI2``` and ```VerifierPOI16``` into the folder ```contracts/src/Compliance/```  
+Execute ```./script_v3.sh 2```  
+Execute ```./script_v3.sh 16``` 
+A folder ```/artifacts``` inside ```/circuits``` will be created with the compiled circom stuff needed to generate zk-proofs and verification, from that folder move ```Verifier2.sol```, ```Verifier16.sol```, ```VerifierPOI2.sol``` and ```VerifierPOI16.sol``` into the folder ```contracts/src/Compliance/```  
 You will have to modify the .sol files with the correct declaration name, since circom will generate all the verifier contract as ```contract Verifier [...]```  
+f.i.: ```Verifier2.sol```: ```contract Verifier [...]``` --> ```contract Verifier2 [...]```  
 f.i.: ```VerifierPOI2.sol```: ```contract Verifier [...]``` --> ```contract VerifierPOI2 [...]```  
-Also rename ```verifyProof``` in ```verifyPOI``` in POI verifier contracts, to avoid collisions in function names.
+Also rename ```verifyProof``` in ```verifyPOI2``` and ```verifyPOI16``` in POI verifier contracts, to avoid collisions in function names.
 5) Base contract setup:   
 Deploy ```Paymaster``` and ```AccountFactory``` using ```npx hardhat run ./contracts/scripts/deployPaymasterAndAccFactory.ts```    
 6) Mixer setup (that is unique for onboarding and transfers):      

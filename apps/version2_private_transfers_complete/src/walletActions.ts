@@ -486,7 +486,7 @@ export async function withdraw(username: string, account: string, initCode: stri
         const { args, extData } = result;
         try {
 
-            console.log ('\nTransfering USDC to the withdrawal address ...');
+            console.log ('\nChecking Proof of Innocence ...');
             
             await call_userop("Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, argsPOI, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account, initCode, signer);
 
