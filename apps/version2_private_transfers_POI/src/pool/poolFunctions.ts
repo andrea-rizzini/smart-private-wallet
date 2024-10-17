@@ -306,7 +306,8 @@ async function prepareTransaction({
   }
 
   // We decide to include a fixed number of 2 or 16 utxos as inputs, reaching these number if necessary with fitticious utxos
-  // This is need due to circom behaviour, since circom code is not able to adapt to any possible input length using input.length. In the proof skip the ones with amount zero
+  // This is need due to circom behaviour, I cannot create a signal which behaves like a counter or even use something like inputs.length
+  // In the proof skip the ones with amount zero
   // For this reason there are two components instansiated with nIns = 2 and nIns = 16
 
   while (inputs.length !== 2 && inputs.length < 16) {
