@@ -63,8 +63,8 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient }: 
         inputMerklePathIndices.push(input.index)
         inputMerklePathElements.push(tree.path(input.index).pathElements)
       } else {
-        inputMerklePathIndices.push(0)
-        inputMerklePathElements.push(new Array(MERKLE_TREE_HEIGHT).fill(0))
+        inputMerklePathIndices.push(0) // merkle indices for fitticious inputs
+        inputMerklePathElements.push(new Array(MERKLE_TREE_HEIGHT).fill(0)) // merkle path for fitticious inputs
       }
     }
     
@@ -73,7 +73,7 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient }: 
     const extData = {
       recipient: toFixedHex(recipient, ADDRESS_BYTES_LENGTH),
       extAmount: toFixedHex(extAmount),
-      encryptedOutput1: output1.encrypt(),
+      encryptedOutput1: output1.encrypt(), // this will be the event onchain, making possible for the receiver to decrypt the output and realize that they are his utxo
       encryptedOutput2: output2.encrypt(),
     }
     
@@ -83,7 +83,7 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient }: 
       root: typeof tree === 'string' ? tree : tree.root(),
       inputNullifier: inputs.map((x) => x.getNullifier()),
       outputCommitment: outputs.map((x) => x.getCommitment()),
-      publicAmount : ((extAmount + FIELD_SIZE) % FIELD_SIZE).toString(), // this is to manage negative numbers
+      publicAmount : ((extAmount + FIELD_SIZE) % FIELD_SIZE).toString(),
   
       // data for transaction inputs
       inAmount: inputs.map((x) => x.amount),

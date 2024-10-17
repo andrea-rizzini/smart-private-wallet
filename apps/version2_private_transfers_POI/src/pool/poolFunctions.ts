@@ -304,9 +304,16 @@ async function prepareTransaction({
   if (inputs.length > 16 || outputs.length > 2) {
       throw new Error('Incorrect inputs/outputs count')
   }
+
+  // We decide to include a fixed number of 2 or 16 utxos as inputs, reaching these number if necessary with fitticious utxos
+  // This is need due to circom behaviour, since circom code is not able to adapt to any possible input length using input.length. In the proof skip the ones with amount zero
+  // For this reason there are two components instansiated with nIns = 2 and nIns = 16
+
   while (inputs.length !== 2 && inputs.length < 16) {
-      inputs.push(new Utxo())
+      inputs.push(new Utxo()) // new UTXO with amount zero
   }
+
+  // Create always two output, in this way there is no way to tell if a change has necessarily happened
   while (outputs.length < 2) {
       outputs.push(new Utxo())
   }
@@ -325,7 +332,7 @@ async function prepareTransaction({
   }
 
   if (!rootHex) {
-      params.tree = await buildMerkleTree({ events })
+      params.tree = await buildMerkleTree({ events }) // build the tree off-chain
   }
 
   const { extData, args } = await getProof(params)

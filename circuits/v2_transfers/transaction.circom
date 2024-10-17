@@ -59,11 +59,7 @@ template Transaction(levels, nIns, nOuts, zeroLeaf) {
         inCheckRoot[tx] = ForceEqualIfEnabled(); // in comparators.circom, which is imported in bitify.circom, which is imported in merkleProof.circom
         inCheckRoot[tx].in[0] <== root;
         inCheckRoot[tx].in[1] <== inTree[tx].root;
-        inCheckRoot[tx].enabled <== inAmount[tx]; // if amount is zero, like for deposit's inputs, we don't need to check the merkle proof. The check is inside the ForceEqualIfEnabled component.
-
-        // We don't need to range check input amounts, since all inputs are valid UTXOs that
-        // were already checked as outputs in the previous transaction (or zero amount UTXOs that don't
-        // need to be checked either).
+        inCheckRoot[tx].enabled <== inAmount[tx]; // if amount is zero, like for fitticious inputs, we don't need to check the merkle proof. The check is inside the ForceEqualIfEnabled component.
 
         sumIns += inAmount[tx];
     }
@@ -80,8 +76,7 @@ template Transaction(levels, nIns, nOuts, zeroLeaf) {
         outCommitmentHasher[tx].inputs[2] <== outBlinding[tx];
         outCommitmentHasher[tx].out === outputCommitment[tx];
 
-        // Check that amount fits into 248 bits to prevent overflow
-        outAmountCheck[tx] = Num2Bits(248); // also this is a bit useless
+        outAmountCheck[tx] = Num2Bits(248); 
         outAmountCheck[tx].in <== outAmount[tx];
 
         sumOuts += outAmount[tx];
@@ -100,7 +95,8 @@ template Transaction(levels, nIns, nOuts, zeroLeaf) {
       }
     }
 
-    // verify amount invariant
+    // verify that amount of inputs and publicAmount is equal to amount of outputs
+    // publicAmount is positive if it's a deposit, negative if it's a withdrawal
     sumIns + publicAmount === sumOuts;
 
 }

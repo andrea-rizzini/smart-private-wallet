@@ -12,7 +12,6 @@ Note that Bob has to trust Alice who also knows the key, but since she is the on
 3) POI: with POI an user who wants withdraw proofs if the corresponding UTXO are allowed or illicit. When a user creates a new UTXO on the Merkle tree, new leafs on another tree with the same height are appended with value "allowed" or "illicit" at the same indixes, based on a legit check (this mechanism is called "add with delay"). When a user wants to withdraw to an external address he also needs to proof if all the UTXOs he includes are on a leaf with "allowed" as value in this second merkle tree. He is forced by the wallet to put all the UTXO he wants include as "allowed" when generating the proof; in this way when the root is checked by the verifier if one of the UTXO he inclueds is actually "illicit" as a value, the check will fail and he won't be able to withdraw.  
 Note: for now all UTXOs are append as "allowed", in future try to develop an engine that performs some checks.
 
-
 # Quickstart for version2_POI:
 1) ```npm i``` on the root of the project
 2) Make sure to have as many private keys as you need and add them to the .env file  

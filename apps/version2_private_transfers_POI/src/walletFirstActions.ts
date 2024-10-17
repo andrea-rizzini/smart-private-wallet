@@ -168,6 +168,7 @@ export async function acceptInvite() {
   await setup(username, account, initCode, signers[index]);
   await new Promise(resolve => setTimeout(resolve, 7000));
 
+  // first send money from external wallet to the account smart contract, then call deposit to append the UTXO
   console.log('\nSome USDC will be sent to your account soon ...');
 
   const usdc = await hre.ethers.getContractAt("IERC20", USDC_ADDRESS, signers[2]);
@@ -179,10 +180,11 @@ export async function acceptInvite() {
   await transferTx.wait();
 
   // here we assume the fresh address just created is not sanctioned, hence the check is not needed and it's allowed to proceed with the deposit
+  // being a fresh address there is no way to tell if it's illicit or not
 
   const result = await prepareDeposit("0.01", account, signers[index]);
 
-  const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
+  const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and not allowed as 0, as a boolean
  
   const POIcommitment = poseidonHash([allowed]); // 2dbc9ff9b5f0afb7a41a828987d17354b28410b26e54f94390b01efe786abc19
 

@@ -8,7 +8,7 @@ export async function prepareDeposit(amount: string, address: string, signer: an
   const recipientAddress = await getAccountAddress(address)
   if (recipientAddress) {
     const keypair = Keypair.fromString(recipientAddress);
-    const output = new Utxo({ amount: hre.ethers.parseUnits(amount, 6), keypair })
+    const output = new Utxo({ amount: hre.ethers.parseUnits(amount, 6), keypair }) // user deposit utxo
     const { extData, args } = await createTransactionData({ outputs: [output] }, keypair, signer)
     return { args, extData }
   } else {
@@ -23,7 +23,7 @@ export async function prepareTransferForOnboarding(amount: string, recipientUtxo
   const senderChangeUtxo = new Utxo({
     keypair: senderKeyPair,
     amount: totalAmount - (hre.ethers.parseUnits(amount, 6)),
-  })
+  }) 
 
   const outputs = (totalAmount - (hre.ethers.parseUnits(amount, 6))) == BigInt(0) ? [recipientUtxoOnboarding] : [recipientUtxoOnboarding, senderChangeUtxo]
 
@@ -38,7 +38,7 @@ export async function prepareTransfer(amount: string, username: string, addressS
     const recipientUtxo = new Utxo({
       amount: hre.ethers.parseUnits(amount, 6),
       keypair: Keypair.fromString(recipientAddress),
-    })
+    }) // recipient utxo
     
     const { unspentUtxo, totalAmount, senderKeyPair } = await getUserAccountInfo(username, addressSender, {amount: hre.ethers.parseUnits(amount, 6)})
     
