@@ -1,7 +1,7 @@
 import figlet from 'figlet';
 import * as readline from 'readline';
-import { acceptInvite, login, onboardViaLink } from '../version2_private_transfers_complete/src/walletFirstActions';
-import { inputFromCLI } from '../version2_private_transfers_complete/src/utils/inputFromCLI';
+import { acceptInvite, login, onboardViaLink } from './src/walletFirstActions';
+import { inputFromCLI } from './src/utils/inputFromCLI';
 
 async function main() {
 

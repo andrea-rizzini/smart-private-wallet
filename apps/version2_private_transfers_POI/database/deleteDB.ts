@@ -8,4 +8,4 @@ deleteContacts();
 deleteChallenges();
 deleteNullifiers();
 
-deleteDir("apps/version2_private_transfers_complete/data");
+deleteDir("apps/version2_private_transfers_POI/data");
