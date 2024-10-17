@@ -137,7 +137,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
 
-    const POIcommitment = poseidonHash([allowed]);
+    const POIcommitment = poseidonHash([allowed]); // in future add with delay after some checks, for now add all utxo as allowed
 
     if (result) {
         const signers = await hre.ethers.getSigners();
