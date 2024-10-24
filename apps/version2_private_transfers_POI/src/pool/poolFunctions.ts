@@ -311,12 +311,12 @@ async function prepareTransaction({
   // For this reason there are two components instansiated with nIns = 2 and nIns = 16
 
   while (inputs.length !== 2 && inputs.length < 16) {
-      inputs.push(new Utxo()) // new UTXO with amount zero
+      inputs.push(new Utxo()) // new input UTXO with amount zero
   }
 
   // Create always two output, in this way there is no way to tell if a change has necessarily happened
   while (outputs.length < 2) {
-      outputs.push(new Utxo())
+      outputs.push(new Utxo()) // new output UTXO with amount zero
   }
   
   // output - input
@@ -332,7 +332,7 @@ async function prepareTransaction({
       recipient
   }
 
-  if (!rootHex) {
+  if (!rootHex) { // do not enter here if it's a deposit
       params.tree = await buildMerkleTree({ events }) // build the tree off-chain
   }
 
@@ -388,7 +388,7 @@ export async function createOnboardingData(params: CreateTransactionParams, keyp
 export async function createTransactionData(params: CreateTransactionParams, keypair: Keypair, signer: any){
   if (!params.inputs || !params.inputs.length) { // enter here for the deposit
     const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS, signer);
-    const root = await contract.getLastRoot_();
+    const root = await contract.getLastRoot_(); // take the last root, used in prepareTransaction to skip off-chain tree construction since for deposit is useless
 
     params.events = []
     params.rootHex = toFixedHex(root)

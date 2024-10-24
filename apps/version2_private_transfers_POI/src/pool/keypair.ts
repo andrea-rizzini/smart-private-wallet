@@ -10,16 +10,16 @@ const STRING_WITH_0X_LENGTH = 130
 const ENCRYPTION_KEY_LENGTH = 128
 
 class Keypair extends KeypairStatic implements BaseKeypair {
-  public privkey: string
+  public privkey: string 
   public pubkey: bigint 
   public encryptionKey: string
 
   public constructor(privkey = Wallet.createRandom().privateKey) { // generated using ethers
     super()
 
-    this.privkey = privkey
-    this.pubkey = poseidonHash([privkey])
-    this.encryptionKey = getEncryptionPublicKey(privkey.slice(2))
+    this.privkey = privkey 
+    this.pubkey = poseidonHash([privkey]) 
+    this.encryptionKey = getEncryptionPublicKey(privkey.slice(2)) 
   }
 
   public toString() {
@@ -42,7 +42,7 @@ class Keypair extends KeypairStatic implements BaseKeypair {
     return Object.assign(new Keypair(), {
       privkey: null,
       pubkey: BigInt('0x' + str.slice(0, PUB_KEY_LENGTH)),
-      encryptionKey: Buffer.from(str.slice(PUB_KEY_LENGTH, ENCRYPTION_KEY_LENGTH), 'hex').toString('base64'), 
+      encryptionKey: Buffer.from(str.slice(PUB_KEY_LENGTH, ENCRYPTION_KEY_LENGTH), 'hex').toString('base64'),
     })
   }
 

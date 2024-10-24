@@ -4,7 +4,7 @@ include "./keypair.circom"
 
 template Transaction(levels, nIns, nOuts, zeroLeaf) {
     signal input root;
-    signal input publicAmount; // publicAmount = extAmount 
+    signal input publicAmount; // publicAmount = extAmount, 0 if it's a transfer, positive if it's a deposit, negative if it's a withdrawal
 
     // data for transaction inputs
     signal         input inputNullifier[nIns];
@@ -47,6 +47,7 @@ template Transaction(levels, nIns, nOuts, zeroLeaf) {
         inNullifierHasher[tx].inputs[0] <== inCommitmentHasher[tx].out;
         inNullifierHasher[tx].inputs[1] <== inPathIndices[tx];
         inNullifierHasher[tx].inputs[2] <== inSignature[tx].out;
+        inNullifierHasher[tx].out === inputNullifier[tx];
             
         inTree[tx] = MerkleProof(levels);
         inTree[tx].leaf <== inCommitmentHasher[tx].out;

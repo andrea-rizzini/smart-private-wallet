@@ -50,17 +50,17 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient }: 
     inputs = shuffle(inputs)
     outputs = shuffle(outputs)
   
-    const inputMerklePathIndices = []
-    const inputMerklePathElements = []
+    const inputMerklePathIndices = [] 
+    const inputMerklePathElements = [] // array of arrays, each array is a merkle branch
     
     for (const input of inputs) {
       if (input.amount > 0) {
-        input.index = tree.indexOf(toFixedHex(input.getCommitment()))
+        input.index = tree.indexOf(toFixedHex(input.getCommitment())) // from the tree we get the index of the commitment
   
         if (input.index < 0) {
           throw new Error(`Input commitment ${toFixedHex(input.getCommitment())} was not found`)
         }
-        inputMerklePathIndices.push(input.index)
+        inputMerklePathIndices.push(input.index) 
         inputMerklePathElements.push(tree.path(input.index).pathElements)
       } else {
         inputMerklePathIndices.push(0) // merkle indices for fitticious inputs
@@ -92,7 +92,7 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient }: 
       inPathIndices: inputMerklePathIndices,
       inPathElements: inputMerklePathElements,
   
-      // data for 2 transaction outputs
+      // data for transaction outputs
       outAmount: outputs.map((x) => x.amount),
       outBlinding: outputs.map((x) => x.blinding),
       outPubkey: outputs.map((x) => x.keypair.pubkey),
