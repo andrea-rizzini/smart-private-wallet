@@ -187,7 +187,6 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryTransactions, Merkl
     emit NewCommitmentPOI(commitmentsPOI[1], nextIndexP - 1);
   }
 
-
   function isSpent(bytes32 _nullifierHash) public view returns (bool) {
     return nullifierHashes[_nullifierHash];
   }
@@ -200,7 +199,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryTransactions, Merkl
           [
             uint256(_args.root),
             _args.publicAmount,
-            //uint256(_args.extDataHash),
+            uint256(_args.extDataHash),
             uint256(_args.inputNullifiers[0]),
             uint256(_args.inputNullifiers[1]),
             uint256(_args.outputCommitments[0]),
@@ -214,7 +213,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryTransactions, Merkl
           [
             uint256(_args.root),
             _args.publicAmount,
-            //uint256(_args.extDataHash),
+            uint256(_args.extDataHash),
             uint256(_args.inputNullifiers[0]),
             uint256(_args.inputNullifiers[1]),
             uint256(_args.inputNullifiers[2]),

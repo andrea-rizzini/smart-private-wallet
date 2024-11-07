@@ -16,6 +16,7 @@ async function main() {
     console.log("\nPM balance in Wei:",
         amountInWei
     );
+    console.log("\nPM balance in Gwei: ", Number(amountInWei) / Number(BigInt("1000000000")));
     const amountInEther = Number(amountInWei) / Number(BigInt("1000000000000000000"));
     const amountInEtherWithDecimals = amountInEther.toFixed(18);
     console.log("PM balance in Eth:",

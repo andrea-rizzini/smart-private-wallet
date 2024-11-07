@@ -2,9 +2,10 @@ include "../../node_modules/circomlib/circuits/poseidon.circom";
 include "./merkleProof.circom"
 include "./keypair.circom"
 
-template Transaction(levels, nIns, nOuts, zeroLeaf) {
+template Transaction(levels, nIns, nOuts) {
     signal input root;
     signal input publicAmount; // publicAmount = extAmount, 0 if it's a transfer, positive if it's a deposit, negative if it's a withdrawal
+    signal input extDataHash; // for integrity check
 
     // data for transaction inputs
     signal         input inputNullifier[nIns];
@@ -77,6 +78,7 @@ template Transaction(levels, nIns, nOuts, zeroLeaf) {
         outCommitmentHasher[tx].inputs[2] <== outBlinding[tx];
         outCommitmentHasher[tx].out === outputCommitment[tx];
 
+        // Check that amount fits into 248 bits to prevent overflow
         outAmountCheck[tx] = Num2Bits(248); 
         outAmountCheck[tx].in <== outAmount[tx];
 
@@ -84,7 +86,7 @@ template Transaction(levels, nIns, nOuts, zeroLeaf) {
     }
 
     // check that there are no same nullifiers among all inputs
-    component sameNullifiers[nIns * (nIns - 1) / 2];
+    component sameNullifiers[nIns * (nIns - 1) / 2]; // number of unique couples, the binomial coefficent
     var index = 0;
     for (var i = 0; i < nIns - 1; i++) {
       for (var j = i + 1; j < nIns; j++) {
@@ -99,5 +101,7 @@ template Transaction(levels, nIns, nOuts, zeroLeaf) {
     // verify that amount of inputs and publicAmount is equal to amount of outputs
     // publicAmount is positive if it's a deposit, negative if it's a withdrawal
     sumIns + publicAmount === sumOuts;
+
+    signal extDataSquare <== extDataHash * extDataHash;
 
 }

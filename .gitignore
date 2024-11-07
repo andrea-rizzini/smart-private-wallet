@@ -35,6 +35,12 @@ apps/version2_private_transfers/links/linkNote.json
 /apps/version2_private_transfers_POI/links/linkNote.json
 apps/version2_private_transfers_POI/links/linkNote.json
 
+/apps/version3_flag_propagation/links/*
+/apps/version3_flag_propagation/cache/*
+/apps/version3_flag_propagation/data/*
+/apps/version3_flag_propagation/links/linkNote.json
+apps/version3_flag_propagation/links/linkNote.json
+
 # circuits files
 /home/andrea/Desktop/smart-private-wallet/circuits/artifacts/circuits/ptau18
 
