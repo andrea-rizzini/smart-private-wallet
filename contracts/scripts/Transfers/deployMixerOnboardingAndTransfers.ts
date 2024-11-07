@@ -19,6 +19,7 @@ async function main () {
     const VERIFIER_16 = process.env.VERIFIER_16 || '';
     const VERIFIER_POI_2 = process.env.VERIFIER_POI_2 || '';
     const VERIFIER_POI_16 = process.env.VERIFIER_POI_16 || '';
+    const VERIFIER_MASKED_COMMITMENT = process.env.VERIFIER_MASKED_COMMITMENT || '';
     const HASHER_TRANSFERS = process.env.HASHER_TRANSFERS || '';
 
     const signers = await hre.ethers.getSigners();
@@ -26,7 +27,7 @@ async function main () {
 
     const mixer = await hre.ethers.getContractFactory("MixerOnboardingAndTransfers", faucet);
 
-    const mixer_onb_and_transf = await mixer.deploy(VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, HASHER_TRANSFERS, USDC_ADDRESS, 20);
+    const mixer_onb_and_transf = await mixer.deploy(VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, VERIFIER_MASKED_COMMITMENT, HASHER_TRANSFERS, USDC_ADDRESS, 20);
     await mixer_onb_and_transf.waitForDeployment();
     console.log(`Mixer for oboarding and transfers deployed at: ${mixer_onb_and_transf.target}`);
     envConfig.MIXER_ONBOARDING_AND_TRANSFERS = mixer_onb_and_transf.target.toString();

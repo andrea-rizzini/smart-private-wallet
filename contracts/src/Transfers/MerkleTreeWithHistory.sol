@@ -7,7 +7,7 @@ interface IHasherTransactions {
   function poseidon(bytes32[2] calldata inputs) external pure returns (bytes32);
 }
 
-contract MerkleTreeWithHistoryTransactions is Initializable {
+contract MerkleTreeWithHistory is Initializable {
   uint256 public constant FIELD_SIZE_ = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
 
   IHasherTransactions public immutable hasherT;
@@ -44,7 +44,7 @@ contract MerkleTreeWithHistoryTransactions is Initializable {
   }
 
   // this inserts pairs of leaves for better efficiency, since we have 2 outputs we insert them both at the same time
-  function _insert(bytes32 _leaf1, bytes32 _leaf2) internal returns (uint32 index) {
+  function _insert(bytes32 _leaf1, bytes32 _leaf2) public returns (uint32 index) {
     uint32 _nextIndex = nextIndex;
     require(_nextIndex != uint32(2)**levels, "Merkle tree is full. No more leaves can be added");
     uint32 currentIndex = _nextIndex / 2;

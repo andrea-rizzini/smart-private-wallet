@@ -5,12 +5,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";   
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./MerkleTreeWithHistoryTransactions.sol";
+import "./MerkleTreeWithHistory.sol";
 import "./MerkleTreeWithHistoryPOI.sol";
 import { IVerifier } from "./interfaces/IVerifier.sol";
 import { IVerifierPOI } from "./interfaces/IVerifierPOI.sol";
+import { IVerifierMaskedCommitment } from "../FlagPropagation/IVerifierMaskedCommitment.sol";
 
-contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryTransactions, MerkleTreeWithHistoryPOI, ReentrancyGuard {
+contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHistoryPOI, ReentrancyGuard {
 
   using SafeERC20 for IERC20;
 
@@ -25,6 +26,11 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryTransactions, Merkl
 
   IVerifierPOI public immutable verifierPOI2;
   IVerifierPOI public immutable verifierPOI16;
+
+  IVerifierMaskedCommitment public immutable verifierMaskedCommitment;
+
+  MerkleTreeWithHistory public statusTree;
+  address public authority;
 
   struct ExtData {
     address recipient;
@@ -49,42 +55,57 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryTransactions, Merkl
 
   event Log(string message);
 
-  // Events for onboarding
-  event CommitmentCreated(
-    bytes32 indexed commitment,
-    uint32 leafIndex,
-    uint256 timestamp
-  );
-
-  event Redeemed(
-    address to, 
-    bytes32 indexed nullifierHash
-  );
-
   // Events for transactions
 
   event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput);
   event NewCommitmentPOI(bytes32 commitment, uint256 index);
   event NewNullifier(bytes32 nullifier);
 
+  event StatusFlagged(bytes32 maskedCommitment, bool status, uint256 timestamp, bytes32 newRoot);
+
+  modifier onlyAuthority() {
+      require(msg.sender == authority, "Not authorized");
+      _;
+  }
+
   constructor(
     IVerifier _verifier2,
     IVerifier _verifier16,
     IVerifierPOI _verifierPOI2,
     IVerifierPOI _verifierPOI16,
+    IVerifierMaskedCommitment _verifierMaskedCommitment,
     address _hasherTransactions,
     IERC20 _token,
     uint32 _merkleTreesHeight
-  )  MerkleTreeWithHistoryTransactions(_merkleTreesHeight, _hasherTransactions)
+  )  MerkleTreeWithHistory(_merkleTreesHeight, _hasherTransactions)
      MerkleTreeWithHistoryPOI(_merkleTreesHeight, _hasherTransactions) {
+    statusTree = new MerkleTreeWithHistory(_merkleTreesHeight, _hasherTransactions);
     verifier2 = _verifier2;
     verifier16 = _verifier16;
     verifierPOI2 = _verifierPOI2;
     verifierPOI16 = _verifierPOI16;
+    verifierMaskedCommitment = _verifierMaskedCommitment;
     token = _token;
     super._initialize();
     super._initializePOI();
   }
+
+  function flagStatus(
+      bytes calldata maskProof,
+      bytes32 maskedCommitment
+    ) external onlyAuthority {
+      require(verifyMaskProof(maskProof, maskedCommitment), "Invalid mask proof");
+      
+      statusTree._insert(maskedCommitment, bytes32(0));
+      bytes32 newRoot = statusTree.getLastRoot_();
+
+      emit StatusFlagged(
+          maskedCommitment,
+          true,
+          block.timestamp,
+          newRoot
+      );
+    }
 
   function deposit(Proof memory _args, ExtData memory _extData, bytes32[2] memory commitmentsPOI) external payable {
     if (_extData.extAmount > 0) {
@@ -249,4 +270,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistoryTransactions, Merkl
     }
   }
 
+  function verifyMaskProof(bytes memory maskProof, bytes32 maskedCommitment) public view returns (bool) {
+    return verifierMaskedCommitment.verifyProofMaskCommitment(maskProof, [uint256(maskedCommitment)]);
+  }
 }
