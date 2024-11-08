@@ -15,6 +15,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY_BOB!,
         process.env.PRIVATE_KEY_FAUCET!,
         process.env.PRIVATE_KEY_RELAYER!,
+        process.env.PRIVATE_KEY_AUTHORITY!,
       ],
     },
     arb: {
@@ -24,6 +25,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY_BOB!,
         process.env.PRIVATE_KEY_FAUCET!,
         process.env.PRIVATE_KEY_RELAYER!,
+        process.env.PRIVATE_KEY_AUTHORITY!,
       ],
     },
   },

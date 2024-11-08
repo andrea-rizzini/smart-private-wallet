@@ -16,6 +16,7 @@ async function main () {
     
     const envConfig = dotenv.parse(fs.readFileSync('.env'));
 
+    const AUTHORITY_ADDRESS = process.env.AUTHORITY_ADDRESS || '';
     const VERIFIER_2 = process.env.VERIFIER_2 || '';
     const VERIFIER_16 = process.env.VERIFIER_16 || '';
     const VERIFIER_POI_2 = process.env.VERIFIER_POI_2 || '';
@@ -28,14 +29,14 @@ async function main () {
 
     const mixer = await hre.ethers.getContractFactory("MixerOnboardingAndTransfers", faucet);
 
-    const mixer_onb_and_transf = await mixer.deploy(VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, VERIFIER_MASKED_COMMITMENT, HASHER_TRANSFERS, USDC_ADDRESS, 20);
+    const mixer_onb_and_transf = await mixer.deploy(VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, VERIFIER_MASKED_COMMITMENT, HASHER_TRANSFERS, USDC_ADDRESS, 20, AUTHORITY_ADDRESS);
     await mixer_onb_and_transf.waitForDeployment();
     console.log(`Mixer for oboarding and transfers deployed at: ${mixer_onb_and_transf.target}`);
     envConfig.MIXER_ONBOARDING_AND_TRANSFERS = mixer_onb_and_transf.target.toString();
 
     // await run(`verify:verify`, {
     //     address: mixer_onb_and_transf.target,
-    //     constructorArguments: [VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, VERIFIER_MASKED_COMMITMENT, HASHER_TRANSFERS, USDC_ADDRESS, 20],
+    //     constructorArguments: [VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, VERIFIER_MASKED_COMMITMENT, HASHER_TRANSFERS, USDC_ADDRESS, 20, AUTHORITY_ADDRESS],
     // });
     
     // write new addresses to .env file

@@ -79,7 +79,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     IVerifierMaskedCommitment _verifierMaskedCommitment,
     address _hasherTransactions,
     IERC20 _token,
-    uint32 _merkleTreesHeight
+    uint32 _merkleTreesHeight,
+    address _authority
   )  MerkleTreeWithHistory(_merkleTreesHeight, _hasherTransactions)
      MerkleTreeWithHistoryPOI(_merkleTreesHeight, _hasherTransactions) {
     statusTree = new MerkleTreeWithHistory(_merkleTreesHeight, _hasherTransactions);
@@ -89,14 +90,10 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     verifierPOI16 = _verifierPOI16;
     verifierMaskedCommitment = _verifierMaskedCommitment;
     token = _token;
+    authority = _authority;
     super._initialize();
     super._initializePOI();
   }
-
-  // function insertMaskedCommitment(bytes32 maskedCommitment, bytes32 allowance) external onlyAuthority {
-  //   statusTree._insert(maskedCommitment, allowance);
-  //   emit initalStatus(); // true = allowed
-  // }
 
   function flagStatus(
       bytes calldata maskProof,

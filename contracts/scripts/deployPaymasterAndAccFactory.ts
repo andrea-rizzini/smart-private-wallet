@@ -39,6 +39,11 @@ async function main() {
   console.log(`\nAF_V3_RELAYER: ${af_v3_relayer.target}`);
   envConfig.ACCOUNT_FACTORY_V3_RELAYER_ADDRESS = af_v3_relayer.target.toString();
 
+  const af_v3_authority = await hre.ethers.deployContract("contracts/src/FlagPropagation/Authority.sol:AccountFactory", [], { signer: faucet });
+  await af_v3_authority.waitForDeployment();
+  console.log(`\nAF_V3_AUTHORITY: ${af_v3_authority.target}`);
+  envConfig.ACCOUNT_FACTORY_V3_AUTHORITY_ADDRESS = af_v3_authority.target.toString();
+
   // write new addresses to .env file
   const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');
   fs.writeFileSync('.env', updatedEnv);

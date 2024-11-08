@@ -81,7 +81,8 @@ export const createTables = () => {
             depositorAddress TEXT NOT NULL,
             commitment TEXT NOT NULL,
             blinding TEXT NOT NULL,
-            maskedCommitment TEXT NOT NULL            
+            maskedCommitment TEXT NOT NULL,
+            flagged BOOLEAN NOT NULL DEFAULT FALSE            
         );
     `;
 
@@ -253,6 +254,12 @@ export const updateChallengeRedeemed = (userID: number, challenge: string) => {
     const updateSQL = `UPDATE challenges SET redeemed = TRUE WHERE userId = ? AND challenge = ?;`;
     const stmt = db.prepare(updateSQL);
     stmt.run(userID, challenge);
+}
+
+export const updateMaskedCommitmentFlagged = (maskedCommitment: string) => {
+    const updateSQL = `UPDATE masked_commitments SET flagged = TRUE WHERE maskedCommitment = ?;`;
+    const stmt = db.prepare(updateSQL);
+    stmt.run(maskedCommitment);
 }
 
 export const getChallengeByNameAndUserID = (userId: number, name: string) => {

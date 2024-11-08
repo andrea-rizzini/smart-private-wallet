@@ -28,10 +28,6 @@ contract Authority is IAccount {
         return owner == recovered ? 0 : 1; 
     }
 
-    // function callInsertMaskedCommitment(address poolAddress, bytes32 maskedCommitment, bytes32 allowance) external {
-    //     IMixerOnboardingAndTransfers(poolAddress).insertMaskedCommitment(maskedCommitment, allowance);
-    // }
-
     function callFlagStatus(address poolAddress, bytes calldata maskProof, bytes32 maskedCommitment) external {
         IMixerOnboardingAndTransfers(poolAddress).flagStatus(maskProof, maskedCommitment);
     }
