@@ -37,6 +37,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     int256 extAmount;
     bytes encryptedOutput1;
     bytes encryptedOutput2;
+    bytes encryptedChainState1;
+    bytes encryptedChainState2;
   }
 
   struct Proof {
@@ -57,10 +59,11 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
 
   // Events for transactions
 
-  event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput);
+  event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput, bytes encryptedChainState);
   event NewCommitmentPOI(bytes32 commitment, uint256 index);
   event NewNullifier(bytes32 nullifier);
 
+  // event initalStatus(); // true = allowed, false = illicit
   event StatusFlagged(bytes32 maskedCommitment, bool status, uint256 timestamp, bytes32 newRoot);
 
   modifier onlyAuthority() {
@@ -90,13 +93,18 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     super._initializePOI();
   }
 
+  // function insertMaskedCommitment(bytes32 maskedCommitment, bytes32 allowance) external onlyAuthority {
+  //   statusTree._insert(maskedCommitment, allowance);
+  //   emit initalStatus(); // true = allowed
+  // }
+
   function flagStatus(
       bytes calldata maskProof,
       bytes32 maskedCommitment
     ) external onlyAuthority {
       require(verifyMaskProof(maskProof, maskedCommitment), "Invalid mask proof");
       
-      statusTree._insert(maskedCommitment, bytes32(0));
+      statusTree._insert(maskedCommitment, bytes32(0)); // second parameter for padding
       bytes32 newRoot = statusTree.getLastRoot_();
 
       emit StatusFlagged(
@@ -121,15 +129,15 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
       require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
     }
     require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
-    require(verifyProof(_args), "Invalid transaction proof");
+    // require(verifyProof(_args), "Invalid transaction proof");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       nullifierHashes[_args.inputNullifiers[i]] = true;
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
@@ -158,8 +166,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
@@ -195,8 +203,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }

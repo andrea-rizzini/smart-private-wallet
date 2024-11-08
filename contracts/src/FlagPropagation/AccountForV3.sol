@@ -8,17 +8,34 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-interface IAssociationSet{
-    function addToTheAssociationSet(bytes32[2] calldata _commitment) external;
-}
+interface IMixerOnboardingAndTransfers {
 
-interface IOnboardingMixer {
-    function createCommitment(bytes32 _commitment) external;
-    function redeemCommitment(    
-        bytes calldata _proof,
-        bytes32 _root,
-        bytes32 _nullifierHash
-    ) external payable;
+    struct ExtData {
+        address recipient;
+        int256 extAmount;
+        bytes encryptedOutput1;
+        bytes encryptedOutput2;
+        bytes encryptedChainState1;
+        bytes encryptedChainState2;
+    }
+
+    struct Proof {
+        bytes proof;
+        bytes32 root;
+        bytes32[] inputNullifiers;
+        bytes32[2] outputCommitments;
+        uint256 publicAmount;
+        bytes32 extDataHash;
+    }
+
+    struct POI {
+        bytes proof;
+        bytes32 root;
+    }
+
+    function deposit(Proof memory _proofArgs, ExtData memory _extData, bytes32[2] memory commitmentsPOI) external;
+    function withdraw(Proof memory _args, ExtData memory _extData, POI memory _poi, bytes32[2] memory commitmentsPOI) external;
+    
 } 
 
 interface IPoolUsers {
@@ -30,37 +47,19 @@ interface IPoolUsers {
     function register(Account_ memory _account) external;
 }
 
-interface IUTXOsPoolWithCompliance {
-  struct ExtData {
-    address recipient;
-    int256 extAmount;
-    bytes encryptedOutput1;
-    bytes encryptedOutput2;
-  }
-
-  struct Proof {
-    bytes proof;
-    bytes32 root;
-    bytes32[] inputNullifiers;
-    bytes32[2] outputCommitments;
-    uint256 publicAmount;
-    bytes32 extDataHash;
-  }
-
-  struct POI {
-    bytes proof;
-    bytes32 root;
-    bytes32[] inputNullifiers;
-    bytes32[] commitments;
-  }
-   
-  function deposit(Proof memory _args, ExtData memory _extData) external ;
-  function transact(Proof memory _args, POI memory _args_poi, ExtData memory _extData) external ;
+interface IEncryptedDataOnboardedUsers {
+    function addEncryptedData(bytes memory data) external;
 }
 
 // Account contract
 
-contract AccountForV3 is IAccount {
+contract Account is IAccount {
+
+    struct Call {
+        address dest;
+        uint256 value;
+        bytes data;
+    }
 
     address public owner;
 
@@ -68,6 +67,8 @@ contract AccountForV3 is IAccount {
     
     /// The ERC-4337 entry point singleton
     address public entryPoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+
+    event Log(string message);
 
     modifier onlyEntryPoint() {
         require(msg.sender == address(entryPoint), "only entry point");
@@ -82,25 +83,11 @@ contract AccountForV3 is IAccount {
 
     function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256) external view returns (uint256 validationData) 
     {
-        address recovered = ECDSA.recover(ECDSA.toEthSignedMessageHash(userOpHash), userOp.signature);
+        address recovered = ECDSA.recover(ECDSA.toEthSignedMessageHash(userOpHash), userOp.signature); // here starting from the uerOpHash and its signature, we recover the address of the signer
         return owner == recovered ? 0 : 1; //return 0 if signature is valid, 1 otherwise
     }
 
-    function append_commitment(address contract_address, bytes32 _commitment, uint256 denomination) external {
-        IERC20(usdcToken).approve(contract_address, denomination);
-        IOnboardingMixer(contract_address).createCommitment(_commitment);
-    }
-
-    function redeem_commitment(
-        address contract_address,
-        bytes calldata _proof,
-        bytes32 _root,
-        bytes32 _nullifierHash
-    ) external payable {
-        IOnboardingMixer(contract_address).redeemCommitment(_proof, _root, _nullifierHash);
-    }
-
-     function insertIntoPoolUsers(address poolUsersContract, bytes memory publicKey) public {
+    function insertIntoPoolUsers(address poolUsersContract, bytes memory publicKey) public {
         IPoolUsers.Account_ memory account_ = IPoolUsers.Account_({
             owner: address(this),
             publicKey: publicKey
@@ -109,27 +96,29 @@ contract AccountForV3 is IAccount {
         IPoolUsers(poolUsersContract).register(account_);
     }
 
+    function insertIntoEncryptedData(address contract_address, bytes memory data) public {
+        IEncryptedDataOnboardedUsers(contract_address).addEncryptedData(data);
+    }
+
     function callDeposit(
         address poolAddress,
-        IUTXOsPoolWithCompliance.Proof memory _proofArgs,
-        IUTXOsPoolWithCompliance.ExtData memory _extData
+        IMixerOnboardingAndTransfers.Proof memory _proofArgs,
+        IMixerOnboardingAndTransfers.ExtData memory _extData,
+        bytes32[2] memory commitmentsPOI
     ) external payable {
         uint256 valueToSend = _extData.extAmount > 0 ? uint256(_extData.extAmount) : 0;
         IERC20(usdcToken).approve(poolAddress, valueToSend);
-        IUTXOsPoolWithCompliance(poolAddress).deposit(_proofArgs, _extData);
+        IMixerOnboardingAndTransfers(poolAddress).deposit(_proofArgs, _extData, commitmentsPOI);
     }
 
-    function callTransact(
+    function callWithdraw(
         address poolAddress,
-        IUTXOsPoolWithCompliance.Proof memory _proofArgs,
-        IUTXOsPoolWithCompliance.POI memory _proof_poi,
-        IUTXOsPoolWithCompliance.ExtData memory _extData
+        IMixerOnboardingAndTransfers.Proof memory _proofArgs,
+        IMixerOnboardingAndTransfers.ExtData memory _extData,
+        IMixerOnboardingAndTransfers.POI memory _poi,
+        bytes32[2] memory commitmentsPOI
     ) external payable {
-        IUTXOsPoolWithCompliance(poolAddress).transact(_proofArgs, _proof_poi, _extData);
-    }
-
-    function callAddToTheAssociationSet(address associationSet, bytes32[2] calldata _commitments) external {
-        IAssociationSet(associationSet).addToTheAssociationSet(_commitments);
+        IMixerOnboardingAndTransfers(poolAddress).withdraw(_proofArgs, _extData, _poi, commitmentsPOI);
     }
 
 }
@@ -138,7 +127,7 @@ contract AccountFactory {
     function createAccount(address owner) external returns (address) {
 
         bytes32 salt = bytes32(uint256(uint160(owner)));
-        bytes memory bytecode = abi.encodePacked(type(AccountForV3).creationCode, abi.encode(owner));
+        bytes memory bytecode = abi.encodePacked(type(Account).creationCode, abi.encode(owner));
 
         address addr = Create2.computeAddress(salt, keccak256(bytecode));
         uint256 codeSize = addr.code.length;

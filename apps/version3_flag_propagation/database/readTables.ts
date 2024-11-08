@@ -1,4 +1,4 @@
-import { getUsers, getContacts, getChallenges, getKeypairs, getKeypairsOnboarding, getNullifiers } from "./database";
+import { getUsers, getContacts, getChallenges, getKeypairs, getKeypairsOnboarding, getMaskedCommitments, getNullifiers } from "./database";
 
 console.log('Users:\n');
 getUsers().forEach(user => {
@@ -18,6 +18,11 @@ getKeypairs().forEach(keypair => {
 console.log('\nKeypairs Onboarding:\n');
 getKeypairsOnboarding().forEach(keypair => {
     console.log(keypair);
+});
+
+console.log('\nMasked Commitments:\n');
+getMaskedCommitments().forEach(maskedCommitment => {
+    console.log(maskedCommitment);
 });
 
 console.log('\nNullifiers:\n');

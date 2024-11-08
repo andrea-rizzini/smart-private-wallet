@@ -19,10 +19,10 @@ import { toFixedHex } from './utils/toHex';
 import { Utxo } from "./pool/utxo";
 
 const ENCRYPTED_DATA_ADDRESS = process.env.ENCRYPTED_DATA_ADDRESS || '';
-const INIT_CODE_RELAYER = process.env.INIT_CODE_RELAYER || '';
+const INIT_CODE_RELAYER_V3 = process.env.INIT_CODE_RELAYER_V3 || '';
 const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
 const POOL_USERS_ADDRESS = process.env.POOL_USERS_ADDRESS || '';
-const RELAYER_ADDRESS = process.env.RELAYER_ADDRESS || '';
+const RELAYER_V3_ADDRESS = process.env.RELAYER_V3_ADDRESS || '';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
 export async function setup(username: string, account: string, initCode: string, signer: any) {
@@ -38,7 +38,7 @@ export async function setup(username: string, account: string, initCode: string,
         const output = new Utxo({ keypair })
 
         // register in poolUsers
-        await call_userop("Account", "insertIntoPoolUsers", [POOL_USERS_ADDRESS, output.keypair.address()], account , initCode, signer);
+        await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "insertIntoPoolUsers", [POOL_USERS_ADDRESS, output.keypair.address()], account , initCode, signer);
 
         const index = getID(username);
 
@@ -143,7 +143,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
         const signers = await hre.ethers.getSigners();
         const { args, extData } = result;
         try {
-            await call_userop("Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
+            await call_userop("Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -288,7 +288,7 @@ export async function send(username: string, account: string, initCode: string, 
         const signers = await hre.ethers.getSigners();
         const { args, extData } = result;
         try {
-            await call_userop("Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData,[toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
+            await call_userop("Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData,[toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -372,7 +372,7 @@ export async function receive(signer: any, account: string, initCode: string) {
     if (result) {
         const { args, extData } = result;
         try {
-            await call_userop("Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account , initCode, signer);
+            await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account , initCode, signer);
             console.log(`\nFunded private amount with ${choiceAmount} USDC\n`)
         }
         catch (error) {
@@ -383,7 +383,7 @@ export async function receive(signer: any, account: string, initCode: string) {
     else {
         console.log("\nDeposit preparation failed\n");
         
-        }   
+    }
     
 }
 
@@ -488,7 +488,7 @@ export async function withdraw(username: string, account: string, initCode: stri
 
             console.log ('\nChecking Proof of Innocence ...');
             
-            await call_userop("Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, argsPOI, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account, initCode, signer);
+            await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, argsPOI, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account, initCode, signer);
 
             console.log(`\nWithdrawal of ${choiceAmount} USDC completed succesfully!\n`);
         }

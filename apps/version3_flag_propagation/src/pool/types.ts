@@ -22,6 +22,7 @@ export type ProofParams = {
   tree: any
   extAmount: bigint
   recipient: string | bigint
+  address?: string
 }
 
 type CommitmentEvent = {
@@ -55,6 +56,7 @@ export type PrepareTxParams = {
   rootHex?: string
   recipient?: string | bigint
   events?: CommitmentEvents
+  address ?: string
 }
 
 export type CreateTransactionParams = {
@@ -65,8 +67,7 @@ export type CreateTransactionParams = {
   recipient?: string | bigint
   rootHex?: string
   events?: CommitmentEvents
-  isL1Withdrawal?: boolean
-  l1Fee?: bigint
+  address ?: string
 }
 
 export interface BaseKeypair {
@@ -116,6 +117,8 @@ export interface Params {
   encryptedOutput1: string
   extAmount: string
   encryptedOutput2: string
+  encryptedChainState1: string
+  encryptedChainState2: string
 }
 
 export type CustomUtxo = BaseUtxo & { transactionHash: string }

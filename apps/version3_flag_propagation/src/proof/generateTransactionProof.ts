@@ -4,7 +4,11 @@ import path from 'path';
 
 import { ArgsProof, BaseUtxo, Params, ProofParams } from "../pool/types";
 import { BytesLike } from '@ethersproject/bytes'
+import { insertMaskedCommitment } from "../../database/database";
+import { poseidonHash } from "../utils/hashFunctions";
 import  { prove } from "../proof/prover";
+import { randomBN } from "../pool/utxo";
+import { toBuffer } from "../pool/utxo";
 import { toFixedHex } from "../utils/toHex";
 
 const ADDRESS_BYTES_LENGTH = 20
@@ -25,12 +29,12 @@ function shuffle(array: BaseUtxo[]) {
     return array
 }
 
-function getExtDataHash({ recipient, extAmount, encryptedOutput1, encryptedOutput2 }: Params) {
+function getExtDataHash({ recipient, extAmount, encryptedOutput1, encryptedOutput2, encryptedChainState1, encryptedChainState2 }: Params) {
     const abi = new hre.ethers.AbiCoder()
   
     const encodedData = abi.encode(
       [
-        'tuple(address recipient,int256 extAmount,bytes encryptedOutput1,bytes encryptedOutput2)',
+        'tuple(address recipient,int256 extAmount,bytes encryptedOutput1,bytes encryptedOutput2, bytes encryptedChainState1, bytes encryptedChainState2)',
       ],
       [
         {
@@ -38,6 +42,8 @@ function getExtDataHash({ recipient, extAmount, encryptedOutput1, encryptedOutpu
           extAmount: extAmount,
           encryptedOutput1: encryptedOutput1,
           encryptedOutput2: encryptedOutput2,
+          encryptedChainState1: encryptedChainState1,
+          encryptedChainState2: encryptedChainState2
         },
       ]
     )
@@ -46,7 +52,7 @@ function getExtDataHash({ recipient, extAmount, encryptedOutput1, encryptedOutpu
   }
 
 // to be moved to the proof folder
-export async function getProof({ inputs, outputs, tree, extAmount, recipient }: ProofParams) {
+export async function getProof({ inputs, outputs, tree, extAmount, recipient, address }: ProofParams) {
     inputs = shuffle(inputs)
     outputs = shuffle(outputs)
   
@@ -69,12 +75,49 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient }: 
     }
     
     const [output1, output2] = outputs
-  
+
+    // prepare encrypted chain state
+    let encryptedChainState1, encryptedChainState2;
+
+    if (extAmount > 0) { // meaning that the transaction is a deposit
+      const commitment_output_one = outputs[0].getCommitment();
+      const blinding_output_one = randomBN();
+      const masked_commitment_one = poseidonHash([commitment_output_one, blinding_output_one]);
+      insertMaskedCommitment(address as string, commitment_output_one.toString(), blinding_output_one.toString(), toFixedHex(masked_commitment_one));
+      const bytes = Buffer.concat([toBuffer(masked_commitment_one, 31)]);
+      encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
+
+      const commitment_output_two = outputs[1].getCommitment();
+      const blinding_output_two = randomBN();
+      const masked_commitment_two = poseidonHash([commitment_output_two, blinding_output_two]);
+      insertMaskedCommitment(address as string, commitment_output_two.toString(), blinding_output_two.toString(), toFixedHex(masked_commitment_two));
+      const bytes2 = Buffer.concat([toBuffer(masked_commitment_two, 31)]);
+      encryptedChainState2 = outputs[1].keypair.encrypt(bytes2);
+    }
+    else {
+      const commitment_output_one = outputs[0].getCommitment();
+      const blinding_output_one = randomBN();
+      const masked_commitment_one = poseidonHash([commitment_output_one, blinding_output_one]);
+      insertMaskedCommitment(address as string, commitment_output_one.toString(), blinding_output_one.toString(), toFixedHex(masked_commitment_one));
+      const bytes = Buffer.concat([toBuffer(masked_commitment_one, 31)]);
+      encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
+
+      const commitment_output_two = outputs[1].getCommitment();
+      const blinding_output_two = randomBN();
+      const masked_commitment_two = poseidonHash([commitment_output_two, blinding_output_two]);
+      insertMaskedCommitment(address as string, commitment_output_two.toString(), blinding_output_two.toString(), toFixedHex(masked_commitment_two));
+      const bytes2 = Buffer.concat([toBuffer(masked_commitment_two, 31)]);
+      encryptedChainState2 = outputs[1].keypair.encrypt(bytes2);
+    }
+    
+    // prepare extData
     const extData = {
       recipient: toFixedHex(recipient, ADDRESS_BYTES_LENGTH),
       extAmount: toFixedHex(extAmount),
       encryptedOutput1: output1.encrypt(), // this will be the event onchain, making possible for the receiver to decrypt the output and realize that they are his utxo
       encryptedOutput2: output2.encrypt(),
+      encryptedChainState1: encryptedChainState1,
+      encryptedChainState2: encryptedChainState2
     }
     
     const extDataHash = getExtDataHash(extData)
@@ -157,6 +200,8 @@ export async function getProofOnboarding({ inputs, outputs, tree, extAmount, rec
     extAmount: toFixedHex(extAmount),
     encryptedOutput1: output1.encrypt(),
     encryptedOutput2: output2.encrypt(),
+    encryptedChainState1: output1.encrypt(),
+    encryptedChainState2: output2.encrypt()
   }
   
   const extDataHash = getExtDataHash(extData)

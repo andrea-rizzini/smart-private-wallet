@@ -20,7 +20,7 @@ import { toFixedHex } from './utils/toHex';
 
 const ENCRYPTED_DATA_ADDRESS: string = process.env.ENCRYPTED_DATA_ADDRESS || '';
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
-const FACTORY_ADDRESS: string = process.env.ACCOUNT_FACTORY_ADDRESS || '';
+const ACCOUNT_FACTORY_V3_ADDRESS: string = process.env.ACCOUNT_FACTORY_V3_ADDRESS || '';
 const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
@@ -147,13 +147,13 @@ export async function acceptInvite() {
   console.log('\nCreating smart account ...');
 
   // deploy new account
-  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/Account.sol:AccountFactory"); 
+  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/FlagPropagation/AccountForV3.sol:AccountFactory"); 
   const signers = await hre.ethers.getSigners(); // signers[i] is the whole object
   const address = await signers[index].getAddress(); 
 
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, signers[2]);
 
-  let initCode = FACTORY_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
+  let initCode = ACCOUNT_FACTORY_V3_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
   let account: string = "0x";
   try {
     await ep.getSenderAddress(initCode);
@@ -162,7 +162,7 @@ export async function acceptInvite() {
     account = "0x" + error.data.slice(-40); 
   }
 
-  const _account = await hre.ethers.getContractAt("Account", account);
+  const _account = await hre.ethers.getContractAt("contracts/src/FlagPropagation/AccountForV3.sol:Account", account);
 
   console.log("\nRegistering account's public key in the pool ...")
   await setup(username, account, initCode, signers[index]);
@@ -189,14 +189,17 @@ export async function acceptInvite() {
   const POIcommitment = poseidonHash([allowed]); // 2dbc9ff9b5f0afb7a41a828987d17354b28410b26e54f94390b01efe786abc19
 
   if (result) {
+  
       const { args, extData } = result;
+
       try {
-          await call_userop("Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account , initCode, signers[index]);
-          console.log(`\nFunded private amount with 0.01 USDC`)
+          await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account , initCode, signers[index]);
+          console.log(`\nFunded private amount with 0.01 USDC`)          
       }
       catch (error) {
         console.error("\nSomething went wrong during the deposit transaction:", error);
       }
+      
   }
   else {
       console.log("\nDeposit preparation failed\n");
@@ -317,9 +320,9 @@ export async function login() {
   const address = await signers[index].getAddress(); 
 
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, signers[2]);
-  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/Account.sol:AccountFactory"); 
+  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/FlagPropagation/AccountForV3.sol:AccountFactory"); 
 
-  let initCode = FACTORY_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2); // first 20 byte are the factory address, the rest is calldata
+  let initCode = ACCOUNT_FACTORY_V3_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2); // first 20 byte are the factory address, the rest is calldata
   let account: string = "0x";
   try {
     await ep.getSenderAddress(initCode);
@@ -447,13 +450,13 @@ export async function onboardViaLink() {
 
   let index: number = insertUser(username, passwordHash) - 1;
 
-  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/Account.sol:AccountFactory"); 
+  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/FlagPropagation/AccountForV3.sol:AccountFactory"); 
   const signers = await hre.ethers.getSigners(); // signers[i] is the whole object
   const address = await signers[index].getAddress(); 
 
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, signers[2]);
 
-  let initCode = FACTORY_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
+  let initCode = ACCOUNT_FACTORY_V3_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
   let account: string = "0x";
   try {
     await ep.getSenderAddress(initCode);
@@ -486,7 +489,7 @@ export async function onboardViaLink() {
     // insert the new keypair which allows to read the utxo related with onboarding
     insertKeypairOnboarding(getID(username), keypair_link.privkey, keypair_link.pubkey.toString(), keypair_link.encryptionKey);
 
-    // Send encrypted data to the EncryptedAddresses contract, needed once the sendere of the note refreshs 
+    // Send encrypted data to the EncryptedAddresses contract, needed once the sender of the note refreshes 
 
     //fetch sender public key
     const recipientAddress = await getAccountAddress(link.sender_address)
@@ -494,13 +497,10 @@ export async function onboardViaLink() {
     if (recipientAddress) {
   
       const keypair: Keypair = Keypair.fromString(recipientAddress);
-
-      const b = link.receiver;
-      const a = toBuffer(link.receiver, link.receiver.length);
   
       const bytes = Buffer.concat([toBuffer(link.challenge, 31), toBuffer(BigInt(account), 19), toBuffer(link.receiver, link.receiver.length)]);
   
-      call_userop("Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, keypair.encrypt(bytes)], account, initCode, signers[index]);
+      call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, keypair.encrypt(bytes)], account, initCode, signers[index]);
     }
     
     // start the wallet

@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import hre from 'hardhat';
 import path from 'path';
+import { run } from "hardhat";
 import { clearJsonFile } from '../../../apps/version2_private_transfers/src/utils/clearsonFile';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
@@ -31,6 +32,11 @@ async function main () {
     await mixer_onb_and_transf.waitForDeployment();
     console.log(`Mixer for oboarding and transfers deployed at: ${mixer_onb_and_transf.target}`);
     envConfig.MIXER_ONBOARDING_AND_TRANSFERS = mixer_onb_and_transf.target.toString();
+
+    // await run(`verify:verify`, {
+    //     address: mixer_onb_and_transf.target,
+    //     constructorArguments: [VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, VERIFIER_MASKED_COMMITMENT, HASHER_TRANSFERS, USDC_ADDRESS, 20],
+    // });
     
     // write new addresses to .env file
     const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');

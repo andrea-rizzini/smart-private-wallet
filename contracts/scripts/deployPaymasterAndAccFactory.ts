@@ -23,27 +23,21 @@ async function main() {
   }); 
   console.log("\nPM funded successfully"); // tofix
 
-  // const amountInWei = await ep.balanceOf(pm.target.toString());
-  // console.log("\nPM balance in Wei:",
-  //     amountInWei
-  // );
-  // const amountInEther = Number(amountInWei) / Number(BigInt("1000000000000000000"));
-  // const amountInEtherWithDecimals = amountInEther.toFixed(18);
-  // console.log("PM balance in Eth:",
-  //     amountInEtherWithDecimals
-  // );
+  // deploy account-factory for v2 and v3
+  const af_v2 = await hre.ethers.deployContract("contracts/src/Account.sol:AccountFactory", [], { signer: faucet }); 
+  await af_v2.waitForDeployment(); 
+  console.log(`\nAF_V2: ${af_v2.target}`); 
+  envConfig.ACCOUNT_FACTORY_ADDRESS = af_v2.target.toString();
 
-  // deploy account-factory for v1 and v2
-  const af = await hre.ethers.deployContract("contracts/src/Account.sol:AccountFactory", [], { signer: faucet }); 
-  await af.waitForDeployment(); 
-  console.log(`\nAF: ${af.target}`); 
-  envConfig.ACCOUNT_FACTORY_ADDRESS = af.target.toString();
+  const af_v3 = await hre.ethers.deployContract("contracts/src/FlagPropagation/AccountForV3.sol:AccountFactory", [], { signer: faucet });
+  await af_v3.waitForDeployment();
+  console.log(`\nAF_V3: ${af_v3.target}`);
+  envConfig.ACCOUNT_FACTORY_V3_ADDRESS = af_v3.target.toString();
 
-  // deploy account-factory for v3
-  // const af_v3 = await hre.ethers.deployContract("contracts/src/AccountForV3.sol:AccountFactory", [], { signer: faucet }); 
-  // await af_v3.waitForDeployment(); 
-  // console.log(`\nAF_V3: ${af_v3.target}`); 
-  // envConfig.ACCOUNT_FACTORY_V3_ADDRESS = af_v3.target.toString();
+  const af_v3_relayer = await hre.ethers.deployContract("contracts/src/FlagPropagation/RelayerForV3.sol:AccountFactory", [], { signer: faucet });
+  await af_v3_relayer.waitForDeployment();
+  console.log(`\nAF_V3_RELAYER: ${af_v3_relayer.target}`);
+  envConfig.ACCOUNT_FACTORY_V3_RELAYER_ADDRESS = af_v3_relayer.target.toString();
 
   // write new addresses to .env file
   const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');

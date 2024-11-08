@@ -300,6 +300,7 @@ async function prepareTransaction({
   rootHex = '',
   outputs = [],
   recipient = BigInt(0),
+  address = '',
 }: PrepareTxParams) {
   if (inputs.length > 16 || outputs.length > 2) {
       throw new Error('Incorrect inputs/outputs count')
@@ -329,7 +330,8 @@ async function prepareTransaction({
       outputs,
       extAmount,
       tree: rootHex,
-      recipient
+      recipient,
+      address
   }
 
   if (!rootHex) { // do not enter here if it's a deposit
@@ -385,17 +387,18 @@ export async function createOnboardingData(params: CreateTransactionParams, keyp
   return { extData, args, amount }
 }
 
-export async function createTransactionData(params: CreateTransactionParams, keypair: Keypair, signer: any){
+export async function createTransactionData(params: CreateTransactionParams, keypair: Keypair, signer: any, address ?: string){
   if (!params.inputs || !params.inputs.length) { // enter here for the deposit
     const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS, signer);
     const root = await contract.getLastRoot_(); // take the last root, used in prepareTransaction to skip off-chain tree construction since for deposit is useless
 
     params.events = []
     params.rootHex = toFixedHex(root)
+    params.address = address
   } else {
-
     params.events = await fetchCommitments()
   }
+  
   const { extData, args, amount } = await prepareTransaction(params)
   return { extData, args, amount }
 }

@@ -5,11 +5,11 @@ import { Keypair } from "./keypair";
 import { Utxo } from "./utxo";
 
 export async function prepareDeposit(amount: string, address: string, signer: any){
-  const recipientAddress = await getAccountAddress(address)
+  const recipientAddress = await getAccountAddress(address) // this is actually the pubkey
   if (recipientAddress) {
     const keypair = Keypair.fromString(recipientAddress);
     const output = new Utxo({ amount: hre.ethers.parseUnits(amount, 6), keypair }) // user deposit utxo
-    const { extData, args } = await createTransactionData({ outputs: [output] }, keypair, signer)
+    const { extData, args } = await createTransactionData({ outputs: [output] }, keypair, signer, address)
     return { args, extData }
   } else {
     console.log('Recipient not found');

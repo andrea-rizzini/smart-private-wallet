@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 
 const dbDir = path.join(__dirname, '../data');
-const dbPath = path.join(dbDir, 'version2_private_transfers.db');
+const dbPath = path.join(dbDir, 'version3_flag_propagation.db');
 
 if (!fs.existsSync(dbDir)) {
     fs.mkdirSync(dbDir, { recursive: true });
@@ -75,6 +75,16 @@ export const createTables = () => {
         );
     `;
 
+    const createMaskedCommitmentsTableSQL = `
+        CREATE TABLE IF NOT EXISTS masked_commitments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            depositorAddress TEXT NOT NULL,
+            commitment TEXT NOT NULL,
+            blinding TEXT NOT NULL,
+            maskedCommitment TEXT NOT NULL            
+        );
+    `;
+
     db.exec(createTableSQL); 
 
     db.exec(createKeypairTableSQL);
@@ -86,6 +96,8 @@ export const createTables = () => {
     db.exec(createUserNullifiersTableSQL);
 
     db.exec(createChallengeTableSQL);
+
+    db.exec(createMaskedCommitmentsTableSQL);
 };
 
 
@@ -128,6 +140,12 @@ export const insertUserNullifier = (userId: number, name: string, nullifier: str
     stmt.run(userId, name, nullifier, amount); 
 }
 
+export const insertMaskedCommitment = (depositorAddress: string, commitment: string, blinding: string, maskedCommitment: string) => {
+    const insertSQL = `INSERT INTO masked_commitments (depositorAddress, commitment, blinding, maskedCommitment) VALUES (?, ?, ?, ?);`;
+    const stmt = db.prepare(insertSQL);
+    stmt.run(depositorAddress, commitment, blinding, maskedCommitment); 
+}
+
 export const getUsers = () => {
     const selectSQL = `SELECT * FROM users;`;
     const stmt = db.prepare(selectSQL);
@@ -160,6 +178,12 @@ export const getNullifiers = () => {
 
 export const getChallenges = () => {
     const selectSQL = `SELECT * FROM challenges;`;
+    const stmt = db.prepare(selectSQL);
+    return stmt.all();
+}
+
+export const getMaskedCommitments = () => {
+    const selectSQL = `SELECT * FROM masked_commitments;`;
     const stmt = db.prepare(selectSQL);
     return stmt.all();
 }
@@ -301,5 +325,10 @@ export const deleteNullifiers = () => {
 
 export const deleteChallenges = () => {
     const deleteSQL = `DELETE FROM challenges;`;
+    db.exec(deleteSQL);
+}
+
+export const deleteMaskedCommitments = () => {
+    const deleteSQL = `DELETE FROM masked_commitments;`;
     db.exec(deleteSQL);
 }

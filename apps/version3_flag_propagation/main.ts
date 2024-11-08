@@ -5,7 +5,7 @@ import { inputFromCLI } from './src/utils/inputFromCLI';
 
 async function main() {
 
-  await figlet('Smart  private  wallet  v2 !', function(err, data) {
+  await figlet('Smart  private  wallet  v3 !', function(err, data) {
       if (err) {
         console.log('Something went wrong...');
         console.dir(err);
@@ -13,8 +13,7 @@ async function main() {
       }
       console.log(data);
   });
-  console.log('\nWelcome to smart private wallet version 2');
-  console.log('\nThis wallet is aimed to demonstrate how private internal transfers work, once you have completed the onboarding to the wallet.');
+  console.log('\nWelcome to smart private wallet version 3');
 
   let isCorrectCode = false;
   
