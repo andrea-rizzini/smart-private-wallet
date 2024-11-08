@@ -63,7 +63,7 @@ export async function checkSanctionedAddress(address: string, maxHops = 3): Prom
     };
 
     if (isSanctioned(address)) {
-        return { sanction: true, message: `Address ${address} is in the OFAC sanctioned-addresses list !` };
+        return { sanction: true, message: `Address ${address} is in the OFAC sanctioned-addresses list !\nYou'll be reported` };
     }
 
     const config = {
@@ -98,7 +98,7 @@ export async function checkSanctionedAddress(address: string, maxHops = 3): Prom
           const fromAddress = transfer.from.toLowerCase();
     
           if (isSanctioned(fromAddress)) {
-            return { sanction: true, message: `Address ${address} has been involved in transactions with a sanctioned addresses: ${fromAddress}` };
+            return { sanction: true, message: `Address ${address} has been involved in transactions with a sanctioned addresses: ${fromAddress}.\nYou'll be reported` };
           }
     
           if (!visited.has(fromAddress)) {

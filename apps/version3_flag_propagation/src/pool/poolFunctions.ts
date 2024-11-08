@@ -32,7 +32,10 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
     const encryptedOutput = event.args[2]
     try {
       const utxo = Utxo.decrypt(senderKeyPair, encryptedOutput, index);
+      const chainState =  BigInt('0x' + senderKeyPair.decrypt(event.args[3]).slice(0,31).toString('hex'))
+      utxo.chainState = chainState
       myUtxo.push(utxo)
+
     } catch (e) {
       // do nothing, we are trying to decrypt an utxo which is not owned by the sender
     }    
@@ -71,7 +74,10 @@ export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSende
     const encryptedOutput = event.args[2]
     try {
       const utxo = Utxo.decrypt(senderKeyPair, encryptedOutput, index);
+      const chainState =  BigInt('0x' + senderKeyPair.decrypt(event.args[3]).slice(0,31).toString('hex'))
+      utxo.chainState = chainState
       myUtxo.push(utxo)
+
     } catch (e) {
       // do nothing, we are trying to decrypt an utxo which is not owned by the sender
     }    
@@ -359,7 +365,8 @@ async function fetchCommitments(): Promise<CommitmentEvents>{
       transactionHash: event.transactionHash,
       commitment: event.args[0],
       index: Number(event.args[1]),
-      encryptedOutput: event.args[2]
+      encryptedOutput: event.args[2],
+      encryptedChainState: event.args[3]
     })
   });
   return commitments
@@ -398,7 +405,7 @@ export async function createTransactionData(params: CreateTransactionParams, key
   } else {
     params.events = await fetchCommitments()
   }
-  
+
   const { extData, args, amount } = await prepareTransaction(params)
   return { extData, args, amount }
 }

@@ -278,11 +278,52 @@ export async function send(username: string, account: string, initCode: string, 
         }
     }
 
+    console.log("\nChecking if the address is present in the sanctioned list");
+    console.log("Or if it has been involved in transactions with sanctioned addresses");
+    console.log("...")
+  
+    const { sanction, message } = await checkSanctionedAddress(account, 2); // be carefull to increse the number of hops, complexity can increase exponentially
+
+    let allowance;
+          
+    if (sanction) {
+        console.log(`\n${message}\n`);
+        console.log('\nBy proceding you will taint the receiver')
+
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+
+        let choice: string;
+        let isValid: boolean = false;
+
+        do {
+            choice = await inputFromCLI("\nDo you want to proceed? (Y/N): ", rl);
+            if (choice === 'Y' || choice === 'N') {
+                isValid = true;
+            }
+            else {
+                console.log('\nInvalid input.');
+            }
+        } while (!isValid);
+
+        rl.close();
+
+        if (choice === 'N') {
+            return;
+        }
+
+        allowance = 0; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
+
+    } else {
+        console.log(`\n${message}`);
+        allowance = 1; 
+    }
+
     const result = await prepareTransfer(choiceAmount, username, account, addressReceiver, signer);
 
-    const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
-
-    const POIcommitment = poseidonHash([allowed]);
+    const POIcommitment = poseidonHash([allowance]);
 
     if (result) {
         const signers = await hre.ethers.getSigners();

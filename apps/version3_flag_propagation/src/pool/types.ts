@@ -31,6 +31,7 @@ type CommitmentEvent = {
   index: number
   commitment: string
   encryptedOutput: string
+  encryptedChainState: string
 }
 
 export type CommitmentEvents = CommitmentEvent[]
@@ -99,6 +100,7 @@ export interface BaseUtxo {
   index: number
   commitment?: bigint
   nullifier?: bigint
+  chainState?: bigint
 
   getNullifier: () => bigint
   getCommitment: () => bigint

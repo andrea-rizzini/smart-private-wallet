@@ -77,7 +77,7 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient, ad
     const [output1, output2] = outputs
 
     // prepare encrypted chain state
-    let encryptedChainState1, encryptedChainState2;
+    let encryptedChainState1: string, encryptedChainState2: string;
 
     if (extAmount > 0) { // meaning that the transaction is a deposit
       const commitment_output_one = outputs[0].getCommitment();
@@ -94,20 +94,8 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient, ad
       const bytes2 = Buffer.concat([toBuffer(masked_commitment_two, 31)]);
       encryptedChainState2 = outputs[1].keypair.encrypt(bytes2);
     }
-    else {
-      const commitment_output_one = outputs[0].getCommitment();
-      const blinding_output_one = randomBN();
-      const masked_commitment_one = poseidonHash([commitment_output_one, blinding_output_one]);
-      insertMaskedCommitment(address as string, commitment_output_one.toString(), blinding_output_one.toString(), toFixedHex(masked_commitment_one));
-      const bytes = Buffer.concat([toBuffer(masked_commitment_one, 31)]);
-      encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
-
-      const commitment_output_two = outputs[1].getCommitment();
-      const blinding_output_two = randomBN();
-      const masked_commitment_two = poseidonHash([commitment_output_two, blinding_output_two]);
-      insertMaskedCommitment(address as string, commitment_output_two.toString(), blinding_output_two.toString(), toFixedHex(masked_commitment_two));
-      const bytes2 = Buffer.concat([toBuffer(masked_commitment_two, 31)]);
-      encryptedChainState2 = outputs[1].keypair.encrypt(bytes2);
+    else if (Number(extAmount) === 0){ // meaning that the transaction is a transfer
+      
     }
     
     // prepare extData
