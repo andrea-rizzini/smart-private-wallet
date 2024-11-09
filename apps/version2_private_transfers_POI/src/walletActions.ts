@@ -38,7 +38,7 @@ export async function setup(username: string, account: string, initCode: string,
         const output = new Utxo({ keypair })
 
         // register in poolUsers
-        await call_userop("Account", "insertIntoPoolUsers", [POOL_USERS_ADDRESS, output.keypair.address()], account , initCode, signer);
+        await call_userop("contracts/src/Account.sol:Account", "insertIntoPoolUsers", [POOL_USERS_ADDRESS, output.keypair.address()], account , initCode, signer);
 
         const index = getID(username);
 
@@ -143,7 +143,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
         const signers = await hre.ethers.getSigners();
         const { args, extData } = result;
         try {
-            await call_userop("Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
+            await call_userop("contracts/src/Transfers/Relayer.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -182,6 +182,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     insertContact(getID(name), nameOnbUser, "0x");
 
     insertChallenge(getID(name), nameOnbUser, link.challenge.toString());
+
 }
 
 export async function send(username: string, account: string, initCode: string, signer: any) {
@@ -278,17 +279,58 @@ export async function send(username: string, account: string, initCode: string, 
         }
     }
 
+    console.log("\nChecking if the address is present in the sanctioned list");
+    console.log("Or if it has been involved in transactions with sanctioned addresses");
+    console.log("...")
+  
+    const { sanction, message } = await checkSanctionedAddress(account, 3); // be carefull to increse the number of hops, complexity can increase exponentially
+
+    let allowance;
+          
+    if (sanction) {
+        console.log(`\n${message}\n`);
+        console.log('\nBy proceding you will taint the receiver')
+
+        const rl = readline.createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+
+        let choice: string;
+        let isValid: boolean = false;
+
+        do {
+            choice = await inputFromCLI("\nDo you want to proceed? (Y/N): ", rl);
+            if (choice === 'Y' || choice === 'N') {
+                isValid = true;
+            }
+            else {
+                console.log('\nInvalid input.');
+            }
+        } while (!isValid);
+
+        rl.close();
+
+        if (choice === 'N') {
+            return;
+        }
+
+        allowance = 0; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
+
+    } else {
+        console.log(`\n${message}`);
+        allowance = 1; 
+    }
+
     const result = await prepareTransfer(choiceAmount, username, account, addressReceiver, signer);
 
-    const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
-
-    const POIcommitment = poseidonHash([allowed]);
+    const POIcommitment = poseidonHash([allowance]);
 
     if (result) {
         const signers = await hre.ethers.getSigners();
         const { args, extData } = result;
         try {
-            await call_userop("Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData,[toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
+            await call_userop("contracts/src/Transfers/Relayer.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData,[toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_ADDRESS , INIT_CODE_RELAYER, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -344,8 +386,8 @@ export async function receive(signer: any, account: string, initCode: string) {
     console.log("Or if it has been involved in transactions with sanctioned addresses");
     console.log("...")
   
-    const { sanction, message } = await checkSanctionedAddress(account, 2); // be carefull to increse the number of hops, complexity can increase exponentially
-          
+    const { sanction, message } = await checkSanctionedAddress(account, 3); // be carefull to increse the number of hops, complexity can increase exponentially    
+
     if (sanction) {
         console.log("\nYou cannot fund the private amount.");
         console.log(`\n${message}\n`);
@@ -372,7 +414,7 @@ export async function receive(signer: any, account: string, initCode: string) {
     if (result) {
         const { args, extData } = result;
         try {
-            await call_userop("Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account , initCode, signer);
+            await call_userop("contracts/src/Account.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account , initCode, signer);
             console.log(`\nFunded private amount with ${choiceAmount} USDC\n`)
         }
         catch (error) {
@@ -383,7 +425,7 @@ export async function receive(signer: any, account: string, initCode: string) {
     else {
         console.log("\nDeposit preparation failed\n");
         
-        }   
+    }   
     
 }
 
@@ -488,7 +530,7 @@ export async function withdraw(username: string, account: string, initCode: stri
 
             console.log ('\nChecking Proof of Innocence ...');
             
-            await call_userop("Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, argsPOI, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account, initCode, signer);
+            await call_userop("contracts/src/Account.sol:Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, argsPOI, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account, initCode, signer);
 
             console.log(`\nWithdrawal of ${choiceAmount} USDC completed succesfully!\n`);
         }
@@ -500,6 +542,7 @@ export async function withdraw(username: string, account: string, initCode: stri
     else {
         console.log("\nWithdraw preparation failed");
     } 
+
 }
 
 export async function exit(name: string) {

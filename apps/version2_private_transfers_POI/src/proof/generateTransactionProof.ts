@@ -166,6 +166,7 @@ export async function getProofOnboarding({ inputs, outputs, tree, extAmount, rec
     inputNullifier: inputs.map((x) => x.getNullifier()),
     outputCommitment: outputs.map((x) => x.getCommitment()),
     publicAmount : ((extAmount + FIELD_SIZE) % FIELD_SIZE).toString(), // this is to manage negative numbers
+    extDataHash,
 
     // data for transaction inputs
     inAmount: inputs.map((x) => x.amount),

@@ -37,8 +37,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     int256 extAmount;
     bytes encryptedOutput1;
     bytes encryptedOutput2;
-    bytes encryptedChainState1;
-    bytes encryptedChainState2;
+    // bytes encryptedChainState1;
+    // bytes encryptedChainState2;
   }
 
   struct Proof {
@@ -59,7 +59,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
 
   // Events for transactions
 
-  event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput, bytes encryptedChainState);
+  event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput/*, bytes encryptedChainState*/);
   event NewCommitmentPOI(bytes32 commitment, uint256 index);
   event NewNullifier(bytes32 nullifier);
 
@@ -133,8 +133,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1/*, _extData.encryptedChainState1*/);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2/*, _extData.encryptedChainState2*/);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
@@ -147,7 +147,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
     _transact(_args, _extData);
-    _depositPOI(commitmentsPOI); // in future add with delay, to check the funds before append to the tree
+    _depositPOI(commitmentsPOI);
   }
 
   function _transact(Proof memory _args, ExtData memory _extData) internal nonReentrant {
@@ -163,8 +163,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1/*, _extData.encryptedChainState1*/);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2/*, _extData.encryptedChainState2*/);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
@@ -200,8 +200,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1/*, _extData.encryptedChainState1*/);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2/*, _extData.encryptedChainState2*/);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }

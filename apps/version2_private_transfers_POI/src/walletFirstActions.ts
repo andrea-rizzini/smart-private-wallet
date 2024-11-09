@@ -162,7 +162,7 @@ export async function acceptInvite() {
     account = "0x" + error.data.slice(-40); 
   }
 
-  const _account = await hre.ethers.getContractAt("Account", account);
+  const _account = await hre.ethers.getContractAt("contracts/src/Account.sol:Account", account);
 
   console.log("\nRegistering account's public key in the pool ...")
   await setup(username, account, initCode, signers[index]);
@@ -191,7 +191,7 @@ export async function acceptInvite() {
   if (result) {
       const { args, extData } = result;
       try {
-          await call_userop("Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account , initCode, signers[index]);
+          await call_userop("contracts/src/Account.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account , initCode, signers[index]);
           console.log(`\nFunded private amount with 0.01 USDC`)
       }
       catch (error) {
@@ -202,6 +202,7 @@ export async function acceptInvite() {
       console.log("\nDeposit preparation failed\n");
       
   }   
+
   console.log('\nWelcome !\n');
 
   // menu options
@@ -462,7 +463,7 @@ export async function onboardViaLink() {
     account = "0x" + error.data.slice(-40); 
   }
 
-  const _account = await hre.ethers.getContractAt("Account", account);
+  const _account = await hre.ethers.getContractAt("contracts/src/Account.sol:Account", account);
 
   // generate pubKey and register it in the pool
   await setup(username, account, initCode, signers[index]);
@@ -500,7 +501,7 @@ export async function onboardViaLink() {
   
       const bytes = Buffer.concat([toBuffer(link.challenge, 31), toBuffer(BigInt(account), 19), toBuffer(link.receiver, link.receiver.length)]);
   
-      call_userop("Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, keypair.encrypt(bytes)], account, initCode, signers[index]);
+      call_userop("contracts/src/Account.sol:Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, keypair.encrypt(bytes)], account, initCode, signers[index]);
     }
     
     // start the wallet
