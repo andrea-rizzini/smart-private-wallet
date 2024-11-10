@@ -5,12 +5,11 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";   
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "./MerkleTreeWithHistory.sol";
-import "./MerkleTreeWithHistoryPOI.sol";
-import { IVerifier } from "./interfaces/IVerifier.sol";
-import { IVerifierPOI } from "./interfaces/IVerifierPOI.sol";
+import "../Transfers/MerkleTreeWithHistory.sol";
+import { IVerifier } from "../Transfers/interfaces/IVerifier.sol";
+import { IVerifierMaskedCommitment } from "./IVerifierMaskedCommitment.sol";
 
-contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHistoryPOI, ReentrancyGuard {
+contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
 
   using SafeERC20 for IERC20;
 
@@ -23,14 +22,18 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
   IVerifier public immutable verifier2;
   IVerifier public immutable verifier16;
 
-  IVerifierPOI public immutable verifierPOI2;
-  IVerifierPOI public immutable verifierPOI16;
+  IVerifierMaskedCommitment public immutable verifierMaskedCommitment;
+
+  MerkleTreeWithHistory public statusTree;
+  address public authority;
 
   struct ExtData {
     address recipient;
     int256 extAmount;
     bytes encryptedOutput1;
     bytes encryptedOutput2;
+    bytes32 encryptedChainState1;
+    bytes32 encryptedChainState2;
   }
 
   struct Proof {
@@ -51,35 +54,56 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
 
   // Events for transactions
 
-  event NewCommitment(bytes32 commitment, uint256 index);
-  event NewCommitmentPOI(bytes32 commitment, uint256 index);
+  event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput, bytes32 encryptedChainState);
   event NewNullifier(bytes32 nullifier);
+
+  event StatusFlagged(bytes32 maskedCommitment, bool status, uint256 timestamp, bytes32 newRoot);
+
+  modifier onlyAuthority() {
+      require(msg.sender == authority, "Not authorized");
+      _;
+  }
 
   constructor(
     IVerifier _verifier2,
     IVerifier _verifier16,
-    IVerifierPOI _verifierPOI2,
-    IVerifierPOI _verifierPOI16,
+    IVerifierMaskedCommitment _verifierMaskedCommitment,
     address _hasherTransactions,
     IERC20 _token,
-    uint32 _merkleTreesHeight
-  )  MerkleTreeWithHistory(_merkleTreesHeight, _hasherTransactions)
-     MerkleTreeWithHistoryPOI(_merkleTreesHeight, _hasherTransactions) {
+    uint32 _merkleTreesHeight,
+    address _authority
+  )  MerkleTreeWithHistory(_merkleTreesHeight, _hasherTransactions) {
+    statusTree = new MerkleTreeWithHistory(_merkleTreesHeight, _hasherTransactions);
     verifier2 = _verifier2;
     verifier16 = _verifier16;
-    verifierPOI2 = _verifierPOI2;
-    verifierPOI16 = _verifierPOI16;
+    verifierMaskedCommitment = _verifierMaskedCommitment;
     token = _token;
+    authority = _authority;
     super._initialize();
-    super._initializePOI();
   }
 
-  function deposit(Proof memory _args, ExtData memory _extData, bytes32[2] memory commitmentsPOI) external payable {
+  function flagStatus(
+      bytes calldata maskProof,
+      bytes32 maskedCommitment
+    ) external onlyAuthority {
+      require(verifyMaskProof(maskProof, maskedCommitment), "Invalid mask proof");
+      
+      statusTree._insert(maskedCommitment, bytes32(0)); // second parameter for padding
+      bytes32 newRoot = statusTree.getLastRoot_();
+
+      emit StatusFlagged(
+          maskedCommitment,
+          true,
+          block.timestamp,
+          newRoot
+      );
+    }
+
+  function deposit(Proof memory _args, ExtData memory _extData) external payable {
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
     _deposit(_args, _extData);
-    _depositPOI(commitmentsPOI);
   }
 
   function _deposit(Proof memory _args, ExtData memory _extData) internal nonReentrant {
@@ -95,8 +119,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
@@ -104,12 +128,11 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     token.safeTransferFrom(msg.sender, address(this), uint256(_extData.extAmount));
   }
 
-  function transact(Proof memory _args, ExtData memory _extData, bytes32[2] memory commitmentsPOI) external payable { 
+  function transact(Proof memory _args, ExtData memory _extData) external payable { 
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
     _transact(_args, _extData);
-    _depositPOI(commitmentsPOI);
   }
 
   function _transact(Proof memory _args, ExtData memory _extData) internal nonReentrant {
@@ -125,32 +148,29 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
   }
 
   // function that allows transfers
-  function withdraw(Proof memory _args, ExtData memory _extData, POI memory poi, bytes32[2] memory commitmentsPOI) external payable { 
+  function withdraw(Proof memory _args, ExtData memory _extData) external payable { 
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
-    _withdraw(_args, _extData, poi); 
-    _depositPOI(commitmentsPOI); 
+    _withdraw(_args, _extData); 
   }
 
-  function _withdraw(Proof memory _args, ExtData memory _extData, POI memory poi) internal nonReentrant {
+  function _withdraw(Proof memory _args, ExtData memory _extData) internal nonReentrant {
     require(isKnownRoot_(_args.root), "Invalid merkle root");
-    require(isKnownRootPOI_(poi.root), "Invalid merkle root POI");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
     }
     require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
     require(verifyProof(_args), "Invalid transaction proof");
-    require(verifyPOI(_args, poi), "Invalid POI proof");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       nullifierHashes[_args.inputNullifiers[i]] = true;
@@ -162,17 +182,11 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
-  }
-
-  function _depositPOI(bytes32[2] memory commitmentsPOI) internal {
-    _insertPOI(commitmentsPOI[0], commitmentsPOI[1]);
-    emit NewCommitmentPOI(commitmentsPOI[0], nextIndexP - 2);
-    emit NewCommitmentPOI(commitmentsPOI[1], nextIndexP - 1);
   }
 
   function isSpent(bytes32 _nullifierHash) public view returns (bool) {
@@ -227,13 +241,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     }
   }
 
-  function verifyPOI(Proof memory _args, POI memory poi) public view returns (bool) {
-    if (_args.inputNullifiers.length == 2) {
-      return verifierPOI2.verifyPOI2(poi.proof, [uint256(poi.root)]);
-    } else if (_args.inputNullifiers.length == 16) {
-      return verifierPOI16.verifyPOI16(poi.proof, [uint256(poi.root)]);
-    } else {
-      revert("unsupported input count");
-    }
+  function verifyMaskProof(bytes memory maskProof, bytes32 maskedCommitment) public view returns (bool) {
+    return verifierMaskedCommitment.verifyProofMaskCommitment(maskProof, [uint256(maskedCommitment)]);
   }
 }

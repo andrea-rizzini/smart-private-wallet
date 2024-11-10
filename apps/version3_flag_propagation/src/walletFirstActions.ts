@@ -11,17 +11,15 @@ import { getAccountAddress, getUtxoFromKeypair } from './pool/poolFunctions';
 import { inputFromCLI } from './utils/inputFromCLI';
 import { Keypair } from './pool/keypair';
 import { LinkNote } from './types/link';
-import { poseidonHash } from './utils/hashFunctions';
 import { prepareDeposit } from './pool/poolPrepareActions';
 import { setup, checkAccountBalance, inviteUsingLink, send, receive, refresh, showContacts, withdraw, exit } from './walletActions';
 import { showMenu } from './menu/menu';
 import { toBuffer } from './pool/utxo';
-import { toFixedHex } from './utils/toHex';
 
 const ENCRYPTED_DATA_ADDRESS: string = process.env.ENCRYPTED_DATA_ADDRESS || '';
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
 const ACCOUNT_FACTORY_V3_ADDRESS: string = process.env.ACCOUNT_FACTORY_V3_ADDRESS || '';
-const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
+const MIXER_ONBOARDING_AND_TRANSFERS_V3 = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3 || '';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
 export async function acceptInvite() { 
@@ -184,16 +182,12 @@ export async function acceptInvite() {
 
   const result = await prepareDeposit("0.01", account, signers[index]);
 
-  const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and not allowed as 0, as a boolean
- 
-  const POIcommitment = poseidonHash([allowed]); // 2dbc9ff9b5f0afb7a41a828987d17354b28410b26e54f94390b01efe786abc19
-
   if (result) {
   
       const { args, extData } = result;
 
       try {
-          await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account , initCode, signers[index]);
+          await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, extData], account , initCode, signers[index]);
           console.log(`\nFunded private amount with 0.01 USDC`)          
       }
       catch (error) {

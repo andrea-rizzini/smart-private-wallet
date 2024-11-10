@@ -147,6 +147,12 @@ export const insertMaskedCommitment = (depositorAddress: string, commitment: str
     stmt.run(depositorAddress, commitment, blinding, maskedCommitment); 
 }
 
+export const getTupleFromDepositorAddress = (depositorAddress: string) => {
+    const selectSQL = `SELECT * FROM masked_commitments WHERE depositorAddress = ?;`;
+    const stmt = db.prepare(selectSQL);
+    return stmt.get(depositorAddress);
+}
+
 export const getUsers = () => {
     const selectSQL = `SELECT * FROM users;`;
     const stmt = db.prepare(selectSQL);
@@ -187,6 +193,12 @@ export const getMaskedCommitments = () => {
     const selectSQL = `SELECT * FROM masked_commitments;`;
     const stmt = db.prepare(selectSQL);
     return stmt.all();
+}
+
+export const getMaskedCommitmentByDepositorAddress = (depositorAddress: string) => {
+    const selectSQL = `SELECT maskedCommitment FROM masked_commitments WHERE depositorAddress = ?;`;
+    const stmt = db.prepare(selectSQL);
+    return stmt.all(depositorAddress);
 }
 
 export const getAddressOfContactOfUser = (userId: number, name: string) => {

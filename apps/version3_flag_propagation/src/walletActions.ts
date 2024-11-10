@@ -11,16 +11,13 @@ import { getAddressOfContactOfUser, getContactsByUserId, getID, getKeyPairOnboar
 import { inputFromCLI } from "./utils/inputFromCLI";
 import { Keypair } from "./pool/keypair";
 import { LinkNote, USDCStr } from "./types/link";
-import { poseidonHash } from "./utils/hashFunctions";
 import { prepareDeposit, prepareTransfer, prepareTransferForOnboarding, prepareWithdrawal } from "./pool/poolPrepareActions";
-import { preparePOI } from "./poi/preparePOI";
 import { randomBN } from './pool/utxo';
-import { toFixedHex } from './utils/toHex';
 import { Utxo } from "./pool/utxo";
 
 const ENCRYPTED_DATA_ADDRESS = process.env.ENCRYPTED_DATA_ADDRESS || '';
 const INIT_CODE_RELAYER_V3 = process.env.INIT_CODE_RELAYER_V3 || '';
-const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
+const MIXER_ONBOARDING_AND_TRANSFERS_V3 = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3 || '';
 const POOL_USERS_ADDRESS = process.env.POOL_USERS_ADDRESS || '';
 const RELAYER_V3_ADDRESS = process.env.RELAYER_V3_ADDRESS || '';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
@@ -113,7 +110,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     rl.close();
 
     let usdcValue: USDCStr = `${parseFloat(choiceAmount)}` as USDCStr;
-    let id: string = MIXER_ONBOARDING_AND_TRANSFERS;
+    let id: string = MIXER_ONBOARDING_AND_TRANSFERS_V3;
 
     // 2) create the utxo 
     const recipientUtxoOnboarding = new Utxo({
@@ -135,15 +132,11 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     const result = await prepareTransferForOnboarding(choiceAmount, recipientUtxoOnboarding, name, account, signer);
 
-    const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
-
-    const POIcommitment = poseidonHash([allowed]); // in future add with delay after some checks, for now add all utxo as allowed
-
     if (result) {
         const signers = await hre.ethers.getSigners();
         const { args, extData } = result;
         try {
-            await call_userop("Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
+            await call_userop("contracts/src/FlagPropagation/RelayerForV3.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -278,58 +271,13 @@ export async function send(username: string, account: string, initCode: string, 
         }
     }
 
-    console.log("\nChecking if the address is present in the sanctioned list");
-    console.log("Or if it has been involved in transactions with sanctioned addresses");
-    console.log("...")
-  
-    const { sanction, message } = await checkSanctionedAddress(account, 2); // be carefull to increse the number of hops, complexity can increase exponentially
-
-    let allowance;
-          
-    if (sanction) {
-        console.log(`\n${message}\n`);
-        console.log('\nBy proceding you will taint the receiver')
-
-        const rl = readline.createInterface({
-            input: process.stdin,
-            output: process.stdout
-        });
-
-        let choice: string;
-        let isValid: boolean = false;
-
-        do {
-            choice = await inputFromCLI("\nDo you want to proceed? (Y/N): ", rl);
-            if (choice === 'Y' || choice === 'N') {
-                isValid = true;
-            }
-            else {
-                console.log('\nInvalid input.');
-            }
-        } while (!isValid);
-
-        rl.close();
-
-        if (choice === 'N') {
-            return;
-        }
-
-        allowance = 0; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
-
-    } else {
-        console.log(`\n${message}`);
-        allowance = 1; 
-    }
-
     const result = await prepareTransfer(choiceAmount, username, account, addressReceiver, signer);
-
-    const POIcommitment = poseidonHash([allowance]);
 
     if (result) {
         const signers = await hre.ethers.getSigners();
         const { args, extData } = result;
         try {
-            await call_userop("Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData,[toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
+            await call_userop("contracts/src/FlagPropagation/RelayerForV3.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -406,14 +354,10 @@ export async function receive(signer: any, account: string, initCode: string) {
     // add a new utxo with that value
     const result = await prepareDeposit(choiceAmount, account, signer);
 
-    const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
-
-    const POIcommitment = poseidonHash([allowed]);
-
     if (result) {
         const { args, extData } = result;
         try {
-            await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account , initCode, signer);
+            await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, extData], account , initCode, signer);
             console.log(`\nFunded private amount with ${choiceAmount} USDC\n`)
         }
         catch (error) {
@@ -517,19 +461,13 @@ export async function withdraw(username: string, account: string, initCode: stri
     rl.close();
     const result = await prepareWithdrawal(choiceAmount, username, account, addressWithdrawal, signer);
 
-    const { argsPOI } = await preparePOI(choiceAmount, username, account, signer);
-
-    const allowed = 1; // since poseidonHash requires bigInt which are elements of a field, we consider allowed as 1 and illicit as 0
-
-    const POIcommitment = poseidonHash([allowed]);
-
     if (result) {
         const { args, extData } = result;
         try {
 
             console.log ('\nChecking Proof of Innocence ...');
             
-            await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS, args, extData, argsPOI, [toFixedHex(POIcommitment), toFixedHex(POIcommitment)]], account, initCode, signer);
+            await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, extData], account, initCode, signer);
 
             console.log(`\nWithdrawal of ${choiceAmount} USDC completed succesfully!\n`);
         }
