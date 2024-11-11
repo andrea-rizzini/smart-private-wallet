@@ -410,7 +410,7 @@ export async function createOnboardingData(params: CreateTransactionParams, keyp
 export async function createTransactionData(params: CreateTransactionParams, keypair: Keypair, signer: any, address ?: string){
   if (!params.inputs || !params.inputs.length) { // enter here for the deposit
     const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3, signer);
-    const root = await contract.getLastRoot_(); // take the last root, used in prepareTransaction to skip off-chain tree construction since for deposit is useless
+    const root = await contract.getLastRoot_(); // take the last root, used in prepareTransaction to skip off-chain tree construction
 
     params.events = []
     params.eventsStatusTree = []
