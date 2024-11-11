@@ -5,14 +5,21 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";   
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
 import "../Transfers/MerkleTreeWithHistory.sol";
 import { IVerifier } from "../Transfers/interfaces/IVerifier.sol";
 import { IVerifierMaskedCommitment } from "./IVerifierMaskedCommitment.sol";
 
+interface IHasherSMT {
+  function poseidon(bytes32[2] calldata inputs) external view returns (bytes32);
+}
+
 contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
 
   using SafeERC20 for IERC20;
+  using SparseMerkleTree for SparseMerkleTree.Bytes32SMT;
 
+  IHasherSMT public hasherSMT;
   IERC20 public token;
 
   // Variable and structures declaration for transactions
@@ -24,7 +31,9 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
 
   IVerifierMaskedCommitment public immutable verifierMaskedCommitment;
 
-  MerkleTreeWithHistory public statusTree;
+  //MerkleTreeWithHistory public statusTree;
+  SparseMerkleTree.Bytes32SMT internal statusTree;
+
   address public authority;
 
   struct ExtData {
@@ -32,8 +41,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     int256 extAmount;
     bytes encryptedOutput1;
     bytes encryptedOutput2;
-    bytes32 encryptedChainState1;
-    bytes32 encryptedChainState2;
+    bytes encryptedChainState1;
+    bytes encryptedChainState2;
   }
 
   struct Proof {
@@ -45,19 +54,12 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     bytes32 extDataHash;
   }
 
-  struct POI {
-    bytes proof;
-    bytes32 root;
-  }
-
-  event Log(string message);
-
   // Events for transactions
 
-  event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput, bytes32 encryptedChainState);
+  event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput, bytes encryptedChainState);
   event NewNullifier(bytes32 nullifier);
 
-  event StatusFlagged(bytes32 maskedCommitment, bool status, uint256 timestamp, bytes32 newRoot);
+  event StatusFlagged(uint256 index, bytes32 maskedCommitment, bool status, uint256 timestamp, bytes32 newRoot);
 
   modifier onlyAuthority() {
       require(msg.sender == authority, "Not authorized");
@@ -73,31 +75,52 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     uint32 _merkleTreesHeight,
     address _authority
   )  MerkleTreeWithHistory(_merkleTreesHeight, _hasherTransactions) {
-    statusTree = new MerkleTreeWithHistory(_merkleTreesHeight, _hasherTransactions);
+    //statusTree = new MerkleTreeWithHistory(_merkleTreesHeight, _hasherTransactions);
     verifier2 = _verifier2;
     verifier16 = _verifier16;
     verifierMaskedCommitment = _verifierMaskedCommitment;
+    hasherSMT = IHasherSMT(_hasherTransactions);
     token = _token;
     authority = _authority;
+    statusTree.initialize(_merkleTreesHeight);
+    statusTree.setHashers(_hash2, _hash3);
     super._initialize();
+  }
+
+  function _hash2(bytes32 element1_, bytes32 element2_) internal view returns (bytes32) {
+    return bytes32(hasherSMT.poseidon([element1_, element2_]));
+  }
+
+  function _hash3( // we never use this but is required in the smt initialization
+      bytes32 element1_,
+      bytes32 element2_,
+      bytes32 element3_
+  ) internal view returns (bytes32) {
+      return bytes32(hasherSMT.poseidon([element1_, element2_]));
+  }
+
+  function getRootSMT() public view returns (bytes32) {
+    return statusTree.getRoot();
   }
 
   function flagStatus(
       bytes calldata maskProof,
+      uint256 index,
       bytes32 maskedCommitment
-    ) external onlyAuthority {
-      require(verifyMaskProof(maskProof, maskedCommitment), "Invalid mask proof");
-      
-      statusTree._insert(maskedCommitment, bytes32(0)); // second parameter for padding
-      bytes32 newRoot = statusTree.getLastRoot_();
+  ) external onlyAuthority {
+    require(verifyMaskProof(maskProof, maskedCommitment), "Invalid mask proof");
+    
+    statusTree.add(bytes32(index), maskedCommitment); // second parameter for padding
+    bytes32 newRoot = statusTree.getRoot();
 
-      emit StatusFlagged(
-          maskedCommitment,
-          true,
-          block.timestamp,
-          newRoot
-      );
-    }
+    emit StatusFlagged(
+        uint256(index),
+        maskedCommitment,
+        true,
+        block.timestamp,
+        newRoot
+    );
+  }
 
   function deposit(Proof memory _args, ExtData memory _extData) external payable {
     if (_extData.extAmount > 0) {

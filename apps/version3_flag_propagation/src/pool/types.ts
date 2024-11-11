@@ -20,6 +20,8 @@ export type ProofParams = {
   outputs: BaseUtxo[]
   // eslint-disable-next-line
   tree: any
+  // eslint-disable-next-line
+  smt: any
   extAmount: bigint
   recipient: string | bigint
   address?: string
@@ -36,14 +38,14 @@ type CommitmentEvent = {
 
 export type CommitmentEvents = CommitmentEvent[]
 
-type CommitmentPOIEvent = {
-  blockNumber: number
+type StatusTreeEvent = {
+  blockNumber: number 
   transactionHash: string
   index: number
-  commitment: string
+  maskedCommitment: string
 }
 
-export type CommitmentPOIEvents = CommitmentPOIEvent[]
+export type StatusTreeEvents = StatusTreeEvent[]
 
 export type CachedData = {
   latestBlock: number
@@ -55,8 +57,10 @@ export type PrepareTxParams = {
   inputs?: BaseUtxo[]
   relayer?: string | bigint
   rootHex?: string
+  rootSMT ?: string
   recipient?: string | bigint
   events?: CommitmentEvents
+  eventsStatusTree?: StatusTreeEvents
   address ?: string
 }
 
@@ -67,7 +71,9 @@ export type CreateTransactionParams = {
   relayer?: string | bigint
   recipient?: string | bigint
   rootHex?: string
+  rootSMT ?: string
   events?: CommitmentEvents
+  eventsStatusTree?: StatusTreeEvents
   address ?: string
 }
 

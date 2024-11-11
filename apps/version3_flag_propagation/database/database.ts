@@ -195,10 +195,10 @@ export const getMaskedCommitments = () => {
     return stmt.all();
 }
 
-export const getMaskedCommitmentByDepositorAddress = (depositorAddress: string) => {
-    const selectSQL = `SELECT maskedCommitment FROM masked_commitments WHERE depositorAddress = ?;`;
+export const getIdAndMaskedCommitmentByDepositorAddress = (depositorAddress: string) => {
+    const selectSQL = `SELECT id, maskedCommitment FROM masked_commitments WHERE depositorAddress = ?;`;
     const stmt = db.prepare(selectSQL);
-    return stmt.all(depositorAddress);
+    return stmt.get(depositorAddress);
 }
 
 export const getAddressOfContactOfUser = (userId: number, name: string) => {

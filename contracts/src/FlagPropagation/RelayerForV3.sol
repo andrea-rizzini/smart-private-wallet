@@ -8,7 +8,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-interface IMixerOnboardingAndTransfers {
+interface IMixerOnboardingAndTransfersV3 {
 
     struct ExtData {
         address recipient;
@@ -70,12 +70,12 @@ contract Relayer is IAccount {
 
     function callTransact(
         address poolAddress,
-        IMixerOnboardingAndTransfers.Proof memory _proofArgs,
-        IMixerOnboardingAndTransfers.ExtData memory _extData,
+        IMixerOnboardingAndTransfersV3.Proof memory _proofArgs,
+        IMixerOnboardingAndTransfersV3.ExtData memory _extData,
         bytes32[2] memory commitmentsPOI
     ) external payable {
         emit Log("Calling transact");
-        IMixerOnboardingAndTransfers(poolAddress).transact(_proofArgs, _extData, commitmentsPOI);
+        IMixerOnboardingAndTransfersV3(poolAddress).transact(_proofArgs, _extData, commitmentsPOI);
     }
 
 }

@@ -10,7 +10,7 @@ import { toFixedHex } from "../utils/toHex";
 
 const AUTHORITY_ADDRESS = process.env.AUTHORITY_ADDRESS || '';
 const INIT_CODE_AUTHORITY = process.env.INIT_CODE_AUTHORITY || '';
-const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
+const MIXER_ONBOARDING_AND_TRANSFERS_V3 = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3 || '';
 
 async function main() {
 
@@ -28,12 +28,11 @@ async function main() {
             const { sanction, message } = await checkSanctionedAddress(maskedCommitment.depositorAddress, 2);
             
             if (sanction) {
-                console.log(`\nFlagging masked commitment ${toFixedHex(maskedCommitment.maskedCommitment)} on the status tree`);
+                console.log(`\nFlagging masked commitment ${toFixedHex(maskedCommitment.maskedCommitment)} on the status SMT`);
                 
                 // generate zk-proof, proving that the authority has the right to flag the commitment
                 const input = {
                     maskedCommitment: maskedCommitment.maskedCommitment,
-
                     commitment: maskedCommitment.commitment,
                     blinding: maskedCommitment.blinding,
                 }
@@ -51,8 +50,8 @@ async function main() {
                 const proof = await prove(input, wasmBuffer, zKeyBuffer)
 
                 // insert to the status tree
-                const signers = await hre.ethers.getSigners();
-                await call_userop("Authority", "callFlagStatus", [MIXER_ONBOARDING_AND_TRANSFERS, proof, toFixedHex(maskedCommitment.maskedCommitment)], AUTHORITY_ADDRESS, INIT_CODE_AUTHORITY, signers[4]);
+                const signers = await hre.ethers.getSigners();                                              /* index */                      /* actual masked commitment */
+                await call_userop("Authority", "callFlagStatus", [MIXER_ONBOARDING_AND_TRANSFERS_V3, proof, maskedCommitment.id, toFixedHex(maskedCommitment.maskedCommitment)], AUTHORITY_ADDRESS, INIT_CODE_AUTHORITY, signers[4]);
             
                 // update to true in the database
                 updateMaskedCommitmentFlagged(maskedCommitment.maskedCommitment);

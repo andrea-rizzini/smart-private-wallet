@@ -4,7 +4,7 @@ import path from 'path';
 
 import { ArgsProof, BaseUtxo, Params, ProofParams } from "../pool/types";
 import { BytesLike } from '@ethersproject/bytes'
-import { getMaskedCommitmentByDepositorAddress, getTupleFromDepositorAddress, insertMaskedCommitment } from "../../database/database";
+import { getIdAndMaskedCommitmentByDepositorAddress, insertMaskedCommitment } from "../../database/database";
 import { poseidonHash } from "../utils/hashFunctions";
 import  { prove } from "../proof/prover";
 import { randomBN } from "../pool/utxo";
@@ -85,13 +85,14 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient, ad
     const [output1, output2] = outputs
 
     // prepare encrypted chain state
+
     let encryptedChainState1, encryptedChainState2;
 
     if (extAmount > 0) { // meaning that the transaction is a deposit
 
-      const masked_commitment_by_address = getMaskedCommitmentByDepositorAddress(address as string)[0] as bigint;
+      const tuple = getIdAndMaskedCommitmentByDepositorAddress(address as string);
 
-      if (!masked_commitment_by_address) { // first deposit by Alice
+      if (!tuple) { // first deposit by Alice
 
         // we create the masked commitment for the one which has the same amount as the deposit, the other is the fictitious output with amount 0
         // this just for deposit case
@@ -119,7 +120,10 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient, ad
 
       else { // use the first masked commitment also for other deposits
 
-        const masked_commitment = masked_commitment_by_address
+        // @ts-ignore
+        const index = tuple.id;
+        // @ts-ignore
+        const masked_commitment = tuple.maskedCommitment;
         
         const bytes = Buffer.concat([toBuffer(masked_commitment, 31)]);
 

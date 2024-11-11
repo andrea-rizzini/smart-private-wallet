@@ -28,13 +28,8 @@ interface IMixerOnboardingAndTransfers {
         bytes32 extDataHash;
     }
 
-    struct POI {
-        bytes proof;
-        bytes32 root;
-    }
-
-    function deposit(Proof memory _proofArgs, ExtData memory _extData, bytes32[2] memory commitmentsPOI) external;
-    function withdraw(Proof memory _args, ExtData memory _extData/*, POI memory _poi, bytes32[2] memory commitmentsPOI*/) external;
+    function deposit(Proof memory _proofArgs, ExtData memory _extData) external;
+    function withdraw(Proof memory _args, ExtData memory _extData) external;
     
 } 
 
@@ -103,22 +98,19 @@ contract Account is IAccount {
     function callDeposit(
         address poolAddress,
         IMixerOnboardingAndTransfers.Proof memory _proofArgs,
-        IMixerOnboardingAndTransfers.ExtData memory _extData,
-        bytes32[2] memory commitmentsPOI
+        IMixerOnboardingAndTransfers.ExtData memory _extData
     ) external payable {
         uint256 valueToSend = _extData.extAmount > 0 ? uint256(_extData.extAmount) : 0;
         IERC20(usdcToken).approve(poolAddress, valueToSend);
-        IMixerOnboardingAndTransfers(poolAddress).deposit(_proofArgs, _extData, commitmentsPOI);
+        IMixerOnboardingAndTransfers(poolAddress).deposit(_proofArgs, _extData);
     }
 
     function callWithdraw(
         address poolAddress,
         IMixerOnboardingAndTransfers.Proof memory _proofArgs,
         IMixerOnboardingAndTransfers.ExtData memory _extData
-        // IMixerOnboardingAndTransfers.POI memory _poi,
-        // bytes32[2] memory commitmentsPOI
     ) external payable {
-        IMixerOnboardingAndTransfers(poolAddress).withdraw(_proofArgs, _extData/*, _poi, commitmentsPOI*/);
+        IMixerOnboardingAndTransfers(poolAddress).withdraw(_proofArgs, _extData);
     }
 
 }

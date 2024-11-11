@@ -23,11 +23,6 @@ async function main () {
     await mixer_onb_and_transf_V3.waitForDeployment();
     console.log(`Mixer for oboarding and transfers V3 deployed at: ${mixer_onb_and_transf_V3.target}`);
     envConfig.MIXER_ONBOARDING_AND_TRANSFERS_V3 = mixer_onb_and_transf_V3.target.toString();
-
-    await run(`verify:verify`, {
-        address: mixer_onb_and_transf_V3.target,
-        constructorArguments: [VERIFIER_2, VERIFIER_16, VERIFIER_MASKED_COMMITMENT, HASHER_TRANSFERS, USDC_ADDRESS, 20, AUTHORITY_ADDRESS],
-    });
     
     // write new addresses to .env file
     const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');

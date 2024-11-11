@@ -1,22 +1,23 @@
-import { BaseUtxo, CreateTransactionParams, CommitmentEvents, CommitmentPOIEvents, PrepareTxParams } from "./types";
+import { BaseUtxo, CreateTransactionParams, CommitmentEvents, PrepareTxParams, StatusTreeEvents } from "./types";
+import { SMT } from "@zk-kit/smt"
 import { getKeyPairByUserId, getKeyPairOnboardingByUserId, getID } from "../../database/database";
 import { getProof, getProofOnboarding } from "../proof/generateTransactionProof";
 import hre from "hardhat";
 import { Keypair } from "./keypair";
 // @ts-ignore
 import MerkleTree from 'fixed-merkle-tree';
-import { poseidonHash2 } from "../utils/hashFunctions";
+import { poseidonHash, poseidonHash2 } from "../utils/hashFunctions";
 import { toFixedHex } from "../utils/toHex";
 import { Utxo } from "./utxo";
 
 const contractAddress = process.env.POOL_USERS_ADDRESS || '';
 const MERKLE_TREE_HEIGHT = 20;
-const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFERS || '';
+const MIXER_ONBOARDING_AND_TRANSFERS_V3 = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3 || '';
 
 export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){
 
   // 1) fetch all nullifiers
-  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
+  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
   let filter = contract.filters.NewNullifier();
   const eventsNullifiers = await contract.queryFilter(filter);
 
@@ -58,7 +59,7 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
 export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){ 
 
   // 1) fetch all nullifiers
-  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
+  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
   let filter = contract.filters.NewNullifier();
   const eventsNullifiers = await contract.queryFilter(filter);
 
@@ -257,8 +258,17 @@ function buildMerkleTree({ events }: { events: CommitmentEvents }): typeof Merkl
   return new MerkleTree(MERKLE_TREE_HEIGHT, leaves, { hashFunction: poseidonHash2 })
 }
 
+function buildSMTree({ events }: { events: StatusTreeEvents }): SMT {
+  const smt = new SMT(poseidonHash, true);
+  for (const event of events) {
+    smt.add(event.index.toString(), event.maskedCommitment)
+  }
+  return smt;
+}
+
 async function prepareOnboarding ({
   events = [],
+  eventsStatusTree = [],
   inputs = [],
   rootHex = '',
   outputs = [],
@@ -283,6 +293,7 @@ async function prepareOnboarding ({
       outputs,
       extAmount,
       tree: rootHex,
+      smt: buildSMTree({ events: eventsStatusTree }),
       recipient
   }
 
@@ -302,6 +313,7 @@ async function prepareOnboarding ({
 
 async function prepareTransaction({
   events = [],
+  eventsStatusTree = [],
   inputs = [],
   rootHex = '',
   outputs = [],
@@ -336,6 +348,7 @@ async function prepareTransaction({
       outputs,
       extAmount,
       tree: rootHex,
+      smt: buildSMTree({ events: eventsStatusTree }),
       recipient,
       address
   }
@@ -355,7 +368,7 @@ async function prepareTransaction({
 }
 
 async function fetchCommitments(): Promise<CommitmentEvents>{
-  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
+  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
   const filter = contract.filters.NewCommitment();
   const events = await contract.queryFilter(filter);
   const commitments: CommitmentEvents = [];
@@ -372,20 +385,20 @@ async function fetchCommitments(): Promise<CommitmentEvents>{
   return commitments
 }
 
-export async function fetchCommitmentsPOI(): Promise<CommitmentPOIEvents>{
-  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
-  const filter = contract.filters.NewCommitmentPOI();
+async function fetchStatusTreeEvents(): Promise<StatusTreeEvents> {
+  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
+  const filter = contract.filters.StatusFlagged();
   const events = await contract.queryFilter(filter);
-  const commitments: CommitmentPOIEvents = [];  
+  const statusTreeEvents: StatusTreeEvents = [];
   events.forEach((event) => {
-    commitments.push({
+    statusTreeEvents.push({
       blockNumber: event.blockNumber,
       transactionHash: event.transactionHash,
-      commitment: event.args[0],
-      index: Number(event.args[1])
+      index: Number(event.args[0]),
+      maskedCommitment: event.args[1]
     })
   });
-  return commitments
+  return statusTreeEvents
 }
 
 export async function createOnboardingData(params: CreateTransactionParams, keypair: Keypair, signer: any){
@@ -396,14 +409,16 @@ export async function createOnboardingData(params: CreateTransactionParams, keyp
 
 export async function createTransactionData(params: CreateTransactionParams, keypair: Keypair, signer: any, address ?: string){
   if (!params.inputs || !params.inputs.length) { // enter here for the deposit
-    const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS, signer);
+    const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3, signer);
     const root = await contract.getLastRoot_(); // take the last root, used in prepareTransaction to skip off-chain tree construction since for deposit is useless
 
     params.events = []
+    params.eventsStatusTree = []
     params.rootHex = toFixedHex(root)
     params.address = address
   } else {
     params.events = await fetchCommitments()
+    params.eventsStatusTree = await fetchStatusTreeEvents()
   }
 
   const { extData, args, amount } = await prepareTransaction(params)

@@ -7,11 +7,9 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/Create2.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
-interface IMixerOnboardingAndTransfers {
+interface IMixerOnboardingAndTransfersV3 {
 
-    // function insertMaskedCommitment(bytes32 maskedCommitment, bytes32 allowance) external;
-
-    function flagStatus(bytes calldata maskProof, bytes32 maskedCommitment) external;
+    function flagStatus(bytes calldata maskProof, uint256 index, bytes32 maskedCommitment) external;
 } 
 
 contract Authority is IAccount {
@@ -28,8 +26,8 @@ contract Authority is IAccount {
         return owner == recovered ? 0 : 1; 
     }
 
-    function callFlagStatus(address poolAddress, bytes calldata maskProof, bytes32 maskedCommitment) external {
-        IMixerOnboardingAndTransfers(poolAddress).flagStatus(maskProof, maskedCommitment);
+    function callFlagStatus(address poolAddress, bytes calldata maskProof, uint256 index, bytes32 maskedCommitment) external {
+        IMixerOnboardingAndTransfersV3(poolAddress).flagStatus(maskProof, index, maskedCommitment);
     }
 
 }
