@@ -170,7 +170,7 @@ export async function acceptInvite() {
   console.log('\nSome USDC will be sent to your account soon ...');
 
   const usdc = await hre.ethers.getContractAt("IERC20", USDC_ADDRESS, signers[2]);
-  const usdcAmount = hre.ethers.parseUnits("1", 6);
+  const usdcAmount = hre.ethers.parseUnits("0.01", 6);
 
   await usdc.approve(account, usdcAmount);
 
@@ -459,7 +459,7 @@ export async function onboardViaLink() {
     account = "0x" + error.data.slice(-40); 
   }
 
-  const _account = await hre.ethers.getContractAt("Account", account);
+  const _account = await hre.ethers.getContractAt("contracts/src/FlagPropagation/AccountForV3.sol:Account", account);
 
   // generate pubKey and register it in the pool
   await setup(username, account, initCode, signers[index]);

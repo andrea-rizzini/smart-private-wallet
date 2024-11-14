@@ -2,7 +2,7 @@ import hre from "hardhat";
 import fs from 'fs';
 import path from 'path';
 
-import { ArgsProof, BaseUtxo, Params, ProofParams } from "../pool/types";
+import { ArgsProof, BaseUtxo, Chainstate, ChainStates, Params, ProofParams } from "../pool/types";
 import { BytesLike } from '@ethersproject/bytes'
 import { getIdAndMaskedCommitmentByDepositorAddress, insertMaskedCommitment } from "../../database/database";
 import { poseidonHash } from "../utils/hashFunctions";
@@ -53,191 +53,274 @@ function getExtDataHash({ recipient, extAmount, encryptedOutput1, encryptedOutpu
 
 // to be moved to the proof folder
 export async function getProof({ inputs, outputs, tree, extAmount, recipient, address }: ProofParams) {
-    inputs = shuffle(inputs)
-    outputs = shuffle(outputs)
+  inputs = shuffle(inputs)
+  outputs = shuffle(outputs)
+
+  const inputMerklePathIndices = [] 
+  const inputMerklePathElements = [] // array of arrays, each array is a merkle branch
+
+  const statusToEncrypt: Chainstate[] = []
   
-    const inputMerklePathIndices = [] 
-    const inputMerklePathElements = [] // array of arrays, each array is a merkle branch
+  for (const input of inputs) {
+    if (input.amount > 0) {
+      input.index = tree.indexOf(toFixedHex(input.getCommitment())) // from the tree we get the index of the commitment
 
-    const statusToEncrypt: bigint[] = []
-    
-    for (const input of inputs) {
-      if (input.amount > 0) {
-        input.index = tree.indexOf(toFixedHex(input.getCommitment())) // from the tree we get the index of the commitment
+      for (const chainState of input.chainStates as ChainStates) {
 
-        // here is the case there are multiple utxo from Alice's deposits, each one has the same masked commitment (the one of the first deposit)
+        // here is the case there are multiple utxo from Alice's deposits, each one will have the same masked commitment (the one of the first deposit)
         // if transfer or withdrawal, this if will be skipped since it not enters even the first check
-        if (!statusToEncrypt.includes(input.chainState as bigint)) {
-          statusToEncrypt.push(input.chainState as bigint);
+        if (!statusToEncrypt.includes({index: chainState.index, maskedCommitment: chainState.maskedCommitment})) {
+          statusToEncrypt.push({index: chainState.index, maskedCommitment: chainState.maskedCommitment});
         }
+      }
+
+      if (input.index < 0) {
+        throw new Error(`Input commitment ${toFixedHex(input.getCommitment())} was not found`)
+      }
+      inputMerklePathIndices.push(input.index) 
+      inputMerklePathElements.push(tree.path(input.index).pathElements)
+    } else {
+      inputMerklePathIndices.push(0) // merkle indices for fitticious inputs
+      inputMerklePathElements.push(new Array(MERKLE_TREE_HEIGHT).fill(0)) // merkle path for fitticious inputs
+    }
+
+  }
   
-        if (input.index < 0) {
-          throw new Error(`Input commitment ${toFixedHex(input.getCommitment())} was not found`)
-        }
-        inputMerklePathIndices.push(input.index) 
-        inputMerklePathElements.push(tree.path(input.index).pathElements)
+  const [output1, output2] = outputs
+
+  // prepare encrypted chain state
+
+  let encryptedChainState1, encryptedChainState2;
+
+  if (extAmount > 0) { // meaning that the transaction is a deposit
+
+    const tuple = getIdAndMaskedCommitmentByDepositorAddress(address as string);
+
+    if (!tuple) { // first deposit by Alice
+
+      // we create the masked commitment for the one which has the same amount as the deposit, the other is the fictitious output with amount 0
+      // this just for deposit case
+
+      if (outputs[0].amount === extAmount) { 
+        const commitment_output_one = outputs[0].getCommitment();
+        const blinding_output_one = randomBN();
+        const masked_commitment_one = poseidonHash([commitment_output_one, blinding_output_one]);
+        const index = insertMaskedCommitment(address as string, commitment_output_one.toString(), blinding_output_one.toString(), toFixedHex(masked_commitment_one));
+        const chainState: Chainstate = { index: BigInt(index), maskedCommitment: masked_commitment_one };
+        const bytes = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 32)]); // if we encrypt only the index, are we vulnerable to brute force attacks?
+        encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
+        encryptedChainState2 = encryptedChainState1;       
+      }
+
+      else {
+        const commitment_output_two = outputs[1].getCommitment();
+        const blinding_output_two = randomBN();
+        const masked_commitment_two = poseidonHash([commitment_output_two, blinding_output_two]);
+        const index = insertMaskedCommitment(address as string, commitment_output_two.toString(), blinding_output_two.toString(), toFixedHex(masked_commitment_two));
+        const chainState: Chainstate = { index: BigInt(index), maskedCommitment: masked_commitment_two };
+        const bytes2 = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 32)]);
+        encryptedChainState2 = outputs[1].keypair.encrypt(bytes2);
+        encryptedChainState1 = encryptedChainState2;    
+      }
+
+    }
+
+    else { // use the first masked commitment also for other deposits
+
+      // const masked_commitment = toFixedHex(tuple.maskedCommitment);
+      const chainState: Chainstate = { index: BigInt(tuple.id), maskedCommitment: BigInt(tuple.maskedCommitment) };
+
+      const bytes = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 32)]);
+
+      if (outputs[0].amount === extAmount) { 
+        encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
+        encryptedChainState2 = encryptedChainState1;
       } else {
-        inputMerklePathIndices.push(0) // merkle indices for fitticious inputs
-        inputMerklePathElements.push(new Array(MERKLE_TREE_HEIGHT).fill(0)) // merkle path for fitticious inputs
+        encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
+        encryptedChainState1 = encryptedChainState2;
       }
-    }
-    
-    const [output1, output2] = outputs
-
-    // prepare encrypted chain state
-
-    let encryptedChainState1, encryptedChainState2;
-
-    if (extAmount > 0) { // meaning that the transaction is a deposit
-
-      const tuple = getIdAndMaskedCommitmentByDepositorAddress(address as string);
-
-      if (!tuple) { // first deposit by Alice
-
-        // we create the masked commitment for the one which has the same amount as the deposit, the other is the fictitious output with amount 0
-        // this just for deposit case
-
-        if (outputs[0].amount === extAmount) { 
-          const commitment_output_one = outputs[0].getCommitment();
-          const blinding_output_one = randomBN();
-          const masked_commitment_one = poseidonHash([commitment_output_one, blinding_output_one]);
-          const bytes = Buffer.concat([toBuffer(masked_commitment_one, 31)]);
-          encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
-          encryptedChainState2 = encryptedChainState1;
-          insertMaskedCommitment(address as string, commitment_output_one.toString(), blinding_output_one.toString(), toFixedHex(masked_commitment_one));
-        }
-        else {
-          const commitment_output_two = outputs[1].getCommitment();
-          const blinding_output_two = randomBN();
-          const masked_commitment_two = poseidonHash([commitment_output_two, blinding_output_two]);
-          const bytes2 = Buffer.concat([toBuffer(masked_commitment_two, 31)]);
-          encryptedChainState2 = outputs[1].keypair.encrypt(bytes2);
-          encryptedChainState1 = encryptedChainState2;
-          insertMaskedCommitment(address as string, commitment_output_two.toString(), blinding_output_two.toString(), toFixedHex(masked_commitment_two));
-        }
-
-      }
-
-      else { // use the first masked commitment also for other deposits
-
-        // @ts-ignore
-        const index = tuple.id;
-        // @ts-ignore
-        const masked_commitment = tuple.maskedCommitment;
-        
-        const bytes = Buffer.concat([toBuffer(masked_commitment, 31)]);
-
-        if (outputs[0].amount === extAmount) { 
-          encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
-          encryptedChainState2 = encryptedChainState1;
-        } else {
-          encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
-          encryptedChainState1 = encryptedChainState2;
-        }
-        
-      }
-
+      
     }
 
-    else { // meaning that the transaction is a transfer or a withdrawal
-      const buffers = statusToEncrypt.map((x) => toBuffer(x, 31));
-      const bytes = Buffer.concat(buffers);
-      encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
-      encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
-    }
-    
-    // prepare extData
-    const extData = {
-      recipient: toFixedHex(recipient, ADDRESS_BYTES_LENGTH),
-      extAmount: toFixedHex(extAmount),
-      encryptedOutput1: output1.encrypt(), // this will be the event onchain, making possible for the receiver to decrypt the output and realize that they are his utxo
-      encryptedOutput2: output2.encrypt(),
-      encryptedChainState1: encryptedChainState1,
-      encryptedChainState2: encryptedChainState2
-    }
-    
-    const extDataHash = getExtDataHash(extData)
+  }
+
+  else { // meaning that the transaction is a transfer or a withdrawal
+    const buffers = statusToEncrypt.flatMap((x) => [toBuffer(x.index, 31), toBuffer(x.maskedCommitment, 32)]);
+    const bytes = Buffer.concat(buffers);
+    encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
+    encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
+  }
   
-    const input = {
-      root: typeof tree === 'string' ? tree : tree.root(),
-      inputNullifier: inputs.map((x) => x.getNullifier()),
-      outputCommitment: outputs.map((x) => x.getCommitment()),
-      publicAmount : ((extAmount + FIELD_SIZE) % FIELD_SIZE).toString(),
-      extDataHash,
+  // prepare extData
+  const extData = {
+    recipient: toFixedHex(recipient, ADDRESS_BYTES_LENGTH),
+    extAmount: toFixedHex(extAmount),
+    encryptedOutput1: output1.encrypt(), // this will be the event onchain, making possible for the receiver to decrypt the output and realize that they are his utxo
+    encryptedOutput2: output2.encrypt(),
+    encryptedChainState1: encryptedChainState1,
+    encryptedChainState2: encryptedChainState2
+  }
   
-      // data for transaction inputs
-      inAmount: inputs.map((x) => x.amount),
-      inPrivateKey: inputs.map((x) => x.keypair.privkey), // it's an array
-      inBlinding: inputs.map((x) => x.blinding),
-      inPathIndices: inputMerklePathIndices,
-      inPathElements: inputMerklePathElements,
+  const extDataHash = getExtDataHash(extData)
+
+  const input = {
+    root: typeof tree === 'string' ? tree : tree.root(),
+    inputNullifier: inputs.map((x) => x.getNullifier()),
+    outputCommitment: outputs.map((x) => x.getCommitment()),
+    publicAmount : ((extAmount + FIELD_SIZE) % FIELD_SIZE).toString(),
+    extDataHash,
+
+    // data for transaction inputs
+    inAmount: inputs.map((x) => x.amount),
+    inPrivateKey: inputs.map((x) => x.keypair.privkey), // it's an array
+    inBlinding: inputs.map((x) => x.blinding),
+    inPathIndices: inputMerklePathIndices,
+    inPathElements: inputMerklePathElements,
+
+    // data for transaction outputs
+    outAmount: outputs.map((x) => x.amount),
+    outBlinding: outputs.map((x) => x.blinding),
+    outPubkey: outputs.map((x) => x.keypair.pubkey),
+  }
   
-      // data for transaction outputs
-      outAmount: outputs.map((x) => x.amount),
-      outBlinding: outputs.map((x) => x.blinding),
-      outPubkey: outputs.map((x) => x.keypair.pubkey),
-    }
-    
-    let dirPath = path.join(__dirname, `../../../../circuits/artifacts/circuits/`);
-    let fileName = `transaction${inputs.length}.wasm`;
-    let filePath = path.join(dirPath, fileName);
-    let wasmBuffer = fs.readFileSync(filePath);
-    
-    fileName = `transaction${inputs.length}.zkey`;
-    filePath = path.join(dirPath, fileName);
-    let zKeyBuffer = fs.readFileSync(filePath);
-    
-    // @ts-ignore
-    const proof = await prove(input, wasmBuffer, zKeyBuffer)
+  let dirPath = path.join(__dirname, `../../../../circuits/artifacts/circuits/`);
+  let fileName = `transaction${inputs.length}.wasm`;
+  let filePath = path.join(dirPath, fileName);
+  let wasmBuffer = fs.readFileSync(filePath);
   
-    const args: ArgsProof = {
-      proof,
-      root: toFixedHex(input.root),
-      inputNullifiers: inputs.map((x) => toFixedHex(x.getNullifier())),
-      outputCommitments: outputs.map((x) => toFixedHex(x.getCommitment())) as [BytesLike, BytesLike],
-      publicAmount: toFixedHex(input.publicAmount),
-      extDataHash: toFixedHex(extDataHash),
-    }
+  fileName = `transaction${inputs.length}.zkey`;
+  filePath = path.join(dirPath, fileName);
+  let zKeyBuffer = fs.readFileSync(filePath);
   
-    return {
-      extData,
-      proof,
-      args,
-    }
-  
+  // @ts-ignore
+  const proof = await prove(input, wasmBuffer, zKeyBuffer)
+
+  const args: ArgsProof = {
+    proof,
+    root: toFixedHex(input.root),
+    inputNullifiers: inputs.map((x) => toFixedHex(x.getNullifier())),
+    outputCommitments: outputs.map((x) => toFixedHex(x.getCommitment())) as [BytesLike, BytesLike],
+    publicAmount: toFixedHex(input.publicAmount),
+    extDataHash: toFixedHex(extDataHash),
+  }
+
+  return {
+    extData,
+    proof,
+    args,
+  }
+
 }
 
-export async function getProofOnboarding({ inputs, outputs, tree, extAmount, recipient }: ProofParams) {
+export async function getProofOnboarding({ inputs, outputs, tree, extAmount, recipient, addressSender}: ProofParams) {
   inputs = shuffle(inputs)
   outputs = shuffle(outputs)
 
   const inputMerklePathIndices = []
   const inputMerklePathElements = []
+
+  const statusToEncrypt: Chainstate[] = []
   
   for (const input of inputs) {
     if (input.amount > 0) {
-      input.index = tree.indexOf(toFixedHex(input.getCommitment()))
+      input.index = tree.indexOf(toFixedHex(input.getCommitment())) // from the tree we get the index of the commitment
+
+      for (const chainState of input.chainStates as ChainStates) {
+
+        // here is the case there are multiple utxo from Alice's deposits, each one will have the same masked commitment (the one of the first deposit)
+        // if transfer or withdrawal, this if will be skipped since it not enters even the first check
+        if (!statusToEncrypt.includes({index: chainState.index, maskedCommitment: chainState.maskedCommitment})) {
+          statusToEncrypt.push({index: chainState.index, maskedCommitment: chainState.maskedCommitment});
+        }
+      }
 
       if (input.index < 0) {
         throw new Error(`Input commitment ${toFixedHex(input.getCommitment())} was not found`)
       }
-      inputMerklePathIndices.push(input.index)
+      inputMerklePathIndices.push(input.index) 
       inputMerklePathElements.push(tree.path(input.index).pathElements)
     } else {
-      inputMerklePathIndices.push(0)
-      inputMerklePathElements.push(new Array(MERKLE_TREE_HEIGHT).fill(0))
+      inputMerklePathIndices.push(0) // merkle indices for fitticious inputs
+      inputMerklePathElements.push(new Array(MERKLE_TREE_HEIGHT).fill(0)) // merkle path for fitticious inputs
     }
+
   }
   
   const [output1, output2] = outputs 
 
+  // prepare encrypted chain state
+
+  let encryptedChainState1, encryptedChainState2;
+
+  if (extAmount > 0) { // meaning that the transaction is a deposit
+
+    const tuple = getIdAndMaskedCommitmentByDepositorAddress(addressSender as string);
+
+    if (!tuple) { // first deposit by Alice
+
+      // we create the masked commitment for the one which has the same amount as the deposit, the other is the fictitious output with amount 0
+      // this just for deposit case
+
+      if (outputs[0].amount === extAmount) { 
+        const commitment_output_one = outputs[0].getCommitment();
+        const blinding_output_one = randomBN();
+        const masked_commitment_one = poseidonHash([commitment_output_one, blinding_output_one]);
+        const index = insertMaskedCommitment(address as string, commitment_output_one.toString(), blinding_output_one.toString(), toFixedHex(masked_commitment_one));
+        const chainState: Chainstate = { index: BigInt(index), maskedCommitment: masked_commitment_one };
+        const bytes = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 31)]); // if we encrypt only the index, are we vulnerable to brute force attacks?
+        encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
+        encryptedChainState2 = encryptedChainState1;       
+      }
+      else {
+        const commitment_output_two = outputs[1].getCommitment();
+        const blinding_output_two = randomBN();
+        const masked_commitment_two = poseidonHash([commitment_output_two, blinding_output_two]);
+        const index = insertMaskedCommitment(address as string, commitment_output_two.toString(), blinding_output_two.toString(), toFixedHex(masked_commitment_two));
+        const chainState: Chainstate = { index: BigInt(index), maskedCommitment: masked_commitment_two };
+        const bytes2 = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 31)]);
+        encryptedChainState2 = outputs[1].keypair.encrypt(bytes2);
+        encryptedChainState1 = encryptedChainState2;    
+      }
+
+    }
+
+    else { // use the first masked commitment also for other deposits
+
+      // @ts-ignore
+      const index = BigInt(tuple.id);
+      // @ts-ignore
+      // const masked_commitment = toFixedHex(tuple.maskedCommitment);
+      const chainState: Chainstate = { index, maskedCommitment: tuple.maskedCommitment };
+
+      const bytes = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 31)]);
+
+      if (outputs[0].amount === extAmount) { 
+        encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
+        encryptedChainState2 = encryptedChainState1;
+      } else {
+        encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
+        encryptedChainState1 = encryptedChainState2;
+      }
+      
+    }
+
+  }
+
+  else { // meaning that the transaction is a transfer or a withdrawal
+    const buffers = statusToEncrypt.flatMap((x) => [toBuffer(x.index, 31), toBuffer(x.maskedCommitment, 31)]);
+    const bytes = Buffer.concat(buffers);
+    encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
+    encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
+  }
+  
+  // prepare extData
   const extData = {
     recipient: toFixedHex(recipient, ADDRESS_BYTES_LENGTH),
     extAmount: toFixedHex(extAmount),
-    encryptedOutput1: output1.encrypt(),
+    encryptedOutput1: output1.encrypt(), // this will be the event onchain, making possible for the receiver to decrypt the output and realize that they are his utxo
     encryptedOutput2: output2.encrypt(),
-    encryptedChainState1: output1.encrypt(),
-    encryptedChainState2: output2.encrypt()
+    encryptedChainState1: encryptedChainState1,
+    encryptedChainState2: encryptedChainState2
   }
   
   const extDataHash = getExtDataHash(extData)
@@ -247,6 +330,7 @@ export async function getProofOnboarding({ inputs, outputs, tree, extAmount, rec
     inputNullifier: inputs.map((x) => x.getNullifier()),
     outputCommitment: outputs.map((x) => x.getCommitment()),
     publicAmount : ((extAmount + FIELD_SIZE) % FIELD_SIZE).toString(), // this is to manage negative numbers
+    extDataHash,
 
     // data for transaction inputs
     inAmount: inputs.map((x) => x.amount),

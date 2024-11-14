@@ -28,7 +28,7 @@ interface IMixerOnboardingAndTransfersV3 {
         bytes32 extDataHash;
     }
 
-    function transact(Proof memory _args, ExtData memory _extData, bytes32[2] memory commitmentsPOI) external;
+    function transact(Proof memory _args, ExtData memory _extData) external;
 
 } 
 
@@ -71,11 +71,10 @@ contract Relayer is IAccount {
     function callTransact(
         address poolAddress,
         IMixerOnboardingAndTransfersV3.Proof memory _proofArgs,
-        IMixerOnboardingAndTransfersV3.ExtData memory _extData,
-        bytes32[2] memory commitmentsPOI
+        IMixerOnboardingAndTransfersV3.ExtData memory _extData
     ) external payable {
         emit Log("Calling transact");
-        IMixerOnboardingAndTransfersV3(poolAddress).transact(_proofArgs, _extData, commitmentsPOI);
+        IMixerOnboardingAndTransfersV3(poolAddress).transact(_proofArgs, _extData);
     }
 
 }

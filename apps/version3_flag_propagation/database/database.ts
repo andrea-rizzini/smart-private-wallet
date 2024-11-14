@@ -107,7 +107,6 @@ export const insertUser = (username: string, passwordHash: string) => {
     const stmt = db.prepare(insertSQL);
     const info = stmt.run(username, passwordHash); 
     const index: number = info.lastInsertRowid as number; 
-    // console.log(`\nUser correctly inserted with ID: ${index}`);
     return index;
 };
 
@@ -144,7 +143,9 @@ export const insertUserNullifier = (userId: number, name: string, nullifier: str
 export const insertMaskedCommitment = (depositorAddress: string, commitment: string, blinding: string, maskedCommitment: string) => {
     const insertSQL = `INSERT INTO masked_commitments (depositorAddress, commitment, blinding, maskedCommitment) VALUES (?, ?, ?, ?);`;
     const stmt = db.prepare(insertSQL);
-    stmt.run(depositorAddress, commitment, blinding, maskedCommitment); 
+    const info = stmt.run(depositorAddress, commitment, blinding, maskedCommitment); 
+    const index: number = info.lastInsertRowid as number;
+    return index;
 }
 
 export const getTupleFromDepositorAddress = (depositorAddress: string) => {

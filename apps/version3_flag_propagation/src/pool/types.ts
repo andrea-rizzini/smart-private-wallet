@@ -25,6 +25,7 @@ export type ProofParams = {
   extAmount: bigint
   recipient: string | bigint
   address?: string
+  addressSender?: string
 }
 
 type CommitmentEvent = {
@@ -62,6 +63,7 @@ export type PrepareTxParams = {
   events?: CommitmentEvents
   eventsStatusTree?: StatusTreeEvents
   address ?: string
+  addressSender?: string
 }
 
 export type CreateTransactionParams = {
@@ -75,6 +77,7 @@ export type CreateTransactionParams = {
   events?: CommitmentEvents
   eventsStatusTree?: StatusTreeEvents
   address ?: string
+  addressSender?: string
 }
 
 export interface BaseKeypair {
@@ -99,6 +102,13 @@ export abstract class UtxoStatic {
   static decrypt(keypair: BaseKeypair, data: string, index: number): BaseUtxo
 }
 
+export type Chainstate = {
+  index: bigint
+  maskedCommitment: bigint
+}
+
+export type ChainStates = Chainstate[]
+
 export interface BaseUtxo {
   keypair: BaseKeypair
   amount: bigint
@@ -106,7 +116,7 @@ export interface BaseUtxo {
   index: number
   commitment?: bigint
   nullifier?: bigint
-  chainState?: bigint
+  chainStates?: ChainStates 
 
   getNullifier: () => bigint
   getCommitment: () => bigint

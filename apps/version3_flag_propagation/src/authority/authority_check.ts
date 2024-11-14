@@ -19,7 +19,7 @@ async function main() {
     console.log("This should be an automated process, but for the sake of this demo, we will perform the check just on program call.");
 
     // reading of this table must be restritcted only to the authority
-    const maskedCommitments = getMaskedCommitments();
+    const maskedCommitments= getMaskedCommitments();
 
     for (const maskedCommitment of maskedCommitments) {
 
@@ -60,6 +60,7 @@ async function main() {
             }
         }
     }
+
 }
 
 main()

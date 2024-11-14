@@ -1,4 +1,4 @@
-import { BaseUtxo, CreateTransactionParams, CommitmentEvents, PrepareTxParams, StatusTreeEvents } from "./types";
+import { BaseUtxo, Chainstate, ChainStates, CreateTransactionParams, CommitmentEvents, PrepareTxParams, StatusTreeEvents } from "./types";
 import { SMT } from "@zk-kit/smt"
 import { getKeyPairByUserId, getKeyPairOnboardingByUserId, getID } from "../../database/database";
 import { getProof, getProofOnboarding } from "../proof/generateTransactionProof";
@@ -16,13 +16,15 @@ const MIXER_ONBOARDING_AND_TRANSFERS_V3 = process.env.MIXER_ONBOARDING_AND_TRANS
 
 export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){
 
+  const chainStateSize = 63;
+
   // 1) fetch all nullifiers
   const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
   let filter = contract.filters.NewNullifier();
   const eventsNullifiers = await contract.queryFilter(filter);
 
   // 2) fetch all commitment events
-  filter = contract.filters.NewCommitment();
+  filter = contract.filters.NewCommitmentV2();
   const eventsCommitments = await contract.queryFilter(filter);
 
   // 3) for each event, take the encrypted output field, decrypt it and if it's owned by the sender, add it to the myUtxo array
@@ -33,13 +35,28 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
     const encryptedOutput = event.args[2]
     try {
       const utxo = Utxo.decrypt(senderKeyPair, encryptedOutput, index);
-      const chainState =  BigInt('0x' + senderKeyPair.decrypt(event.args[3]).slice(0,31).toString('hex'))
-      utxo.chainState = chainState
+      const buf = senderKeyPair.decrypt(event.args[3]) 
+      const chainStates : Chainstate[] = []
+
+      for (let i = 0; i < buf.length; i += chainStateSize) {
+        const index = BigInt('0x' + buf.slice(i, i + 31).toString('hex'));
+        const maskedCommitment = BigInt('0x' + buf.slice(i + 31, chainStateSize+1).toString('hex'));
+        console.log("Index:", buf.slice(i, i + 31).toString('hex'))
+        console.log("Masked:", '0x'+buf.slice(i + 31, chainStateSize).toString('hex'))
+        const chainState: Chainstate = { index, maskedCommitment: maskedCommitment }
+        chainStates.push(chainState)
+      }
+
+      utxo.chainStates = chainStates
       myUtxo.push(utxo)
 
+      console.log(myUtxo)
+
     } catch (e) {
+      // console.log(e)
       // do nothing, we are trying to decrypt an utxo which is not owned by the sender
     }    
+
   })
 
   // 4) create the nullifier and if it was not spent yet consider it as an unspent utxo
@@ -58,13 +75,16 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
 
 export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){ 
 
+  const chainStateSize = 98;
+  const chainStates : Chainstate[] = []
+
   // 1) fetch all nullifiers
-  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
+  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
   let filter = contract.filters.NewNullifier();
   const eventsNullifiers = await contract.queryFilter(filter);
 
   // 2) fetch all commitment events
-  filter = contract.filters.NewCommitment();
+  filter = contract.filters.NewCommitmentV2();
   const eventsCommitments = await contract.queryFilter(filter);
 
   // 3) for each event, take the encrypted output field, decrypt it and if it's owned by the sender, add it to the myUtxo array
@@ -75,13 +95,25 @@ export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSende
     const encryptedOutput = event.args[2]
     try {
       const utxo = Utxo.decrypt(senderKeyPair, encryptedOutput, index);
-      const chainState =  BigInt('0x' + senderKeyPair.decrypt(event.args[3]).slice(0,31).toString('hex'))
-      utxo.chainState = chainState
+      const buf = senderKeyPair.decrypt(event.args[3]) 
+
+      for (let i = 0; i < buf.length - 96; i += chainStateSize) {
+        const index = BigInt('0x' + buf.slice(i, i + 31).toString('hex'));
+        const maskedCommitment = BigInt('0x' + buf.slice(i + 31, chainStateSize).toString('hex'));
+        // console.log(buf.slice(i + 31, i + chainStateSize).toString('utf-8'))
+        const chainState: Chainstate = { index, maskedCommitment: maskedCommitment }
+        chainStates.push(chainState)
+      }
+
+      utxo.chainStates = chainStates
       myUtxo.push(utxo)
+
+      console.log(myUtxo)
 
     } catch (e) {
       // do nothing, we are trying to decrypt an utxo which is not owned by the sender
     }    
+
   })
 
   // 4) create the nullifier and if it was not spent yet consider it as an unspent utxo
@@ -261,7 +293,7 @@ function buildMerkleTree({ events }: { events: CommitmentEvents }): typeof Merkl
 function buildSMTree({ events }: { events: StatusTreeEvents }): SMT {
   const smt = new SMT(poseidonHash, true);
   for (const event of events) {
-    smt.add(event.index.toString(), event.maskedCommitment)
+    smt.add(BigInt(event.index), BigInt(event.maskedCommitment))
   }
   return smt;
 }
@@ -353,6 +385,9 @@ async function prepareTransaction({
       address
   }
 
+  // console.log("\nRoot: ", toFixedHex(params.smt.root))
+  // console.log("\Proof: ", params.smt.createProof(BigInt(1)))
+
   if (!rootHex) { // do not enter here if it's a deposit
       params.tree = await buildMerkleTree({ events }) // build the tree off-chain
   }
@@ -368,8 +403,8 @@ async function prepareTransaction({
 }
 
 async function fetchCommitments(): Promise<CommitmentEvents>{
-  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
-  const filter = contract.filters.NewCommitment();
+  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
+  const filter = contract.filters.NewCommitmentV2();
   const events = await contract.queryFilter(filter);
   const commitments: CommitmentEvents = [];
   events.forEach((event) => {
@@ -386,7 +421,7 @@ async function fetchCommitments(): Promise<CommitmentEvents>{
 }
 
 async function fetchStatusTreeEvents(): Promise<StatusTreeEvents> {
-  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
+  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
   const filter = contract.filters.StatusFlagged();
   const events = await contract.queryFilter(filter);
   const statusTreeEvents: StatusTreeEvents = [];
@@ -401,8 +436,9 @@ async function fetchStatusTreeEvents(): Promise<StatusTreeEvents> {
   return statusTreeEvents
 }
 
-export async function createOnboardingData(params: CreateTransactionParams, keypair: Keypair, signer: any){
+export async function createOnboardingData(params: CreateTransactionParams, keypair: Keypair, signer: any, addressSender: string){
   params.events = await fetchCommitments()
+  params.addressSender = addressSender
   const { extData, args, amount } = await prepareOnboarding(params)
   return { extData, args, amount }
 }
@@ -413,7 +449,7 @@ export async function createTransactionData(params: CreateTransactionParams, key
     const root = await contract.getLastRoot_(); // take the last root, used in prepareTransaction to skip off-chain tree construction
 
     params.events = []
-    params.eventsStatusTree = []
+    params.eventsStatusTree = await fetchStatusTreeEvents()
     params.rootHex = toFixedHex(root)
     params.address = address
   } else {

@@ -56,7 +56,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
 
   // Events for transactions
 
-  event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput, bytes encryptedChainState);
+  event NewCommitmentV2(bytes32 commitment, uint256 index, bytes encryptedOutput, bytes encryptedChainState);
   event NewNullifier(bytes32 nullifier);
 
   event StatusFlagged(uint256 index, bytes32 maskedCommitment, bool status, uint256 timestamp, bytes32 newRoot);
@@ -142,8 +142,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
+    emit NewCommitmentV2(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
+    emit NewCommitmentV2(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
@@ -171,8 +171,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
+    emit NewCommitmentV2(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
+    emit NewCommitmentV2(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
@@ -205,8 +205,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
+    emit NewCommitmentV2(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1, _extData.encryptedChainState1);
+    emit NewCommitmentV2(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2, _extData.encryptedChainState2);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }

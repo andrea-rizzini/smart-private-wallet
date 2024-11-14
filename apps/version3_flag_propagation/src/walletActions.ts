@@ -5,7 +5,7 @@ import * as readline from 'readline';
 
 import { call_userop } from "./userop/createUserOp";
 import { checkSanctionedAddress } from './poi/checkIfSanctioned';
-import { getAccountAddress, getAccountKeyPair, getUtxoFromKeypair, getTotalAmount } from "./pool/poolFunctions";
+import { getAccountAddress, getAccountKeyPair, getOnbUtxoFromKeypair, getTotalAmount } from "./pool/poolFunctions";
 import { getAddressOfContactOfUser, getContactsByUserId, getID, getKeyPairOnboardingByUserId, insertChallenge, insertContact, 
     insertKeypair, isChallengeRedeemed, updateContact, updateChallengeRedeemed} from '../database/database';
 import { inputFromCLI } from "./utils/inputFromCLI";
@@ -56,9 +56,9 @@ export async function checkAccountBalance(username: string, account: string) {
         let keyPair: Keypair = getKeyPairOnboardingByUserId(getID(username)) as Keypair;
         const keypair_link: Keypair = new Keypair(keyPair.privkey);
         if (keypair_link) {
-            const { unspentUtxo } = await getUtxoFromKeypair(keypair_link, account);
+            const { unspentUtxoOnb } = await getOnbUtxoFromKeypair(keypair_link, account);
             let totalAmountLink = BigInt(0);
-            unspentUtxo.forEach(utxo => {
+            unspentUtxoOnb.forEach(utxo => {
                 totalAmountLink = totalAmountLink + (utxo.amount);
             })
             poolAmount = poolAmount + totalAmountLink;

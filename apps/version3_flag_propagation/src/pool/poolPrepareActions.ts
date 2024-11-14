@@ -27,7 +27,7 @@ export async function prepareTransferForOnboarding(amount: string, recipientUtxo
 
   const outputs = (totalAmount - (hre.ethers.parseUnits(amount, 6))) == BigInt(0) ? [recipientUtxoOnboarding] : [recipientUtxoOnboarding, senderChangeUtxo]
 
-  const { extData, args } = await createOnboardingData({ outputs, inputs: unspentUtxo }, senderKeyPair, signer)
+  const { extData, args } = await createOnboardingData({ outputs, inputs: unspentUtxo }, senderKeyPair, signer, addressSender)
   return { args, extData }
 }
 
