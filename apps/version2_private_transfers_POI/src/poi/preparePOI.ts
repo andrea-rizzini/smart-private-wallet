@@ -41,7 +41,7 @@ export async function preparePOI(amount: string, username: string, addressSender
             if (utxo.index === POIevent.index) {
                 inputMerklePathIndicesPOI.push(POIevent.index)
                 inputMerklePathElementsPOI.push(tree.path(POIevent.index).pathElements)
-                preimages.push(allowed)
+                preimages.push(allowed)      // here is the core
                 inAmount.push(utxo.amount)
             }
         }

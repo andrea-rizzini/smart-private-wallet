@@ -1,12 +1,13 @@
 import { BaseUtxo, Chainstate, ChainStates, CreateTransactionParams, CommitmentEvents, PrepareTxParams, StatusTreeEvents } from "./types";
-import { SMT } from "@zk-kit/smt"
 import { getKeyPairByUserId, getKeyPairOnboardingByUserId, getID } from "../../database/database";
 import { getProof, getProofOnboarding } from "../proof/generateTransactionProof";
 import hre from "hardhat";
 import { Keypair } from "./keypair";
 // @ts-ignore
 import MerkleTree from 'fixed-merkle-tree';
+import { InMemoryDB, LocalStorageDB, Merkletree as MerkleTreeIden3, str2Bytes } from "@iden3/js-merkletree";
 import { poseidonHash, poseidonHash2 } from "../utils/hashFunctions";
+import { SMT } from "@zk-kit/smt";
 import { toFixedHex } from "../utils/toHex";
 import { Utxo } from "./utxo";
 
@@ -41,8 +42,8 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
       for (let i = 0; i < buf.length; i += chainStateSize) {
         const index = BigInt('0x' + buf.slice(i, i + 31).toString('hex'));
         const maskedCommitment = BigInt('0x' + buf.slice(i + 31, chainStateSize+1).toString('hex'));
-        console.log("Index:", buf.slice(i, i + 31).toString('hex'))
-        console.log("Masked:", '0x'+buf.slice(i + 31, chainStateSize).toString('hex'))
+        // console.log("Index:", buf.slice(i, i + 31).toString('hex'))
+        // console.log("Masked:", '0x'+buf.slice(i + 31, chainStateSize).toString('hex'))
         const chainState: Chainstate = { index, maskedCommitment: maskedCommitment }
         chainStates.push(chainState)
       }
@@ -50,7 +51,7 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
       utxo.chainStates = chainStates
       myUtxo.push(utxo)
 
-      console.log(myUtxo)
+      // console.log(myUtxo)
 
     } catch (e) {
       // console.log(e)
@@ -108,7 +109,7 @@ export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSende
       utxo.chainStates = chainStates
       myUtxo.push(utxo)
 
-      console.log(myUtxo)
+      // console.log(myUtxo)
 
     } catch (e) {
       // do nothing, we are trying to decrypt an utxo which is not owned by the sender
@@ -290,12 +291,23 @@ function buildMerkleTree({ events }: { events: CommitmentEvents }): typeof Merkl
   return new MerkleTree(MERKLE_TREE_HEIGHT, leaves, { hashFunction: poseidonHash2 })
 }
 
-function buildSMTree({ events }: { events: StatusTreeEvents }): SMT {
-  const smt = new SMT(poseidonHash, true);
+async function buildSMTree({ events }: { events: StatusTreeEvents }) /* SMT */ /*MerkleTreeIden3*/ {
+  // const smt_ = new SMT(poseidonHash, true);
+  // for (const event of events) {
+  //   smt_.add(BigInt(event.index), BigInt(event.maskedCommitment))
+  // }
+  // console.log("Root1: ", smt_.root)
+  // return smt;
+  
+  //const localStorage = new LocalStorageDB(str2Bytes(''));
+  const inMemoryDb = new InMemoryDB(str2Bytes(''));
+  const smt = new MerkleTreeIden3 (inMemoryDb, true, 20);
   for (const event of events) {
-    smt.add(BigInt(event.index), BigInt(event.maskedCommitment))
+    await smt.add(BigInt(event.index), BigInt(event.maskedCommitment))
   }
-  return smt;
+  const root = await smt.root();
+  console.log("Root2: ", root.string())  
+  //return smt;
 }
 
 async function prepareOnboarding ({
@@ -385,8 +397,7 @@ async function prepareTransaction({
       address
   }
 
-  // console.log("\nRoot: ", toFixedHex(params.smt.root))
-  // console.log("\Proof: ", params.smt.createProof(BigInt(1)))
+  // console.log("\nRoot: ", toFixedHex(params.smt.root.toString()))
 
   if (!rootHex) { // do not enter here if it's a deposit
       params.tree = await buildMerkleTree({ events }) // build the tree off-chain
