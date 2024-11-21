@@ -292,21 +292,22 @@ function buildMerkleTree({ events }: { events: CommitmentEvents }): typeof Merkl
 }
 
 async function buildSMTree({ events }: { events: StatusTreeEvents }) /* SMT */ /*MerkleTreeIden3*/ {
-  // const smt_ = new SMT(poseidonHash, true);
-  // for (const event of events) {
-  //   smt_.add(BigInt(event.index), BigInt(event.maskedCommitment))
-  // }
-  // console.log("Root1: ", smt_.root)
+  const smt_ = new SMT(poseidonHash, true);
+  for (const event of events) {
+    smt_.add(BigInt(event.index), BigInt(event.maskedCommitment))
+  }
+  console.log("Root: ", smt_.root)
+  
   // return smt;
   
-  //const localStorage = new LocalStorageDB(str2Bytes(''));
-  const inMemoryDb = new InMemoryDB(str2Bytes(''));
-  const smt = new MerkleTreeIden3 (inMemoryDb, true, 20);
-  for (const event of events) {
-    await smt.add(BigInt(event.index), BigInt(event.maskedCommitment))
-  }
-  const root = await smt.root();
-  console.log("Root2: ", root.string())  
+  // const localStorage = new LocalStorageDB(str2Bytes(''));
+  // const inMemoryDb = new InMemoryDB(str2Bytes(''));
+  // const smt = new MerkleTreeIden3 (inMemoryDb, true, 20);
+  // for (const event of events) {
+  //   await smt.add(BigInt(event.index), BigInt(event.maskedCommitment))
+  // }
+  // const root = await smt.root();
+  // console.log("Root2: ", BigInt(root.string()))  
   //return smt;
 }
 

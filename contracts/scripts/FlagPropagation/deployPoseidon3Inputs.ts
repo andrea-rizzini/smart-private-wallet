@@ -10,7 +10,9 @@ async function main() {
 
   let poseidon;
   let bytecode = createCode(3); // npinputs
-  let abi = generateABI(4); // npinputs
+  let abi = generateABI(3); // npinputs
+
+  console.log(abi)
 
   const signers = await hre.ethers.getSigners();
   const faucet = signers[2]; 

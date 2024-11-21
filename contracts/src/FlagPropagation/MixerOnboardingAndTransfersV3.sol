@@ -9,13 +9,14 @@ import "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
 import "../Transfers/MerkleTreeWithHistory.sol";
 import { IVerifier } from "../Transfers/interfaces/IVerifier.sol";
 import { IVerifierMaskedCommitment } from "./IVerifierMaskedCommitment.sol";
+import {PoseidonUnit2L, PoseidonUnit3L} from "@iden3/contracts/lib/Poseidon.sol";
 
-interface IHasherSMT2Inputs {
-  function poseidon2(bytes32[2] calldata inputs) external view returns (bytes32);
+interface IHasherSMT {
+  function poseidon(bytes32[2] calldata inputs) external view returns (bytes32);
 }
 
 interface IHasherSMT3Inputs {
-  function poseidon3(bytes32[3] calldata inputs) external view returns (bytes32);
+  function poseidon(bytes32[3] calldata inputs) external view returns (bytes32); // this function must be named "poseidon"
 }
 
 contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
@@ -23,7 +24,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
   using SafeERC20 for IERC20;
   using SparseMerkleTree for SparseMerkleTree.Bytes32SMT;
 
-  IHasherSMT2Inputs public hasherSMT2Inputs;
+  IHasherSMT public hasherSMT;
   IHasherSMT3Inputs public hasherSMT3Inputs;
   IERC20 public token;
 
@@ -85,7 +86,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     verifier2 = _verifier2;
     verifier16 = _verifier16;
     verifierMaskedCommitment = _verifierMaskedCommitment;
-    hasherSMT2Inputs = IHasherSMT2Inputs(_hasherTransactions);
+    hasherSMT = IHasherSMT(_hasherTransactions);
     hasherSMT3Inputs = IHasherSMT3Inputs(_hasherPoseidon3Inputs);
     token = _token;
     authority = _authority;
@@ -95,16 +96,35 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
   }
 
   function _hash2(bytes32 element1_, bytes32 element2_) internal view returns (bytes32) {
-    return bytes32(hasherSMT2Inputs.poseidon2([element1_, element2_]));
+    return bytes32(hasherSMT.poseidon([element1_, element2_]));
   }
 
-  function _hash3( // we never use this but is required in the smt initialization
+  function _hash3(
       bytes32 element1_,
       bytes32 element2_,
       bytes32 element3_
   ) internal view returns (bytes32) {
-      return bytes32(hasherSMT3Inputs.poseidon3([element1_, element2_, element3_]));
+      //return bytes32(hasherSMT.poseidon([element1_, element2_]));
+      return bytes32(hasherSMT3Inputs.poseidon([element1_, element2_, element3_]));
   }
+
+  // function _hash2(bytes32 element1_, bytes32 element2_) internal pure returns (bytes32) {
+  //   return bytes32(PoseidonUnit2L.poseidon([uint256(element1_), uint256(element2_)]));
+  // }
+
+  // function _hash3(
+  //   bytes32 element1_,
+  //   bytes32 element2_,
+  //   bytes32 element3_
+  // ) internal pure returns (bytes32) {
+  //     return
+  //       bytes32(
+  //           PoseidonUnit3L.poseidon(
+  //               [uint256(element1_), uint256(element2_), uint256(element3_)]
+  //           )
+  //       );
+  // }
+
 
   function getRootSMT() public view returns (bytes32) {
     return statusTree.getRoot();
@@ -117,7 +137,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
   ) external onlyAuthority {
     require(verifyMaskProof(maskProof, maskedCommitment), "Invalid mask proof");
     
-    statusTree.add(bytes32(index), maskedCommitment); // second parameter for padding
+    statusTree.add(bytes32(index), maskedCommitment);
     bytes32 newRoot = statusTree.getRoot();
 
     emit StatusFlagged(
