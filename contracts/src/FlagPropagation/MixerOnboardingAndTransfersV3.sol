@@ -104,7 +104,6 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
       bytes32 element2_,
       bytes32 element3_
   ) internal view returns (bytes32) {
-      //return bytes32(hasherSMT.poseidon([element1_, element2_]));
       return bytes32(hasherSMT3Inputs.poseidon([element1_, element2_, element3_]));
   }
 

@@ -297,6 +297,8 @@ async function buildSMTree({ events }: { events: StatusTreeEvents }) /* SMT */ /
     smt_.add(BigInt(event.index), BigInt(event.maskedCommitment))
   }
   console.log("Root: ", smt_.root)
+
+  console.log(`Proof for 3: `, smt_.createProof(BigInt(3)))
   
   // return smt;
   
