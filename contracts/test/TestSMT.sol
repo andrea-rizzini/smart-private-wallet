@@ -22,7 +22,7 @@ contract TestSMT {
     IHasherSMT public hasherSMT;
     IHasherSMT3Inputs public hasherSMT3Inputs;
 
-    uint32 _merkleTreesHeight = 32;
+    uint32 _merkleTreesHeight = 20;
 
     constructor(IHasherSMT _hasherSMT, IHasherSMT3Inputs _hasherSMT3Inputs) {
         hasherSMT = _hasherSMT;

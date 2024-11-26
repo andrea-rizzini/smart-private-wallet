@@ -9,7 +9,7 @@ import "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
 import "../Transfers/MerkleTreeWithHistory.sol";
 import { IVerifier } from "../Transfers/interfaces/IVerifier.sol";
 import { IVerifierMaskedCommitment } from "./IVerifierMaskedCommitment.sol";
-import {PoseidonUnit2L, PoseidonUnit3L} from "@iden3/contracts/lib/Poseidon.sol";
+// import {PoseidonUnit2L, PoseidonUnit3L} from "@iden3/contracts/lib/Poseidon.sol";
 
 interface IHasherSMT {
   function poseidon(bytes32[2] calldata inputs) external view returns (bytes32);
