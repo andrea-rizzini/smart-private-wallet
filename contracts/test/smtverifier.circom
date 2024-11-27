@@ -8,7 +8,7 @@ include "../../node_modules/circomlib/circuits/smt/smtverifiersm.circom";
 include "../../node_modules/circomlib/circuits/smt/smthash_poseidon.circom";
 
 template SMTVerifier(nLevels) {
-    signal input enabled;
+    signal private input enabled;
     signal input root;
     signal private input siblings[nLevels];
     signal private input oldKey;

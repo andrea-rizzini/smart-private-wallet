@@ -1,5 +1,5 @@
-1,1,0,main.enabled
-2,2,0,main.root
+1,2,0,main.enabled
+2,1,0,main.root
 3,3,0,main.siblings[0]
 4,4,0,main.siblings[1]
 5,5,0,main.siblings[2]
@@ -4462,7 +4462,7 @@
 4462,1164,310,main.n2bNew.n2b.out[251]
 4463,1165,310,main.n2bNew.n2b.out[252]
 4464,1166,310,main.n2bNew.n2b.out[253]
-4465,1,311,main.smtLevIns.enabled
+4465,2,311,main.smtLevIns.enabled
 4466,3,311,main.smtLevIns.siblings[0]
 4467,4,311,main.smtLevIns.siblings[1]
 4468,5,311,main.smtLevIns.siblings[2]
@@ -4585,7 +4585,7 @@
 4585,25,332,main.sm[0].is0
 4586,5704,332,main.sm[0].levIns
 4587,28,332,main.sm[0].fnc
-4588,1,332,main.sm[0].prev_top
+4588,2,332,main.sm[0].prev_top
 4589,10954,332,main.sm[0].prev_i0
 4590,10955,332,main.sm[0].prev_iold
 4591,10956,332,main.sm[0].prev_inew
@@ -20031,7 +20031,7 @@
 20031,28,3254,main.keysOk.in[0]
 20032,10948,3254,main.keysOk.in[1]
 20033,5003,3254,main.keysOk.in[2]
-20034,1,3254,main.keysOk.in[3]
+20034,2,3254,main.keysOk.in[3]
 20035,10949,3254,main.keysOk.out
 20036,5005,3255,main.keysOk.and2.a
 20037,5006,3255,main.keysOk.and2.b
@@ -20043,14 +20043,14 @@
 20043,10948,3258,main.keysOk.ands[0].and1.b
 20044,5005,3258,main.keysOk.ands[0].and1.out
 20045,5003,3257,main.keysOk.ands[1].in[0]
-20046,1,3257,main.keysOk.ands[1].in[1]
+20046,2,3257,main.keysOk.ands[1].in[1]
 20047,5006,3257,main.keysOk.ands[1].out
 20048,5003,3259,main.keysOk.ands[1].and1.a
-20049,1,3259,main.keysOk.ands[1].and1.b
+20049,2,3259,main.keysOk.ands[1].and1.b
 20050,5006,3259,main.keysOk.ands[1].and1.out
-20051,1,3260,main.checkRoot.enabled
+20051,2,3260,main.checkRoot.enabled
 20052,10689,3260,main.checkRoot.in[0]
-20053,2,3260,main.checkRoot.in[1]
+20053,1,3260,main.checkRoot.in[1]
 20054,5007,3261,main.checkRoot.isz.in
 20055,5008,3261,main.checkRoot.isz.out
 20056,5009,3261,main.checkRoot.isz.inv
