@@ -41,7 +41,7 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
 
       for (let i = 0; i < buf.length; i += chainStateSize) {
         const index = BigInt('0x' + buf.slice(i, i + 31).toString('hex'));
-        const maskedCommitment = BigInt('0x' + buf.slice(i + 31, chainStateSize+1).toString('hex'));
+        const maskedCommitment = BigInt('0x' + buf.slice(i + 31, i+chainStateSize).toString('hex'));
         // console.log("Index:", buf.slice(i, i + 31).toString('hex'))
         // console.log("Masked:", '0x'+buf.slice(i + 31, chainStateSize).toString('hex'))
         const chainState: Chainstate = { index, maskedCommitment: maskedCommitment }
@@ -98,9 +98,9 @@ export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSende
       const utxo = Utxo.decrypt(senderKeyPair, encryptedOutput, index);
       const buf = senderKeyPair.decrypt(event.args[3]) 
 
-      for (let i = 0; i < buf.length - 96; i += chainStateSize) {
+      for (let i = 0; i < buf.length; i += chainStateSize) {
         const index = BigInt('0x' + buf.slice(i, i + 31).toString('hex'));
-        const maskedCommitment = BigInt('0x' + buf.slice(i + 31, chainStateSize).toString('hex'));
+        const maskedCommitment = BigInt('0x' + buf.slice(i + 31, i+chainStateSize).toString('hex'));
         // console.log(buf.slice(i + 31, i + chainStateSize).toString('utf-8'))
         const chainState: Chainstate = { index, maskedCommitment: maskedCommitment }
         chainStates.push(chainState)
