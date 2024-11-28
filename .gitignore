@@ -44,4 +44,6 @@ apps/version3_flag_propagation/links/linkNote.json
 # circuits files
 /home/andrea/Desktop/smart-private-wallet/circuits/artifacts/circuits/ptau18
 
+/circuits/artifacts/circuits/*
+
 /circuits/artifacts/circuits/*contracts/test/artifacts/ptau18
