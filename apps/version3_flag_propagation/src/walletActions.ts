@@ -134,9 +134,9 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     if (result) {
         const signers = await hre.ethers.getSigners();
-        const { args, extData } = result;
+        const { args, argsSMT, extData } = result;
         try {
-            await call_userop("contracts/src/FlagPropagation/RelayerForV3.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
+            await call_userop("contracts/src/FlagPropagation/RelayerForV3.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, argsSMT, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -275,9 +275,9 @@ export async function send(username: string, account: string, initCode: string, 
 
     if (result) {
         const signers = await hre.ethers.getSigners();
-        const { args, extData } = result;
+        const { args, argsSMT, extData } = result;
         try {
-            await call_userop("contracts/src/FlagPropagation/RelayerForV3.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
+            await call_userop("contracts/src/FlagPropagation/RelayerForV3.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, argsSMT, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -462,12 +462,12 @@ export async function withdraw(username: string, account: string, initCode: stri
     const result = await prepareWithdrawal(choiceAmount, username, account, addressWithdrawal, signer);
 
     if (result) {
-        const { args, extData } = result;
+        const { args, argsSMT, extData } = result;
         try {
 
             console.log ('\nChecking Proof of Innocence ...');
             
-            await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, extData], account, initCode, signer);
+            await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, argsSMT, extData], account, initCode, signer);
 
             console.log(`\nWithdrawal of ${choiceAmount} USDC completed succesfully!\n`);
         }

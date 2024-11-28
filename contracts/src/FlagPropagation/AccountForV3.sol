@@ -28,8 +28,13 @@ interface IMixerOnboardingAndTransfers {
         bytes32 extDataHash;
     }
 
+    struct ProofSMT {
+        bytes[] proofs;
+        bytes32 root;
+    }
+
     function deposit(Proof memory _proofArgs, ExtData memory _extData) external;
-    function withdraw(Proof memory _args, ExtData memory _extData) external;
+    function withdraw(Proof memory _args, ProofSMT memory _argsSMT, ExtData memory _extData) external;
     
 } 
 
@@ -108,9 +113,10 @@ contract Account is IAccount {
     function callWithdraw(
         address poolAddress,
         IMixerOnboardingAndTransfers.Proof memory _proofArgs,
+        IMixerOnboardingAndTransfers.ProofSMT memory _argsSMT,
         IMixerOnboardingAndTransfers.ExtData memory _extData
     ) external payable {
-        IMixerOnboardingAndTransfers(poolAddress).withdraw(_proofArgs, _extData);
+        IMixerOnboardingAndTransfers(poolAddress).withdraw(_proofArgs, _argsSMT, _extData);
     }
 
 }

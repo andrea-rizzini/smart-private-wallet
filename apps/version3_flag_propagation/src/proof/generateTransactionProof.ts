@@ -2,7 +2,7 @@ import hre from "hardhat";
 import fs from 'fs';
 import path from 'path';
 
-import { ArgsProof, BaseUtxo, Chainstate, ChainStates, Params, ProofParams } from "../pool/types";
+import { ArgsProof, ArgsSMT, BaseUtxo, Chainstate, ChainStates, Params, ProofParams } from "../pool/types";
 import { BytesLike } from '@ethersproject/bytes'
 import { getIdAndMaskedCommitmentByDepositorAddress, insertMaskedCommitment } from "../../database/database";
 import { poseidonHash } from "../utils/hashFunctions";
@@ -14,6 +14,13 @@ import { toFixedHex } from "../utils/toHex";
 const ADDRESS_BYTES_LENGTH = 20
 const FIELD_SIZE = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617')
 const MERKLE_TREE_HEIGHT = 20;
+const SMT_HEIGHT = 20;
+
+function padSiblings(siblings: bigint[], height: number): bigint[] {
+  return siblings.length < height
+      ? siblings.concat(Array(height - siblings.length).fill(0n))
+      : siblings;
+}
 
 function shuffle(array: BaseUtxo[]) {
     let currentIndex = array.length
@@ -52,7 +59,7 @@ function getExtDataHash({ recipient, extAmount, encryptedOutput1, encryptedOutpu
   }
 
 // to be moved to the proof folder
-export async function getProof({ inputs, outputs, tree, extAmount, recipient, address }: ProofParams) {
+export async function getProof({ inputs, outputs, tree, smt, extAmount, recipient, address }: ProofParams) {
   inputs = shuffle(inputs)
   outputs = shuffle(outputs)
 
@@ -68,7 +75,6 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient, ad
       for (const chainState of input.chainStates as ChainStates) {
 
         // here is the case there are multiple utxo from Alice's deposits, each one will have the same masked commitment (the one of the first deposit)
-        // if transfer or withdrawal, this if will be skipped since it not enters even the first check
         if (!statusToEncrypt.includes({index: chainState.index, maskedCommitment: chainState.maskedCommitment})) {
           statusToEncrypt.push({index: chainState.index, maskedCommitment: chainState.maskedCommitment});
         }
@@ -128,6 +134,7 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient, ad
     else { // use the first masked commitment also for other deposits
 
       // const masked_commitment = toFixedHex(tuple.maskedCommitment);
+      // @ts-ignore
       const chainState: Chainstate = { index: BigInt(tuple.id), maskedCommitment: BigInt(tuple.maskedCommitment) };
 
       const bytes = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 32)]);
@@ -193,7 +200,7 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient, ad
   let zKeyBuffer = fs.readFileSync(filePath);
   
   // @ts-ignore
-  const proof = await prove(input, wasmBuffer, zKeyBuffer)
+  const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer)
 
   const args: ArgsProof = {
     proof,
@@ -204,15 +211,52 @@ export async function getProof({ inputs, outputs, tree, extAmount, recipient, ad
     extDataHash: toFixedHex(extDataHash),
   }
 
+  // proofs for each masked commitment
+  fileName = `non_membership.wasm`;
+  filePath = path.join(dirPath, fileName);
+  wasmBuffer = fs.readFileSync(filePath);
+  
+  fileName = `non_membership.zkey`;
+  filePath = path.join(dirPath, fileName);
+  zKeyBuffer = fs.readFileSync(filePath);
+
+  const proofs = []
+  for (const status of statusToEncrypt) {
+    const proof_ = smt.createProof(status.index)
+    proof_.siblings = padSiblings(proof_.siblings, SMT_HEIGHT)
+
+    const input = {
+      enabled: 1,
+      root: smt.root,
+      siblings: proof_.siblings,
+      oldKey: 0,
+      oldValue: 0,
+      isOld0: 1,
+      key: status.index,
+      value: 0,
+      fnc: 1
+    }
+
+    // @ts-ignore
+    const { proof } = await prove(input, wasmBuffer, zKeyBuffer)
+    proofs.push(proof)
+  }
+
+  const argsSMT: ArgsSMT = {
+    proofs,
+    root: toFixedHex(smt.root),
+  }
+
   return {
     extData,
     proof,
     args,
+    argsSMT,
   }
 
 }
 
-export async function getProofOnboarding({ inputs, outputs, tree, extAmount, recipient, addressSender}: ProofParams) {
+export async function getProofOnboarding({ inputs, outputs, tree, smt, extAmount, recipient, addressSender}: ProofParams) {
   inputs = shuffle(inputs)
   outputs = shuffle(outputs)
 
@@ -228,7 +272,6 @@ export async function getProofOnboarding({ inputs, outputs, tree, extAmount, rec
       for (const chainState of input.chainStates as ChainStates) {
 
         // here is the case there are multiple utxo from Alice's deposits, each one will have the same masked commitment (the one of the first deposit)
-        // if transfer or withdrawal, this if will be skipped since it not enters even the first check
         if (!statusToEncrypt.includes({index: chainState.index, maskedCommitment: chainState.maskedCommitment})) {
           statusToEncrypt.push({index: chainState.index, maskedCommitment: chainState.maskedCommitment});
         }
@@ -265,7 +308,7 @@ export async function getProofOnboarding({ inputs, outputs, tree, extAmount, rec
         const commitment_output_one = outputs[0].getCommitment();
         const blinding_output_one = randomBN();
         const masked_commitment_one = poseidonHash([commitment_output_one, blinding_output_one]);
-        const index = insertMaskedCommitment(address as string, commitment_output_one.toString(), blinding_output_one.toString(), toFixedHex(masked_commitment_one));
+        const index = insertMaskedCommitment(addressSender as string, commitment_output_one.toString(), blinding_output_one.toString(), toFixedHex(masked_commitment_one));
         const chainState: Chainstate = { index: BigInt(index), maskedCommitment: masked_commitment_one };
         const bytes = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 31)]); // if we encrypt only the index, are we vulnerable to brute force attacks?
         encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
@@ -275,7 +318,7 @@ export async function getProofOnboarding({ inputs, outputs, tree, extAmount, rec
         const commitment_output_two = outputs[1].getCommitment();
         const blinding_output_two = randomBN();
         const masked_commitment_two = poseidonHash([commitment_output_two, blinding_output_two]);
-        const index = insertMaskedCommitment(address as string, commitment_output_two.toString(), blinding_output_two.toString(), toFixedHex(masked_commitment_two));
+        const index = insertMaskedCommitment(addressSender as string, commitment_output_two.toString(), blinding_output_two.toString(), toFixedHex(masked_commitment_two));
         const chainState: Chainstate = { index: BigInt(index), maskedCommitment: masked_commitment_two };
         const bytes2 = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 31)]);
         encryptedChainState2 = outputs[1].keypair.encrypt(bytes2);
@@ -355,7 +398,7 @@ export async function getProofOnboarding({ inputs, outputs, tree, extAmount, rec
   let zKeyBuffer = fs.readFileSync(filePath);
   
   // @ts-ignore
-  const proof = await prove(input, wasmBuffer, zKeyBuffer)
+  const { proof, publicInput } = await prove(input, wasmBuffer, zKeyBuffer)
 
   const args: ArgsProof = {
     proof,
@@ -366,9 +409,46 @@ export async function getProofOnboarding({ inputs, outputs, tree, extAmount, rec
     extDataHash: toFixedHex(extDataHash),
   }
 
+  // proofs for each masked commitment
+  fileName = `non_membership.wasm`;
+  filePath = path.join(dirPath, fileName);
+  wasmBuffer = fs.readFileSync(filePath);
+  
+  fileName = `non_membership.zkey`;
+  filePath = path.join(dirPath, fileName);
+  zKeyBuffer = fs.readFileSync(filePath);
+
+  const proofs: BytesLike[] = []
+  for (const status of statusToEncrypt) {
+    const proof_ = smt.createProof(status.index)
+    proof_.siblings = padSiblings(proof_.siblings, SMT_HEIGHT)
+
+    const input = {
+      enabled: 1,
+      root: smt.root,
+      siblings: proof_.siblings,
+      oldKey: 0,
+      oldValue: 0,
+      isOld0: 1,
+      key: status.index,
+      value: 0,
+      fnc: 1
+    }
+
+    // @ts-ignore
+    const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer)
+    proofs.push(proof)
+  }
+
+  const argsSMT: ArgsSMT = {
+    proofs: proofs,
+    root: toFixedHex(smt.root),
+  }
+
   return {
     extData,
     proof,
     args,
+    argsSMT,
   }
 }

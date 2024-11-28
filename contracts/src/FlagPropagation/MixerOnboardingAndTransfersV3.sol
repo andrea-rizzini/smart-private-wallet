@@ -9,6 +9,7 @@ import "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
 import "../Transfers/MerkleTreeWithHistory.sol";
 import { IVerifier } from "../Transfers/interfaces/IVerifier.sol";
 import { IVerifierMaskedCommitment } from "./IVerifierMaskedCommitment.sol";
+import { IVerifierNonMembership } from "../FlagPropagation/IVerifierNonMembership.sol";
 // import {PoseidonUnit2L, PoseidonUnit3L} from "@iden3/contracts/lib/Poseidon.sol";
 
 interface IHasherSMT {
@@ -37,6 +38,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
 
   IVerifierMaskedCommitment public immutable verifierMaskedCommitment;
 
+  IVerifierNonMembership public immutable verifierNonMembership;
+
   //MerkleTreeWithHistory public statusTree;
   SparseMerkleTree.Bytes32SMT internal statusTree;
 
@@ -60,6 +63,11 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     bytes32 extDataHash;
   }
 
+  struct ProofSMT {
+    bytes[] proofs;
+    bytes32 root;
+  }
+
   // Events for transactions
 
   event NewCommitmentV2(bytes32 commitment, uint256 index, bytes encryptedOutput, bytes encryptedChainState);
@@ -76,6 +84,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     IVerifier _verifier2,
     IVerifier _verifier16,
     IVerifierMaskedCommitment _verifierMaskedCommitment,
+    IVerifierNonMembership _verifierNonMembership,
     address _hasherTransactions,
     address _hasherPoseidon3Inputs,
     IERC20 _token,
@@ -86,6 +95,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     verifier2 = _verifier2;
     verifier16 = _verifier16;
     verifierMaskedCommitment = _verifierMaskedCommitment;
+    verifierNonMembership = _verifierNonMembership;
     hasherSMT = IHasherSMT(_hasherTransactions);
     hasherSMT3Inputs = IHasherSMT3Inputs(_hasherPoseidon3Inputs);
     token = _token;
@@ -177,19 +187,21 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     token.safeTransferFrom(msg.sender, address(this), uint256(_extData.extAmount));
   }
 
-  function transact(Proof memory _args, ExtData memory _extData) external payable { 
+  function transact(Proof memory _args, ProofSMT memory _argsSMT, ExtData memory _extData) external payable { 
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
-    _transact(_args, _extData);
+    _transact(_args, _argsSMT, _extData);
   }
 
-  function _transact(Proof memory _args, ExtData memory _extData) internal nonReentrant {
+  function _transact(Proof memory _args, ProofSMT memory _argsSMT, ExtData memory _extData) internal nonReentrant {
     require(isKnownRoot_(_args.root), "Invalid merkle root");
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
     }
     require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
+
+    require(verifyNonMembershipProofs(_argsSMT));
     require(verifyProof(_args), "Invalid transaction proof");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
@@ -205,20 +217,22 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
   }
 
   // function that allows transfers
-  function withdraw(Proof memory _args, ExtData memory _extData) external payable { 
+  function withdraw(Proof memory _args, ProofSMT memory _argsSMT, ExtData memory _extData) external payable { 
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
-    _withdraw(_args, _extData); 
+    _withdraw(_args, _argsSMT, _extData); 
   }
 
-  function _withdraw(Proof memory _args, ExtData memory _extData) internal nonReentrant {
+  function _withdraw(Proof memory _args, ProofSMT memory _argsSMT, ExtData memory _extData) internal nonReentrant {
     require(isKnownRoot_(_args.root), "Invalid merkle root");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
     }
     require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
+
+    require(verifyNonMembershipProofs(_argsSMT));
     require(verifyProof(_args), "Invalid transaction proof");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
@@ -293,4 +307,20 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
   function verifyMaskProof(bytes memory maskProof, bytes32 maskedCommitment) public view returns (bool) {
     return verifierMaskedCommitment.verifyProofMaskCommitment(maskProof, [uint256(maskedCommitment)]);
   }
+
+function verifyNonMembershipProofs(ProofSMT memory _argsSMT) public view returns (bool) {
+
+  for (uint256 i = 0; i < _argsSMT.proofs.length; i++) {
+    bool isValid = verifierNonMembership.verifyProofNonMembership(
+        _argsSMT.proofs[i],
+        [uint256(_argsSMT.root)] 
+    );
+
+    if (!isValid) {
+        return false;
+    }
+  }
+
+  return true;
+}
 }
