@@ -32,7 +32,9 @@ async function fetchStatusTreeEvents(): Promise<StatusTreeEvents> {
     statusTreeEvents.push({
       blockNumber: event.blockNumber,
       transactionHash: event.transactionHash,
+      // @ts-ignore
       index: Number(event.args[0]),
+      // @ts-ignore
       maskedCommitment: event.args[1]
     })
   });
