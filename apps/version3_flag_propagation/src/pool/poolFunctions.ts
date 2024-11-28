@@ -76,7 +76,7 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
 
 export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){ 
 
-  const chainStateSize = 98;
+  const chainStateSize = 63; 
   const chainStates : Chainstate[] = []
 
   // 1) fetch all nullifiers
