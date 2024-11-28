@@ -2,6 +2,7 @@
 This project comprises two demos, originally there were three but the one showing the onboarding feature has been removed for redundancy, since the feature is present in both ```version2_private_transfers``` and ```version2_private_transfers_POI```
 1) ```version2_private_transfers```, which allows private transfers and private onboarding in Ethereum.
 2) ```version2_private_transfers_POI```, which allows private transfers and private onboarding in Ethereum as ```version2_private_transfers```, but the onboarding happens directly inside the mixer, without the need to shield the fund once redeemed. Also a Proof of Innocence check is present.
+3) ```version3_flag_propagation```, which enables a compliance mechanism with backtracking of tainted UTXOs. For more details, check the README inside the ```apps/version3_flag_propagation``` folder.
 
 # How version2_POI works:
 This version relies on a Mixer that is used both for Onboarding and Transfers, both are UTXO-based with UTXOs being appended on the same Merkle Tree.  
