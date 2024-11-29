@@ -10,6 +10,6 @@ export function poseidonHash2(a: string, b: string) {
     return poseidonHash([a, b])
 }
 
-export function posidonHash3(a: string, b: string, c: string) {
+export function poseidonHash3(a: string, b: string, c: string) {
     return poseidonHash([a, b, c])
 }

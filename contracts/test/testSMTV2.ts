@@ -3,25 +3,24 @@ import fs from "fs";
 import path from "path";
 
 // @ts-ignore
+import * as circomlib from 'circomlib'
+
+// @ts-ignore
 import * as snarkjs from 'snarkjs'
 
-import { newMemEmptyTrie } from "circomlibjs";
+import { BigNumberish } from "circomlibjs";
+import { buildPoseidon, buildPoseidonOpt, newMemEmptyTrie } from "circomlibjs";
 import { prove, proveRaw } from "../../apps/version3_flag_propagation/src/proof/prover";
-import { poseidonHash, poseidonHash2, posidonHash3 } from "../../apps/version3_flag_propagation/src/utils/hashFunctions";
 
 import { SMT } from "@zk-kit/smt";
 import { SMT as SMT_V2 } from "circomlibjs";
 import { StatusTreeEvents } from "../../apps/version3_flag_propagation/src/pool/types";
 import { toFixedHex } from "../../apps/version3_flag_propagation/src/utils/toHex";
 
+var ffjavascript = require('ffjavascript');
+
 const MIXER_ONBOARDING_AND_TRANSFERS_V3 = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3 || '';
 const TEST_SMT = process.env.TEST_SMT || '';
-
-function padSiblings(siblings: bigint[], height: number): bigint[] {
-  return siblings.length < height
-      ? siblings.concat(Array(height - siblings.length).fill(0n))
-      : siblings;
-}
 
 async function fetchStatusTreeEvents(): Promise<StatusTreeEvents> {
   const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
@@ -41,38 +40,89 @@ async function fetchStatusTreeEvents(): Promise<StatusTreeEvents> {
   return statusTreeEvents
 }
 
-async function buildSMTree({ events }: { events: StatusTreeEvents }): Promise<SMT>  /*MerkleTreeIden3*/ {
-  const smt_ = new SMT(poseidonHash, true);
+// async function getHashes() {
+//     const bn128 = await ffjavascript.getCurveFromName("bn128", true);
+//     const poseidon = await buildPoseidonOpt();
+//     return {
+//         hash0: function (left, right) {
+//             return poseidon([left, right]);
+//         },
+//         hash1: function(key, value) {
+//             return poseidon([key, value, bn128.Fr.one]);
+//         },
+//         F: bn128.Fr
+//     }
+// }
+
+async function buildSMTreeV2({ events }: { events: StatusTreeEvents }): Promise<SMT_V2> {
+
+  const tree = await newMemEmptyTrie();
+
   // for (const event of events) {
-  //   smt_.add(BigInt(event.index), BigInt(event.maskedCommitment))
+  //   tree.insert(event.index, event.maskedCommitment)
   // }
 
-  smt_.add(BigInt(1), BigInt(10))
-  smt_.add(BigInt(3), BigInt(5))
-  smt_.add(BigInt(25), BigInt(15))
+  await tree.insert(3, 5);
+  await tree.insert(1, 10);
+  await tree.insert(25, 15);
 
-  console.log("Root: ", smt_.root)
+  console.log("Root: ", tree.F.toObject(tree.root))
 
-  return smt_
+  return tree
+
+}
+
+async function getInputInclusion(tree: SMT_V2, _key: number) {
+    const key = tree.F.e(_key);
+    const res = await tree.find(key);
+
+    let siblings = res.siblings;
+    for (let i=0; i<siblings.length; i++) siblings[i] = tree.F.toObject(siblings[i]);
+    while (siblings.length<10) siblings.push(0);
+
+    const input = {
+        enabled: 1,
+        fnc: 0,
+        root: tree.F.toObject(tree.root),
+        siblings: siblings,
+        oldKey: 0,
+        oldValue: 0,
+        isOld0: 0,
+        key: tree.F.toObject(key),
+        value: tree.F.toObject(res.foundValue)
+    };
+
+    return input;
+
+}
+
+async function getInputExclusion(tree: SMT_V2, _key: number) {
+    const key = tree.F.e(_key);
+    const res = await tree.find(key);
+
+    let siblings = res.siblings;
+    for (let i=0; i<siblings.length; i++) siblings[i] = tree.F.toObject(siblings[i]);
+    while (siblings.length<10) siblings.push(0);
+
+    const input = {
+        enabled: 1,
+        fnc: 1,
+        root: tree.F.toObject(tree.root),
+        siblings: siblings,
+        oldKey: res.isOld0 ? 0 : tree.F.toObject(res.notFoundKey),
+        oldValue: res.isOld0 ? 0 : tree.F.toObject(res.notFoundValue),
+        isOld0: res.isOld0 ? 1 : 0,
+        key: tree.F.toObject(key),
+        value: 0
+    };
+
+    return input;
 
 }
 
 async function main() {
   const eventsStatusTree = await fetchStatusTreeEvents()
-  const smt = await buildSMTree({ events: eventsStatusTree })
-
-  const proof_for_1 = smt.createProof(BigInt(1));
-  const proof_for_3 = smt.createProof(BigInt(3));
-  const proof_for_25 = smt.createProof(BigInt(25));
-  const proof_for_5 = smt.createProof(BigInt(5));
-
-  proof_for_1.siblings = padSiblings(proof_for_1.siblings as bigint[], 20);
-  proof_for_3.siblings = padSiblings(proof_for_3.siblings as bigint[], 20);
-  proof_for_25.siblings = padSiblings(proof_for_25.siblings as bigint[], 20);
-  proof_for_5.siblings = padSiblings(proof_for_5.siblings as bigint[], 20);
-
-  // console.log(`Proof for 3: `, proof_for_3)
-  // console.log(`Proof for 1: `, proof_for_1)
+  const smt = await buildSMTreeV2({ events: eventsStatusTree })
 
   const signers = await hre.ethers.getSigners();
   const contract = await hre.ethers.getContractAt("TestSMT", TEST_SMT, signers[2]);
@@ -95,56 +145,16 @@ async function main() {
   // const node1 = await contract.getNodeByKey(toFixedHex(3))
   // console.log(`Node for 3: `, node1)
 
-  // const digest = posidonHash3("3", "5", "1").toString()
-  // console.log("Digest: ", digest)
-
   // prepare the input for the circuit
 
   // correct proof, non membership of 5
-  // const input = {
-  //   enabled: 1,
-  //   root: smt.root,
-  //   siblings: proof_for_5.siblings,
-  //   oldKey: 0,
-  //   oldValue: 0,
-  //   isOld0: 1,
-  //   key: 5,
-  //   value: 0,
-  //   fnc: 1
-  // }
+  const input = getInputExclusion(smt, 5);
 
-  const input = {
-    root: smt.root,
-    siblings: proof_for_5.siblings,
-    key: 5,
-    value: 0,
-    auxKey: 0,
-    auxValue: 0,
-    auxIsEmpty: 1,
-    isExclusion: 1
-  }
+  // correct proof, membership of 1 
+  // const input = getInputInclusion(smt, 1);
 
-  // const input = {
-  //   root: smt.root,
-  //   siblings: proof_for_1.siblings,
-  //   key: 1,
-  //   value: 10,
-  //   auxKey: 0,
-  //   auxValue: 0,
-  //   auxIsEmpty: 0,
-  //   isExclusion: 0
-  // }
-
-  // const input = {
-  //   root: smt.root,
-  //   siblings: proof_for_1.siblings,
-  //   key: 1,
-  //   value: 0,
-  //   auxKey: 0,
-  //   auxValue: 0,
-  //   auxIsEmpty: 0,
-  //   isExclusion: 1
-  // }
+  // uncorrect proof, non membership of 1 that is actually in the tree
+  // const input = getInputExclusion(smt, 1);
 
   // read the wasm file
   let dirPath = path.join(__dirname, `./artifacts/`);

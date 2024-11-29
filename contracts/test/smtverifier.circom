@@ -1,107 +1,269 @@
+include "../../node_modules/circomlib/circuits/poseidon.circom";
+include "../../node_modules/circomlib/circuits/switcher.circom";
 include "../../node_modules/circomlib/circuits/gates.circom";
 include "../../node_modules/circomlib/circuits/bitify.circom";
-include "../../node_modules/circomlib/circuits/comparators.circom";
-include "../../node_modules/circomlib/circuits/switcher.circom";
-include "../../node_modules/circomlib/circuits/smt/smtlevins.circom";
-include "../../node_modules/circomlib/circuits/smt/smtverifierlevel.circom";
-include "../../node_modules/circomlib/circuits/smt/smtverifiersm.circom";
-include "../../node_modules/circomlib/circuits/smt/smthash_poseidon.circom";
 
-template SMTVerifier(nLevels) {
-    signal private input enabled;
+function inverse(a) {
+    return 1 - a;
+}
+
+/*
+ * Hash2 = Poseidon(H_L | H_R)
+ */
+template Hash2() {
+    signal input a;
+    signal input b;
+
+    signal output out;
+
+    component h = Poseidon(2);
+    h.inputs[0] <== a;
+    h.inputs[1] <== b;
+
+    out <== h.out;
+}
+
+/*
+ * Hash2 = Poseidon(key | value | 1)
+ * 1 is added to the end of the leaf value to make the hash unique
+ */
+template Hash3() {
+    signal input a;
+    signal input b;
+    signal input c;
+
+    signal output out;
+
+    c === 1;
+
+    component h = Poseidon(3);
+    h.inputs[0] <== a;
+    h.inputs[1] <== b;
+    h.inputs[2] <== c;
+
+    out <== h.out;
+}
+
+/*
+* Returns an array of bits, where the index of `1` bit 
+* is the current depth of the tree
+*/
+template DepthDeterminer(depth) {
+    assert(depth > 1);
+
+    signal input siblings[depth];
+    signal output desiredDepth[depth];
+
+    signal done[depth - 1];
+    
+    component isZero[depth];
+
+    for (var i = 0; i < depth; i++) {
+        isZero[i] = IsZero();
+        isZero[i].in <== siblings[i];
+    }
+
+    // The last sibling is always zero due to the way the proof is constructed
+    isZero[depth - 1].out === 1;
+
+    // If there is a branch on the previous depth, then the current depth is the desired one
+    desiredDepth[depth - 1] <== inverse(isZero[depth - 2].out);
+    done[depth - 2] <== desiredDepth[depth - 1];
+
+    // desiredDepth will be `1` the first time we encounter non-zero branch on the previous depth
+    for (var i = depth - 2; i > 0; i--) {
+        desiredDepth[i] <== inverse(done[i]) * inverse(isZero[i - 1].out);
+        done[i - 1] <== desiredDepth[i] + done[i];
+    }
+
+    desiredDepth[0] <== inverse(done[0]);
+}
+
+/*
+ * Determines the type of the node
+ */
+template NodeTypeDeterminer() {
+    signal input auxIsEmpty;
+    // 1 if the node is at the desired depth, 0 otherwise
+    signal input isDesiredDepth;
+    signal input isExclusion;
+
+    signal input previousMiddle;
+    signal input previousEmpty;
+    signal input previousAuxLeaf;
+    signal input previousLeaf;
+
+    // 1 if the node is a middle node, 0 otherwise
+    signal output middle;
+    // 1 if the node is an empty node, 0 otherwise
+    signal output empty;
+    // 1 if the node is a leaf node for the exclusion proof, 0 otherwise
+    signal output auxLeaf;
+    // 1 if the node is a leaf node, 0 otherwise
+    signal output leaf;
+
+    // 1 if the node is a leaf node and we are checking for exclusion, 0 otherwise
+    signal leafForExclusionCheck <== isDesiredDepth * isExclusion;
+
+    // Determine the node as a middle, until getting to the desired depth
+    middle <== previousMiddle - isDesiredDepth;
+
+    // Determine the node as a leaf, when we are at the desired depth and
+    // we check for inclusion
+    leaf <== isDesiredDepth - leafForExclusionCheck;
+
+    // Determine the node as an auxLeaf, when we are at the desired depth and
+    // we check for exclusion in a bamboo scenatrio
+    auxLeaf <== leafForExclusionCheck * inverse(auxIsEmpty);
+
+    // Determine the node as an empty, when we are at the desired depth and
+    // we check for exclusion with an empty node
+    empty <== isDesiredDepth * auxIsEmpty;
+}
+
+/*
+ * Gets hash at the current depth, based on the type of the node
+ * If the mode is a empty, then the hash is 0
+ */
+template DepthHasher() {
+    signal input isMiddle;
+    signal input isAuxLeaf;
+    signal input isLeaf;
+
+    signal input sibling;
+    signal input auxLeaf;
+    signal input leaf;
+    signal input currentKeyBit;
+    signal input child;
+
+    signal output root;
+
+    component switcher = Switcher();
+    switcher.L <== child;
+    switcher.R <== sibling;
+    // Based on the current key bit, we understand which order to use
+    switcher.sel <== currentKeyBit;
+
+    component proofHash = Hash2();
+    proofHash.a <== switcher.outL;
+    proofHash.b <== switcher.outR;
+
+    signal res[3];
+    // hash of the middle node
+    res[0] <== proofHash.out * isMiddle;
+    // hash of the aux leaf node for the exclusion proof
+    res[1] <== auxLeaf * isAuxLeaf;
+    // hash of the leaf node for the inclusion proof
+    res[2] <== leaf * isLeaf;
+
+    // only one of the following will be non-zero
+    root <== res[0] + res[1] + res[2];
+}
+
+/*
+ * Checks the sparse merkle proof against the given root
+ */
+template SMTVerifier(depth) {
+    // The root of the sparse merkle tree
     signal input root;
-    signal private input siblings[nLevels];
-    signal private input oldKey;
-    signal private input oldValue;
-    signal private input isOld0;
+    // The siblings for each depth
+    signal private input siblings[depth];
+
     signal private input key;
     signal private input value;
-    signal private input fnc;
 
-    var i;
+    signal private input auxKey;
+    signal private input auxValue;
+    // 1 if the aux node is empty, 0 otherwise
+    signal input auxIsEmpty;
 
-    component hash1Old = SMTHash1();
-    hash1Old.key <== oldKey;
-    hash1Old.value <== oldValue;
+    // 1 if we are checking for exclusion, 0 if we are checking for inclusion
+    signal private input isExclusion;
 
-    component hash1New = SMTHash1();
-    hash1New.key <== key;
-    hash1New.value <== value;
+    // Check that the auxIsEmpty is 0 if we are checking for inclusion
+    component exclusiveCase = AND();
+    exclusiveCase.a <== inverse(isExclusion);
+    exclusiveCase.b <== auxIsEmpty;
+    exclusiveCase.out === 0;
 
-    component n2bOld = Num2Bits_strict();
-    component n2bNew = Num2Bits_strict();
-
-    n2bOld.in <== oldKey;
-    n2bNew.in <== key;
-
-    component smtLevIns = SMTLevIns(nLevels);
-    for (i=0; i<nLevels; i++) smtLevIns.siblings[i] <== siblings[i];
-    smtLevIns.enabled <== enabled;
-
-    component sm[nLevels];
-    for (i=0; i<nLevels; i++) {
-        sm[i] = SMTVerifierSM();
-        if (i==0) {
-            sm[i].prev_top <== enabled;
-            sm[i].prev_i0 <== 0;
-            sm[i].prev_inew <== 0;
-            sm[i].prev_iold <== 0;
-            sm[i].prev_na <== 1-enabled;
-        } else {
-            sm[i].prev_top <== sm[i-1].st_top;
-            sm[i].prev_i0 <== sm[i-1].st_i0;
-            sm[i].prev_inew <== sm[i-1].st_inew;
-            sm[i].prev_iold <== sm[i-1].st_iold;
-            sm[i].prev_na <== sm[i-1].st_na;
-        }
-        sm[i].is0 <== isOld0;
-        sm[i].fnc <== fnc;
-        sm[i].levIns <== smtLevIns.levIns[i];
-    }
-    sm[nLevels-1].st_na + sm[nLevels-1].st_iold + sm[nLevels-1].st_inew + sm[nLevels-1].st_i0 === 1;
-
-    component levels[nLevels];
-    for (i=nLevels-1; i != -1; i--) {
-        levels[i] = SMTVerifierLevel();
-
-        levels[i].st_top <== sm[i].st_top;
-        levels[i].st_i0 <== sm[i].st_i0;
-        levels[i].st_inew <== sm[i].st_inew;
-        levels[i].st_iold <== sm[i].st_iold;
-        levels[i].st_na <== sm[i].st_na;
-
-        levels[i].sibling <== siblings[i];
-        levels[i].old1leaf <== hash1Old.out;
-        levels[i].new1leaf <== hash1New.out;
-
-        levels[i].lrbit <== n2bNew.out[i];
-        if (i==nLevels-1) {
-            levels[i].child <== 0;
-        } else {
-            levels[i].child <== levels[i+1].root;
-        }
-    }
-
-
-    // Check that if checking for non inclussuin and isOld0==0 then key!=old
+    // Check that the key != auxKey if we are checking for exclusion and the auxIsEmpty is 0
     component areKeyEquals = IsEqual();
-    areKeyEquals.in[0] <== oldKey;
+    areKeyEquals.in[0] <== auxKey;
     areKeyEquals.in[1] <== key;
 
-    component keysOk = MultiAND(4);
-    keysOk.in[0] <== fnc;
-    keysOk.in[1] <== 1-isOld0;
+    component keysOk = MultiAND(3);
+    keysOk.in[0] <== isExclusion;
+    keysOk.in[1] <== inverse(auxIsEmpty);
     keysOk.in[2] <== areKeyEquals.out;
-    keysOk.in[3] <== enabled;
-
     keysOk.out === 0;
 
-    // Check the root
-    component checkRoot = ForceEqualIfEnabled();
-    checkRoot.enabled <== enabled;
-    checkRoot.in[0] <== levels[0].root;
-    checkRoot.in[1] <== root;
+    component auxHash = Hash3();
+    auxHash.a <== auxKey;
+    auxHash.b <== auxValue;
+    auxHash.c <== 1;
 
-    // levels[0].root === root;
+    component hash = Hash3();
+    hash.a <== key;
+    hash.b <== value;
+    hash.c <== 1;
 
+    component keyBits = Num2Bits_strict();
+    keyBits.in <== key;
+
+    component depths = DepthDeterminer(depth);
+    
+    for (var i = 0; i < depth; i++) {
+        depths.siblings[i] <== siblings[i];
+    }
+
+    component nodeType[depth];
+
+    // Start with the middle node (closest to the root)
+    for (var i = 0; i < depth; i++) {
+        nodeType[i] = NodeTypeDeterminer();
+
+        if (i == 0) {
+            nodeType[i].previousMiddle <== 1;
+            nodeType[i].previousEmpty <== 0;
+            nodeType[i].previousLeaf <== 0;
+            nodeType[i].previousAuxLeaf <== 0;
+        } else {
+            nodeType[i].previousMiddle <== nodeType[i - 1].middle;
+            nodeType[i].previousEmpty <== nodeType[i - 1].empty;
+            nodeType[i].previousLeaf <== nodeType[i - 1].leaf;
+            nodeType[i].previousAuxLeaf <== nodeType[i - 1].auxLeaf;
+        }
+
+        nodeType[i].auxIsEmpty <== auxIsEmpty;
+        nodeType[i].isExclusion <== isExclusion;
+        nodeType[i].isDesiredDepth <== depths.desiredDepth[i];
+    }
+
+    component depthHash[depth];
+
+    // Hash up the elements in the reverse order
+    for (var i = depth - 1; i >= 0; i--) {
+        depthHash[i] = DepthHasher();
+
+        depthHash[i].isMiddle <== nodeType[i].middle;
+        depthHash[i].isLeaf <== nodeType[i].leaf;
+        depthHash[i].isAuxLeaf <== nodeType[i].auxLeaf;
+
+        depthHash[i].sibling <== siblings[i];
+        depthHash[i].auxLeaf <== auxHash.out;
+        depthHash[i].leaf <== hash.out;
+
+        depthHash[i].currentKeyBit <== keyBits.out[i];
+
+        if (i == depth - 1) {
+            // The last depth has no child
+            depthHash[i].child <== 0;
+        } else {
+            // The child of the current depth is the root of the next depth
+            depthHash[i].child <== depthHash[i + 1].root;
+        }
+    }
+
+    // The root of the merkle tree is the root of the first depth
+    depthHash[0].root === root;
 }

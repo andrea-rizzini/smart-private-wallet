@@ -271,24 +271,27 @@ export async function send(username: string, account: string, initCode: string, 
         }
     }
 
-    const result = await prepareTransfer(choiceAmount, username, account, addressReceiver, signer);
-
-    if (result) {
-        const signers = await hre.ethers.getSigners();
-        const { args, argsSMT, extData } = result;
-        try {
-            await call_userop("contracts/src/FlagPropagation/RelayerForV3.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, argsSMT, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
-            console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
-        }
-        catch (error) {
+    try {
+        const result = await prepareTransfer(choiceAmount, username, account, addressReceiver, signer);
+        
+        if (result) {
+          const signers = await hre.ethers.getSigners();
+          const { args, argsSMT, extData } = result;
+          try {
+            await call_userop("contracts/src/FlagPropagation/RelayerForV3.sol:Relayer", "callTransact", 
+                              [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, argsSMT, extData], 
+                              RELAYER_V3_ADDRESS, INIT_CODE_RELAYER_V3, signers[3]); 
+            console.log(`\nTransfer of ${choiceAmount} USDC completed successfully!\n`);
+          } catch (error) {
             console.error("\nSomething went wrong during the transfer transaction:", error);
             console.log("\n");
+          }
+        } else {
+          console.log("\nTransfer preparation failed\n");
         }
-        
-    }
-    else {
-        console.log("\nTransfer preparation failed\n");
-    }
+      } catch (error) {
+        console.error("\nError during prepareTransfer execution:", error);
+      }
     
     rl.close();
 

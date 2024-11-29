@@ -226,15 +226,14 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
     proof_.siblings = padSiblings(proof_.siblings, SMT_HEIGHT)
 
     const input = {
-      enabled: 1,
       root: smt.root,
       siblings: proof_.siblings,
-      oldKey: 0,
-      oldValue: 0,
-      isOld0: 1,
       key: status.index,
       value: 0,
-      fnc: 1
+      auxKey: 0,
+      auxValue: 0,
+      auxIsEmpty: 1,
+      isExclusion: 1
     }
 
     // @ts-ignore
@@ -424,20 +423,26 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, extAmount
     proof_.siblings = padSiblings(proof_.siblings, SMT_HEIGHT)
 
     const input = {
-      enabled: 1,
       root: smt.root,
       siblings: proof_.siblings,
-      oldKey: 0,
-      oldValue: 0,
-      isOld0: 1,
       key: status.index,
       value: 0,
-      fnc: 1
+      auxKey: 0,
+      auxValue: 0,
+      auxIsEmpty: 1,
+      isExclusion: 1
     }
 
-    // @ts-ignore
-    const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer)
-    proofs.push(proof)
+    try {
+      // @ts-ignore
+      const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer)
+      proofs.push(proof)
+    }
+    catch (e) {
+      throw new Error(`You are trying to include a tainted UTXO`);
+    }
+    
+    
   }
 
   const argsSMT: ArgsSMT = {

@@ -5,6 +5,7 @@ if [ ! -f artifacts/circuits/ptau$POWERS_OF_TAU ]; then
   echo "Downloading powers of tau file"
   curl -L https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_$POWERS_OF_TAU.ptau --create-dirs -o artifacts/circuits/ptau$POWERS_OF_TAU
 fi
+
 npx circom -v -r artifacts/circuits/mask_commitment.r1cs -w artifacts/circuits/mask_commitment.wasm -s artifacts/circuits/mask_commitment.sym v3_flag_propagation/mask_commitment.circom
 npx snarkjs groth16 setup artifacts/circuits/mask_commitment.r1cs artifacts/circuits/ptau$POWERS_OF_TAU artifacts/circuits/mask_commitment_0.zkey
 npx snarkjs zkey contribute artifacts/circuits/mask_commitment_0.zkey artifacts/circuits/mask_commitment_1.zkey
