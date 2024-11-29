@@ -43,3 +43,17 @@ Note: a ```.db``` file will be created inside ```/apps/version3_flag_propagation
  ```npx hardhat run ./apps/version3_flag_propagation/main.ts```  
 
 # Demo for version3_flag_propagation:
+You need 2 terminals, T1, T2 and T3.
+1) (T1): ```npx hardhat run apps/version3_flag_propagation/main.ts```  
+2) (T1): type ```1```, type ```testnet``` and choose username (Alice) and password for your account: you will be fund in seconds with 0.01 USDC from the faucet.
+3) (T1): type  ```1``` to check your smart contract address and your private balance
+4) (T1): in the menu type ```2``` to invite someone, select a name (Bob) for him and select the amount you want onboard him with. You can check your amount after having spent funds to onboard Bob typing  ```1```.
+5) (T2): ```npx hardhat run apps/version3_flag_propagation/main.ts``` 
+6) (T2): type ```3```, choose username (Bob) and password and wait for the onboarding to be complete: now you are in.
+7) (T2): in the menu type ```6``` to verify if the person who invited you is present in the contacts (there should be Alice with her address).
+8) (T1): in the menu type ```7``` to refresh, this will check if the user has completed the onboarding procedure. 
+9) (T1): in the menu type ```6``` to verify if the person you have onboarded is now present in your contacts (there should be Bob with his address).  
+This is the basic setup where Bob has received a UTXO from Alice. Now, let's suppose Alice's address becomes sanctioned:
+10) Add Alice's address in ```apps/version3_flag_propagation/sanctioned_addresses/sanctioned_addresses.json```
+11) (T3): ```npx hardhat run apps/version3_flag_propagation/src/authority/authority_check.ts```, now the masked commitment related to Alice will be appended on the Sparse Merkle Tree of the authority.
+12) (T2): in the menu type ```4``` and send back to Alice 0.01 USDC --> You will be blocked because the proof of non-membership of that UTXO in the SMT will not pass. Here, a burning/locking mechanism should be implemented so that Bob can exclude the tainted UTXO from his UTXOs.

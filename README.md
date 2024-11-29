@@ -54,7 +54,7 @@ You need 2 terminals, T1 and T2.
 6) (T2): type ```3```, choose username (Bob) and password and wait for the onboarding to be complete: now you are in.
 7) (T2): in the menu type ```6``` to verify if the person who invited you is present in the contacts (there should be Alice with her address).
 8) (T1): in the menu type ```7``` to refresh, this will check if the user has completed the onboarding procedure. 
-9) (T1): in the menu type ```7``` to verify if the person you have onboarded is now present in your contacts (there should be Bob with his address).
+9) (T1): in the menu type ```6``` to verify if the person you have onboarded is now present in your contacts (there should be Bob with his address).
 10) (T1): if you need to fund your private amount, in the menu type ```3``` and then insert the amount you want make private and press enter.
 11) (T1): in the menu type ```4```, insert an amount, then you can decide to send to a contact of yours or to send directly by inserting the address, finally you can decide if use a relayer for the send.
 12) (T2): in the menu type ```1``` and verify if you have received the amount sent you by Alice.
