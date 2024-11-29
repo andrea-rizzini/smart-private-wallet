@@ -12,7 +12,6 @@ npx snarkjs zkey beacon artifacts/circuits/mask_commitment_1.zkey artifacts/circ
 npx snarkjs zkey export solidityverifier artifacts/circuits/mask_commitment.zkey artifacts/circuits/VerifierMaskCommitment.sol
 npx snarkjs info -r artifacts/circuits/mask_commitment.r1cs
 
-
 npx circom -v -r artifacts/circuits/non_membership.r1cs -w artifacts/circuits/non_membership.wasm -s artifacts/circuits/non_membership.sym v3_flag_propagation/non_membership.circom
 npx snarkjs groth16 setup artifacts/circuits/non_membership.r1cs artifacts/circuits/ptau$POWERS_OF_TAU artifacts/circuits/non_membership_0.zkey
 npx snarkjs zkey contribute artifacts/circuits/non_membership_0.zkey artifacts/circuits/non_membership_1.zkey
