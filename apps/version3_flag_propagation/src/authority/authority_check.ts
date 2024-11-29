@@ -47,7 +47,7 @@ async function main() {
                 let zKeyBuffer = fs.readFileSync(filePath);
 
                 // @ts-ignore
-                const proof = await prove(input, wasmBuffer, zKeyBuffer)
+                const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer)
 
                 // insert to the status tree
                 const signers = await hre.ethers.getSigners();                                              /* index */                      /* actual masked commitment */

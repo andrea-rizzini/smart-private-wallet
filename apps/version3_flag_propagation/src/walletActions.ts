@@ -290,7 +290,7 @@ export async function send(username: string, account: string, initCode: string, 
           console.log("\nTransfer preparation failed\n");
         }
       } catch (error) {
-        console.error("\nError during prepareTransfer execution:", error);
+        console.log(error);
       }
     
     rl.close();
