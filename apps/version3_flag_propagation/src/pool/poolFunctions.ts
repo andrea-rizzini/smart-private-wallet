@@ -5,7 +5,6 @@ import hre from "hardhat";
 import { Keypair } from "./keypair";
 // @ts-ignore
 import MerkleTree from 'fixed-merkle-tree';
-import { InMemoryDB, LocalStorageDB, Merkletree as MerkleTreeIden3, str2Bytes } from "@iden3/js-merkletree";
 import { poseidonHash, poseidonHash2 } from "../utils/hashFunctions";
 import { SMT } from "@zk-kit/smt";
 import { toFixedHex } from "../utils/toHex";

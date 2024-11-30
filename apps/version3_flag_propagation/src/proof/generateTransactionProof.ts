@@ -242,7 +242,7 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
       proofs.push(proof)
     }
     catch (e) {
-      throw new Error(`You are trying to include a tainted UTXO!`);
+      throw (`\nYou are trying to include a tainted UTXO!\n`);
     }
   }
 
@@ -444,7 +444,7 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, extAmount
       proofs.push(proof)
     }
     catch (e) {
-      throw new Error(`You are trying to include a tainted UTXO!`);
+      throw (`\nYou are trying to include a tainted UTXO!\n`);
     }
         
   }
