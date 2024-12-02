@@ -24,7 +24,7 @@ async function prove(input: never, wasm: File, zkey: File) {
       publicSignals: publicSignals
     }
   } catch (err: any) {
-    throw new Error(err.message)
+    // throw new Error(err.message)
   }
 }
 

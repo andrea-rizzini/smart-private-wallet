@@ -236,13 +236,19 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
       isExclusion: 1
     }
 
+    const originalLog = console.log;
+
     try {
+      console.log = function (...args) {
+          if (args[0] !== "ERROR:") return;
+      };
       // @ts-ignore
-      const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer)
-      proofs.push(proof)
-    }
-    catch (e) {
-      throw (`\nYou are trying to include a tainted UTXO!\n`);
+      const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer);
+      proofs.push(proof);
+    } catch (error) {
+        throw (`\nError in the transaction preparation: you are trying to include a tainted UTXO!\nMasked commitment: ${toFixedHex(status.maskedCommitment)}\n`);
+    } finally {
+        console.log = originalLog;
     }
   }
 
@@ -444,7 +450,7 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, extAmount
       proofs.push(proof)
     }
     catch (e) {
-      throw (`\nYou are trying to include a tainted UTXO!\n`);
+      throw (`\nYou are trying to include a tainted UTXO!\nMasked commtiment: ${toFixedHex(status.maskedCommitment)}\n`);
     }
         
   }
