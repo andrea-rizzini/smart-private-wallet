@@ -4,15 +4,17 @@ import path from 'path';
 
 import { ArgsProof, ArgsSMT, BaseUtxo, Chainstate, ChainStates, Params, ProofParams } from "../pool/types";
 import { BytesLike } from '@ethersproject/bytes'
+import { createBitArray, computeBloomIndices } from "../utils/bloomUtils";
 import { getIdAndMaskedCommitmentByDepositorAddress, insertMaskedCommitment } from "../../database/database";
 import { poseidonHash } from "../utils/hashFunctions";
-import  { prove } from "../proof/prover";
+import  { prove } from "./prover";
 import { randomBN } from "../pool/utxo";
 import { toBuffer } from "../pool/utxo";
 import { toFixedHex } from "../utils/toHex";
 
 const ADDRESS_BYTES_LENGTH = 20
 const FIELD_SIZE = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617')
+const FILTER_SIZE = 16384;
 const MERKLE_TREE_HEIGHT = 20;
 const SMT_HEIGHT = 20;
 
@@ -66,19 +68,22 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
   const inputMerklePathIndices = [] 
   const inputMerklePathElements = [] // array of arrays, each array is a merkle branch
 
-  const statusToEncrypt: Chainstate[] = []
+  // const statusToEncrypt: Chainstate[] = []
+  const statusMerged: Chainstate = { chainstateBitArray: [] }; // will have always the same size
   
   for (const input of inputs) {
     if (input.amount > 0) {
       input.index = tree.indexOf(toFixedHex(input.getCommitment())) // from the tree we get the index of the commitment
 
-      for (const chainState of input.chainStates as ChainStates) {
+      // for (const chainState of input.chainStates as ChainStates) {
 
         // here is the case there are multiple utxo from Alice's deposits, each one will have the same masked commitment (the one of the first deposit)
-        if (!statusToEncrypt.includes({index: chainState.index, maskedCommitment: chainState.maskedCommitment})) {
-          statusToEncrypt.push({index: chainState.index, maskedCommitment: chainState.maskedCommitment});
-        }
-      }
+        // if (!statusToEncrypt.includes({index: chainState.index, maskedCommitment: chainState.maskedCommitment})) {
+        //   statusToEncrypt.push({index: chainState.index, maskedCommitment: chainState.maskedCommitment});
+        // }
+      // }
+
+      statusMerged.chainstateBitArray = statusMerged.chainstateBitArray.map((bit, i) => bit | input.chainState.chainstateBitArray[i]);
 
       if (input.index < 0) {
         throw new Error(`Input commitment ${toFixedHex(input.getCommitment())} was not found`)
@@ -100,7 +105,8 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
 
   // prepare encrypted chain state
 
-  let encryptedChainState1, encryptedChainState2;
+  // let encryptedChainState1, encryptedChainState2; // maybe encryption is not needed, already hashed
+  let chainState1, chainState2;
 
   if (extAmount > 0) { // meaning that the transaction is a deposit
 
@@ -115,63 +121,76 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
         const commitment_output_one = outputs[0].getCommitment();
         const blinding_output_one = randomBN();
         const masked_commitment_one = poseidonHash([commitment_output_one, blinding_output_one]);
+        const indices = await computeBloomIndices(masked_commitment_one, FILTER_SIZE);
+        const chainstateBitArray = createBitArray(FILTER_SIZE, indices);
         const index = insertMaskedCommitment(address as string, commitment_output_one.toString(), blinding_output_one.toString(), toFixedHex(masked_commitment_one));
-        const chainState: Chainstate = { index: BigInt(index), maskedCommitment: masked_commitment_one };
-        const bytes = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 32)]); 
-        encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
-        encryptedChainState2 = encryptedChainState1;  
+
+        const chainState: Chainstate = { chainstateBitArray: chainstateBitArray };
+        const bytes = Buffer.concat([Buffer.from(chainState.chainstateBitArray)]); 
+        chainState1 = outputs[0].keypair.encrypt(bytes);
+        chainState2 = chainState1;  
         
-        console.log("Size of chainState , deposit, before encryption:", bytes.length);
+        // console.log("Size of chainState , deposit, before encryption:", bytes.length);
       }
 
       else {
         const commitment_output_two = outputs[1].getCommitment();
         const blinding_output_two = randomBN();
         const masked_commitment_two = poseidonHash([commitment_output_two, blinding_output_two]);
+        const indices = await computeBloomIndices(masked_commitment_two, FILTER_SIZE);
+        const chainstateBitArray = createBitArray(FILTER_SIZE, indices);
         const index = insertMaskedCommitment(address as string, commitment_output_two.toString(), blinding_output_two.toString(), toFixedHex(masked_commitment_two));
-        const chainState: Chainstate = { index: BigInt(index), maskedCommitment: masked_commitment_two };
-        const bytes2 = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 32)]);
-        encryptedChainState2 = outputs[1].keypair.encrypt(bytes2);
-        encryptedChainState1 = encryptedChainState2;  
         
-        console.log("Size of chainState , deposit, before encryption:", bytes2.length);
+        const chainState: Chainstate = { chainstateBitArray: chainstateBitArray };
+        const bytes2 = Buffer.concat([Buffer.from(chainState.chainstateBitArray)]); 
+        chainState2 = outputs[1].keypair.encrypt(bytes2);
+        chainState1 = chainState2;  
+        
+        // console.log("Size of chainState , deposit, before encryption:", bytes2.length);
       }
 
-      console.log("Size of encryptedChainState1, transfer, after encryption:", (encryptedChainState1.length-2)/2);
-      console.log("Size of encryptedChainState2, transfer, after encryption:", (encryptedChainState2.length-2)/2);
+      // console.log("Size of encryptedChainState1, transfer, after encryption:", (encryptedChainState1.length-2)/2);
+      // console.log("Size of encryptedChainState2, transfer, after encryption:", (encryptedChainState2.length-2)/2);
 
     }
 
     else { // use the first masked commitment also for other deposits
 
       // @ts-ignore
-      const chainState: Chainstate = { index: BigInt(tuple.id), maskedCommitment: BigInt(tuple.maskedCommitment) };
+      const masked_commitment = tuple.maskedCommitment;
+      const indices = await computeBloomIndices(masked_commitment, FILTER_SIZE);
+      const chainstateBitArray = createBitArray(FILTER_SIZE, indices);
 
-      const bytes = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 32)]);
+      // @ts-ignore
+      const chainState: Chainstate = { chainstateBitArray: chainstateBitArray };
+
+      const bytes = Buffer.concat([Buffer.from(chainState.chainstateBitArray)]); 
 
       if (outputs[0].amount === extAmount) { 
-        encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
-        encryptedChainState2 = encryptedChainState1;
+        chainState1 = outputs[0].keypair.encrypt(bytes);
+        chainState2 = chainState1;
       } else {
-        encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
-        encryptedChainState1 = encryptedChainState2;
+        chainState2 = outputs[1].keypair.encrypt(bytes);
+        chainState1 = chainState2;
       }
 
-      console.log("Size of encryptedChainState1, transfer, after encryption:", (encryptedChainState1.length-2)/2);
-      console.log("Size of encryptedChainState2, transfer, after encryption:", (encryptedChainState2.length-2)/2);
+      // console.log("Size of encryptedChainState1, transfer, after encryption:", (encryptedChainState1.length-2)/2);
+      // console.log("Size of encryptedChainState2, transfer, after encryption:", (encryptedChainState2.length-2)/2);
 
     }
 
   }
 
   else { // meaning that the transaction is a transfer or a withdrawal
-    const buffers = statusToEncrypt.flatMap((x) => [toBuffer(x.index, 31), toBuffer(x.maskedCommitment, 32)]);
-    const bytes = Buffer.concat(buffers);
-    console.log("Size of chainState, transfer, before encryption:", bytes.length);
-    encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
-    encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
-    console.log("Size of encryptedChainState1, transfer, after encryption:", (encryptedChainState1.length-2)/2);
-    console.log("Size of encryptedChainState2, transfer, after encryption:", (encryptedChainState2.length-2)/2);
+    // const buffers = statusToEncrypt.flatMap((x) => [toBuffer(x.index, 31), toBuffer(x.maskedCommitment, 32)]);
+    // const bytes = Buffer.concat(buffers);
+    const bytes = Buffer.concat([Buffer.from(statusMerged.chainstateBitArray)]); 
+
+    // console.log("Size of chainState, transfer, before encryption:", bytes.length);
+    chainState1 = outputs[0].keypair.encrypt(bytes);
+    chainState2 = outputs[1].keypair.encrypt(bytes);
+    console.log("Size of encryptedChainState1, transfer, after encryption:", (chainState1.length-2)/2);
+    console.log("Size of encryptedChainState2, transfer, after encryption:", (chainState2.length-2)/2);
   }
   
   // prepare extData
