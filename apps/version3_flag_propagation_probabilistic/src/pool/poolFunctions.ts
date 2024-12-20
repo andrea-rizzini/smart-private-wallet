@@ -1,4 +1,5 @@
-import { BaseUtxo, Chainstate, ChainStates, CreateTransactionParams, CommitmentEvents, PrepareTxParams, StatusTreeEvents } from "./types";
+import { BaseUtxo, Chainstate, CreateTransactionParams, CommitmentEvents, PrepareTxParams, StatusTreeEvents } from "./types";
+import { createBitArray } from "../utils/bloomUtils";
 import { getKeyPairByUserId, getKeyPairOnboardingByUserId, getID } from "../../database/database";
 import { getProof, getProofOnboarding } from "../proof/generateTransactionProof";
 import hre from "hardhat";
@@ -11,15 +12,16 @@ import { toFixedHex } from "../utils/toHex";
 import { Utxo } from "./utxo";
 
 const contractAddress = process.env.POOL_USERS_ADDRESS || '';
+const FILTER_SIZE = 16384;
 const MERKLE_TREE_HEIGHT = 20;
-const MIXER_ONBOARDING_AND_TRANSFERS_V3 = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3 || '';
+const MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC || '';
 
 export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){
 
   const chainStateSize = 63;
 
   // 1) fetch all nullifiers
-  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
+  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
   let filter = contract.filters.NewNullifier();
   const eventsNullifiers = await contract.queryFilter(filter);
 
@@ -31,23 +33,25 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
   let myUtxo: BaseUtxo[] = []
 
   eventsCommitments.forEach(event => {
+    // @ts-ignore
     const index = Number(event.args[1])
+    // @ts-ignore
     const encryptedOutput = event.args[2]
     try {
       const utxo = Utxo.decrypt(senderKeyPair, encryptedOutput, index);
+      // @ts-ignore
       const buf = senderKeyPair.decrypt(event.args[3]) 
-      const chainStates : Chainstate[] = []
 
-      for (let i = 0; i < buf.length; i += chainStateSize) {
-        const index = BigInt('0x' + buf.slice(i, i + 31).toString('hex'));
-        const maskedCommitment = BigInt('0x' + buf.slice(i + 31, i+chainStateSize).toString('hex'));
-        // console.log("Index:", buf.slice(i, i + 31).toString('hex'))
-        // console.log("Masked:", '0x'+buf.slice(i + 31, chainStateSize).toString('hex'))
-        const chainState: Chainstate = { index, maskedCommitment: maskedCommitment }
-        chainStates.push(chainState)
-      }
+      // for (let i = 0; i < buf.length; i += chainStateSize) {
+      //   const index = BigInt('0x' + buf.slice(i, i + 31).toString('hex'));
+      //   const maskedCommitment = BigInt('0x' + buf.slice(i + 31, i+chainStateSize).toString('hex'));
+      //   // console.log("Index:", buf.slice(i, i + 31).toString('hex'))
+      //   // console.log("Masked:", '0x'+buf.slice(i + 31, chainStateSize).toString('hex'))
+      //   const chainState: Chainstate = { index, maskedCommitment: maskedCommitment }
+      //   chainStates.push(chainState)
+      // }
 
-      utxo.chainStates = chainStates
+      utxo.chainState.chainstateBitArray = 
       myUtxo.push(utxo)
 
       // console.log(myUtxo)
@@ -79,7 +83,7 @@ export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSende
   const chainStates : Chainstate[] = []
 
   // 1) fetch all nullifiers
-  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
+  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
   let filter = contract.filters.NewNullifier();
   const eventsNullifiers = await contract.queryFilter(filter);
 
@@ -91,21 +95,24 @@ export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSende
   let myUtxo: BaseUtxo[] = []
 
   eventsCommitments.forEach(event => {
+    // @ts-ignore
     const index = Number(event.args[1])
+    // @ts-ignore
     const encryptedOutput = event.args[2]
     try {
       const utxo = Utxo.decrypt(senderKeyPair, encryptedOutput, index);
+      // @ts-ignore
       const buf = senderKeyPair.decrypt(event.args[3]) 
 
-      for (let i = 0; i < buf.length; i += chainStateSize) {
-        const index = BigInt('0x' + buf.slice(i, i + 31).toString('hex'));
-        const maskedCommitment = BigInt('0x' + buf.slice(i + 31, i+chainStateSize).toString('hex'));
-        // console.log(buf.slice(i + 31, i + chainStateSize).toString('utf-8'))
-        const chainState: Chainstate = { index, maskedCommitment: maskedCommitment }
-        chainStates.push(chainState)
-      }
+      // for (let i = 0; i < buf.length; i += chainStateSize) {
+      //   const index = BigInt('0x' + buf.slice(i, i + 31).toString('hex'));
+      //   const maskedCommitment = BigInt('0x' + buf.slice(i + 31, i+chainStateSize).toString('hex'));
+      //   // console.log(buf.slice(i + 31, i + chainStateSize).toString('utf-8'))
+      //   const chainState: Chainstate = { index, maskedCommitment: maskedCommitment }
+      //   chainStates.push(chainState)
+      // }
 
-      utxo.chainStates = chainStates
+      utxo.chainState.chainstateBitArray = 
       myUtxo.push(utxo)
 
       // console.log(myUtxo)
@@ -418,7 +425,7 @@ async function prepareTransaction({
 }
 
 async function fetchCommitments(): Promise<CommitmentEvents>{
-  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
+  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
   const filter = contract.filters.NewCommitmentV2();
   const events = await contract.queryFilter(filter);
   const commitments: CommitmentEvents = [];
@@ -426,9 +433,13 @@ async function fetchCommitments(): Promise<CommitmentEvents>{
     commitments.push({
       blockNumber: event.blockNumber,
       transactionHash: event.transactionHash,
+      // @ts-ignore
       commitment: event.args[0],
+      // @ts-ignore
       index: Number(event.args[1]),
+      // @ts-ignore
       encryptedOutput: event.args[2],
+      // @ts-ignore
       encryptedChainState: event.args[3]
     })
   });
@@ -436,7 +447,7 @@ async function fetchCommitments(): Promise<CommitmentEvents>{
 }
 
 async function fetchStatusTreeEvents(): Promise<StatusTreeEvents> {
-  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3);
+  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
   const filter = contract.filters.StatusFlagged();
   const events = await contract.queryFilter(filter);
   const statusTreeEvents: StatusTreeEvents = [];
@@ -444,7 +455,9 @@ async function fetchStatusTreeEvents(): Promise<StatusTreeEvents> {
     statusTreeEvents.push({
       blockNumber: event.blockNumber,
       transactionHash: event.transactionHash,
+      // @ts-ignore
       index: Number(event.args[0]),
+      // @ts-ignore
       maskedCommitment: event.args[1]
     })
   });
@@ -461,7 +474,7 @@ export async function createOnboardingData(params: CreateTransactionParams, keyp
 
 export async function createTransactionData(params: CreateTransactionParams, keypair: Keypair, signer: any, address ?: string){
   if (!params.inputs || !params.inputs.length) { // enter here for the deposit
-    const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3, signer);
+    const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, signer);
     const root = await contract.getLastRoot_(); // take the last root, used in prepareTransaction to skip off-chain tree construction
 
     params.events = []

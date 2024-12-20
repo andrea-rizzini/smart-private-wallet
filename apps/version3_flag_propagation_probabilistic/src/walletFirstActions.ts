@@ -19,7 +19,7 @@ import { toBuffer } from './pool/utxo';
 const ENCRYPTED_DATA_ADDRESS: string = process.env.ENCRYPTED_DATA_ADDRESS || '';
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
 const ACCOUNT_FACTORY_V3_ADDRESS: string = process.env.ACCOUNT_FACTORY_V3_ADDRESS || '';
-const MIXER_ONBOARDING_AND_TRANSFERS_V3 = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3 || '';
+const MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC || '';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
 export async function acceptInvite() { 
@@ -187,7 +187,7 @@ export async function acceptInvite() {
       const { args, extData } = result;
 
       try {
-          await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, extData], account , initCode, signers[index]);
+          await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, extData], account , initCode, signers[index]);
           console.log(`\nFunded private amount with 0.01 USDC`)          
       }
       catch (error) {

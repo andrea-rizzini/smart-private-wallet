@@ -2,7 +2,7 @@ import hre from "hardhat";
 import fs from 'fs';
 import path from 'path';
 
-import { ArgsProof, ArgsSMT, BaseUtxo, Chainstate, ChainStates, Params, ProofParams } from "../pool/types";
+import { ArgsProof, ArgsSMT, BaseUtxo, Chainstate, Params, ProofParams } from "../pool/types";
 import { BytesLike } from '@ethersproject/bytes'
 import { createBitArray, computeBloomIndices } from "../utils/bloomUtils";
 import { getIdAndMaskedCommitmentByDepositorAddress, insertMaskedCommitment } from "../../database/database";
@@ -83,7 +83,7 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
         // }
       // }
 
-      statusMerged.chainstateBitArray = statusMerged.chainstateBitArray.map((bit, i) => bit | input.chainState.chainstateBitArray[i]);
+      statusMerged.chainstateBitArray = statusMerged.chainstateBitArray.map((bit, i) => bit | input.chainState!.chainstateBitArray[i]);
 
       if (input.index < 0) {
         throw new Error(`Input commitment ${toFixedHex(input.getCommitment())} was not found`)
@@ -106,7 +106,7 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
   // prepare encrypted chain state
 
   // let encryptedChainState1, encryptedChainState2; // maybe encryption is not needed, already hashed
-  let chainState1, chainState2;
+  let encryptedChainState1, encryptedChainState2;
 
   if (extAmount > 0) { // meaning that the transaction is a deposit
 
@@ -127,8 +127,8 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
 
         const chainState: Chainstate = { chainstateBitArray: chainstateBitArray };
         const bytes = Buffer.concat([Buffer.from(chainState.chainstateBitArray)]); 
-        chainState1 = outputs[0].keypair.encrypt(bytes);
-        chainState2 = chainState1;  
+        encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
+        encryptedChainState2 = encryptedChainState1;  
         
         // console.log("Size of chainState , deposit, before encryption:", bytes.length);
       }
@@ -143,8 +143,8 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
         
         const chainState: Chainstate = { chainstateBitArray: chainstateBitArray };
         const bytes2 = Buffer.concat([Buffer.from(chainState.chainstateBitArray)]); 
-        chainState2 = outputs[1].keypair.encrypt(bytes2);
-        chainState1 = chainState2;  
+        encryptedChainState2 = outputs[1].keypair.encrypt(bytes2);
+        encryptedChainState1 = encryptedChainState2;  
         
         // console.log("Size of chainState , deposit, before encryption:", bytes2.length);
       }
@@ -167,11 +167,11 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
       const bytes = Buffer.concat([Buffer.from(chainState.chainstateBitArray)]); 
 
       if (outputs[0].amount === extAmount) { 
-        chainState1 = outputs[0].keypair.encrypt(bytes);
-        chainState2 = chainState1;
+        encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
+        encryptedChainState2 = encryptedChainState1;
       } else {
-        chainState2 = outputs[1].keypair.encrypt(bytes);
-        chainState1 = chainState2;
+        encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
+        encryptedChainState1 = encryptedChainState2;
       }
 
       // console.log("Size of encryptedChainState1, transfer, after encryption:", (encryptedChainState1.length-2)/2);
@@ -187,10 +187,10 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
     const bytes = Buffer.concat([Buffer.from(statusMerged.chainstateBitArray)]); 
 
     // console.log("Size of chainState, transfer, before encryption:", bytes.length);
-    chainState1 = outputs[0].keypair.encrypt(bytes);
-    chainState2 = outputs[1].keypair.encrypt(bytes);
-    console.log("Size of encryptedChainState1, transfer, after encryption:", (chainState1.length-2)/2);
-    console.log("Size of encryptedChainState2, transfer, after encryption:", (chainState2.length-2)/2);
+    encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
+    encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
+    // console.log("Size of encryptedChainState1, transfer, after encryption:", (chainState1.length-2)/2);
+    // console.log("Size of encryptedChainState2, transfer, after encryption:", (chainState2.length-2)/2);
   }
   
   // prepare extData
@@ -320,19 +320,22 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, extAmount
   const inputMerklePathIndices = []
   const inputMerklePathElements = []
 
-  const statusToEncrypt: Chainstate[] = []
+  // const statusToEncrypt: Chainstate[] = []
+  const statusMerged: Chainstate = { chainstateBitArray: [] }; 
   
   for (const input of inputs) {
     if (input.amount > 0) {
       input.index = tree.indexOf(toFixedHex(input.getCommitment())) // from the tree we get the index of the commitment
 
-      for (const chainState of input.chainStates as ChainStates) {
+      // for (const chainState of input.chainStates as ChainStates) {
 
-        // here is the case there are multiple utxo from Alice's deposits, each one will have the same masked commitment (the one of the first deposit)
-        if (!statusToEncrypt.includes({index: chainState.index, maskedCommitment: chainState.maskedCommitment})) {
-          statusToEncrypt.push({index: chainState.index, maskedCommitment: chainState.maskedCommitment});
-        }
-      }
+      //   // here is the case there are multiple utxo from Alice's deposits, each one will have the same masked commitment (the one of the first deposit)
+      //   if (!statusToEncrypt.includes({index: chainState.index, maskedCommitment: chainState.maskedCommitment})) {
+      //     statusToEncrypt.push({index: chainState.index, maskedCommitment: chainState.maskedCommitment});
+      //   }
+      // }
+
+      statusMerged.chainstateBitArray = statusMerged.chainstateBitArray.map((bit, i) => bit | input.chainState!.chainstateBitArray[i]);
 
       if (input.index < 0) {
         throw new Error(`Input commitment ${toFixedHex(input.getCommitment())} was not found`)
@@ -365,21 +368,30 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, extAmount
         const commitment_output_one = outputs[0].getCommitment();
         const blinding_output_one = randomBN();
         const masked_commitment_one = poseidonHash([commitment_output_one, blinding_output_one]);
+        const indices = await computeBloomIndices(masked_commitment_one, FILTER_SIZE);
+        const chainstateBitArray = createBitArray(FILTER_SIZE, indices);
         const index = insertMaskedCommitment(addressSender as string, commitment_output_one.toString(), blinding_output_one.toString(), toFixedHex(masked_commitment_one));
-        const chainState: Chainstate = { index: BigInt(index), maskedCommitment: masked_commitment_one };
-        const bytes = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 31)]); // if we encrypt only the index, are we vulnerable to brute force attacks?
+
+        const chainState: Chainstate = { chainstateBitArray: chainstateBitArray };
+        const bytes = Buffer.concat([Buffer.from(chainState.chainstateBitArray)]); 
         encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
-        encryptedChainState2 = encryptedChainState1;       
+        encryptedChainState2 = encryptedChainState1;  
+        
+        // console.log("Size of chainState , deposit, before encryption:", bytes.length);
       }
+
       else {
         const commitment_output_two = outputs[1].getCommitment();
         const blinding_output_two = randomBN();
         const masked_commitment_two = poseidonHash([commitment_output_two, blinding_output_two]);
+        const indices = await computeBloomIndices(masked_commitment_two, FILTER_SIZE);
+        const chainstateBitArray = createBitArray(FILTER_SIZE, indices);
         const index = insertMaskedCommitment(addressSender as string, commitment_output_two.toString(), blinding_output_two.toString(), toFixedHex(masked_commitment_two));
-        const chainState: Chainstate = { index: BigInt(index), maskedCommitment: masked_commitment_two };
-        const bytes2 = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 31)]);
+        
+        const chainState: Chainstate = { chainstateBitArray: chainstateBitArray };
+        const bytes2 = Buffer.concat([Buffer.from(chainState.chainstateBitArray)]); 
         encryptedChainState2 = outputs[1].keypair.encrypt(bytes2);
-        encryptedChainState1 = encryptedChainState2;    
+        encryptedChainState1 = encryptedChainState2;  
       }
 
     }
@@ -387,12 +399,14 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, extAmount
     else { // use the first masked commitment also for other deposits
 
       // @ts-ignore
-      const index = BigInt(tuple.id);
-      // @ts-ignore
-      // const masked_commitment = toFixedHex(tuple.maskedCommitment);
-      const chainState: Chainstate = { index, maskedCommitment: tuple.maskedCommitment };
+      const masked_commitment = tuple.maskedCommitment;
+      const indices = await computeBloomIndices(masked_commitment, FILTER_SIZE);
+      const chainstateBitArray = createBitArray(FILTER_SIZE, indices);
 
-      const bytes = Buffer.concat([toBuffer(chainState.index, 31), toBuffer(chainState.maskedCommitment, 31)]);
+      // @ts-ignore
+      const chainState: Chainstate = { chainstateBitArray: chainstateBitArray };
+
+      const bytes = Buffer.concat([Buffer.from(chainState.chainstateBitArray)]); 
 
       if (outputs[0].amount === extAmount) { 
         encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
@@ -401,14 +415,14 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, extAmount
         encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
         encryptedChainState1 = encryptedChainState2;
       }
-      
+
     }
 
   }
 
   else { // meaning that the transaction is a transfer or a withdrawal
-    const buffers = statusToEncrypt.flatMap((x) => [toBuffer(x.index, 31), toBuffer(x.maskedCommitment, 31)]);
-    const bytes = Buffer.concat(buffers);
+    const bytes = Buffer.concat([Buffer.from(statusMerged.chainstateBitArray)]); 
+
     encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
     encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
   }

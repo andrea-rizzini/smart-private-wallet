@@ -4,13 +4,15 @@ import * as path from 'path';
 
 import { call_userop } from "../userop/createUserOp";
 import { checkSanctionedAddress } from '../poi/checkIfSanctioned';
+import { bits2Num, computeBloomIndices, createBitArray} from "../utils/bloomUtils";
 import { getMaskedCommitments, updateMaskedCommitmentFlagged } from '../../database/database';
 import  { prove } from "../proof/prover";
 import { toFixedHex } from "../utils/toHex";
 
 const AUTHORITY_ADDRESS = process.env.AUTHORITY_ADDRESS || '';
+const FILTER_SIZE = 16384;
 const INIT_CODE_AUTHORITY = process.env.INIT_CODE_AUTHORITY || '';
-const MIXER_ONBOARDING_AND_TRANSFERS_V3 = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3 || '';
+const MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC || '';
 
 async function main() {
 
@@ -19,7 +21,7 @@ async function main() {
     console.log("This should be an automated process, but for the sake of this demo, we will perform the check just on program call.");
 
     // reading of this table must be restritcted only to the authority
-    const maskedCommitments= getMaskedCommitments();
+    const maskedCommitments: any = getMaskedCommitments();
 
     for (const maskedCommitment of maskedCommitments) {
 
@@ -37,6 +39,10 @@ async function main() {
                     blinding: maskedCommitment.blinding,
                 }
 
+                const indices = await computeBloomIndices(input.maskedCommitment, FILTER_SIZE);
+                const chainstateBitArray = createBitArray(FILTER_SIZE, indices);
+                const value = bits2Num(chainstateBitArray);
+
                 let dirPath = path.join(__dirname, `../../../../circuits/artifacts/circuits/`);
                 let fileName = `mask_commitment.wasm`;
                 let filePath = path.join(dirPath, fileName);
@@ -50,8 +56,8 @@ async function main() {
                 const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer)
 
                 // insert to the status tree
-                const signers = await hre.ethers.getSigners();                                              /* index */                      /* actual masked commitment */
-                await call_userop("Authority", "callFlagStatus", [MIXER_ONBOARDING_AND_TRANSFERS_V3, proof, maskedCommitment.id, toFixedHex(maskedCommitment.maskedCommitment)], AUTHORITY_ADDRESS, INIT_CODE_AUTHORITY, signers[4]);
+                const signers = await hre.ethers.getSigners();                                              /* index */          /* bloom of the masked commitment*/            
+                await call_userop("Authority", "callFlagStatus", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, proof, maskedCommitment.id, toFixedHex(value)], AUTHORITY_ADDRESS, INIT_CODE_AUTHORITY, signers[4]);
             
                 // update to true in the database
                 updateMaskedCommitmentFlagged(maskedCommitment.maskedCommitment);

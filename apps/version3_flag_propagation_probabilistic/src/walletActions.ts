@@ -17,7 +17,7 @@ import { Utxo } from "./pool/utxo";
 
 const ENCRYPTED_DATA_ADDRESS = process.env.ENCRYPTED_DATA_ADDRESS || '';
 const INIT_CODE_RELAYER_V3 = process.env.INIT_CODE_RELAYER_V3 || '';
-const MIXER_ONBOARDING_AND_TRANSFERS_V3 = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3 || '';
+const MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC || '';
 const POOL_USERS_ADDRESS = process.env.POOL_USERS_ADDRESS || '';
 const RELAYER_V3_ADDRESS = process.env.RELAYER_V3_ADDRESS || '';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
@@ -110,7 +110,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
     rl.close();
 
     let usdcValue: USDCStr = `${parseFloat(choiceAmount)}` as USDCStr;
-    let id: string = MIXER_ONBOARDING_AND_TRANSFERS_V3;
+    let id: string = MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC;
 
     // 2) create the utxo 
     const recipientUtxoOnboarding = new Utxo({
@@ -136,7 +136,7 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
         const signers = await hre.ethers.getSigners();
         const { args, argsSMT, extData } = result;
         try {
-            await call_userop("contracts/src/FlagPropagation/RelayerForV3.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, argsSMT, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
+            await call_userop("contracts/src/FlagPropagation/RelayerForV3.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, argsSMT, extData], RELAYER_V3_ADDRESS , INIT_CODE_RELAYER_V3, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -279,7 +279,7 @@ export async function send(username: string, account: string, initCode: string, 
           const { args, argsSMT, extData } = result;
           try {
             await call_userop("contracts/src/FlagPropagation/RelayerForV3.sol:Relayer", "callTransact", 
-                              [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, argsSMT, extData], 
+                              [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, argsSMT, extData], 
                               RELAYER_V3_ADDRESS, INIT_CODE_RELAYER_V3, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed successfully!\n`);
           } catch (error) {
@@ -358,7 +358,7 @@ export async function receive(signer: any, account: string, initCode: string) {
     if (result) {
         const { args, extData } = result;
         try {
-            await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, extData], account , initCode, signer);
+            await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, extData], account , initCode, signer);
             console.log(`\nFunded private amount with ${choiceAmount} USDC\n`)
         }
         catch (error) {
@@ -468,7 +468,7 @@ export async function withdraw(username: string, account: string, initCode: stri
 
             console.log ('\nChecking Proof of Innocence ...');
             
-            await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS_V3, args, argsSMT, extData], account, initCode, signer);
+            await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, argsSMT, extData], account, initCode, signer);
 
             console.log(`\nWithdrawal of ${choiceAmount} USDC completed succesfully!\n`);
         }

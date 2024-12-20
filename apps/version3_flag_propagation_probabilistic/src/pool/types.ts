@@ -120,7 +120,7 @@ export interface BaseUtxo {
   index: number
   commitment?: bigint
   nullifier?: bigint
-  chainState: Chainstate
+  chainState?: Chainstate
 
   getNullifier: () => bigint
   getCommitment: () => bigint

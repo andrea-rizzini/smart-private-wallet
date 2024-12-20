@@ -15,3 +15,9 @@ export function createBitArray(size: number, indices: number[]) {
     indices.forEach(idx => arr[idx] = 1);
     return arr;
 }
+
+export function bits2Num(bits: number[]) {
+    return bits.reduce((acc, bit, i) => {
+        return acc + BigInt(bit) * (2n ** BigInt(i));
+    }, 0n);
+}
