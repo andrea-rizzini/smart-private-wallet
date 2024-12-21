@@ -290,7 +290,6 @@ async function buildSMTree({ events }: { events: StatusTreeEvents }): Promise<SM
   for (const event of events) {
     smt.add(BigInt(event.index), BigInt(event.maskedCommitment))
   }
-  // console.log("Root: ", smt.root)
 
   // console.log(`Proof for 3: `, smt.createProof(BigInt(3)))
   

@@ -39,9 +39,9 @@ async function main() {
                     blinding: maskedCommitment.blinding,
                 }
 
-                const indices = await computeBloomIndices(input.maskedCommitment, FILTER_SIZE);
-                const chainstateBitArray = createBitArray(FILTER_SIZE, indices);
-                const value = bits2Num(chainstateBitArray);
+                // const indices = await computeBloomIndices(input.maskedCommitment, FILTER_SIZE);
+                // const chainstateBitArray = createBitArray(FILTER_SIZE, indices);
+                // const value = bits2Num(chainstateBitArray);
 
                 let dirPath = path.join(__dirname, `../../../../circuits/artifacts/circuits/`);
                 let fileName = `mask_commitment.wasm`;
@@ -56,8 +56,8 @@ async function main() {
                 const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer)
 
                 // insert to the status tree
-                const signers = await hre.ethers.getSigners();                                              /* index */          /* bloom of the masked commitment*/            
-                await call_userop("Authority", "callFlagStatus", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, proof, maskedCommitment.id, toFixedHex(value)], AUTHORITY_ADDRESS, INIT_CODE_AUTHORITY, signers[4]);
+                const signers = await hre.ethers.getSigners();                                                        
+                await call_userop("Authority", "callFlagStatus", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, proof, maskedCommitment.id, toFixedHex(input.maskedCommitment)], AUTHORITY_ADDRESS, INIT_CODE_AUTHORITY, signers[4]);
             
                 // update to true in the database
                 updateMaskedCommitmentFlagged(maskedCommitment.maskedCommitment);

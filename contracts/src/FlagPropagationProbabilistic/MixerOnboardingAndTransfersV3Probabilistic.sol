@@ -119,6 +119,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
       return bytes32(hasherSMT3Inputs.poseidon([element1_, element2_, element3_]));
   }
 
+
   function getRootSMT() public view returns (bytes32) {
     return statusTree.getRoot();
   }

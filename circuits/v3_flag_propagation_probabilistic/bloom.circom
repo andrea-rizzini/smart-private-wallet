@@ -52,9 +52,9 @@ template BloomFilter(n, k, depth) {
     }
 
     // log(bits2Value.out);
-    bits2Value.out === value;
+    // bits2Value.out === value;
 
-    // first verify that bitArray2 belongs to the authorized smt 
+    // first verify that maskeCommitment belongs to the authorized smt 
     component smtVerifier = SMTVerifier(depth);
     smtVerifier.root <== root;
     for (var i = 0; i < depth; i++) {

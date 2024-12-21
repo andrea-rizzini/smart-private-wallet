@@ -28,16 +28,15 @@ export async function generateCircuitInput(bitArray1: number[], bitArray2: numbe
     return {
         bitArray: bitArray1,
         bitArray2: bitArray2,
-        root: smtData.root.toString(),
-        // @ts-ignore
-        siblings: smtData.proof.siblings.map(s => s.toString()),
-        key: smtData.testKey.toString(),
-        value: smtData.value.toString(),
-        auxKey: "0",
-        auxValue: "0",
-        auxIsEmpty: "0", 
-        isExclusion: "0",
-        k: "2"
+        root: smtData.root,
+        siblings: smtData.proof.siblings,
+        key: smtData.key,
+        value: smtData.masked_commitment,
+        auxKey: 0,
+        auxValue: 0,
+        auxIsEmpty: 0, 
+        isExclusion: 0,
+        // k: "2"
     };
 }
 
@@ -47,18 +46,16 @@ function padSiblings(siblings: bigint[], height: number): bigint[] {
         : siblings;
   }
 
-export async function argumentsSMT(bitArray2: number[], smt: any, key: bigint) {
-        
-    // bits2Num expects an array of bits in reverse order (lsb first)
-    const value = bits2Num(bitArray2);
-    // console.log("bitarray2: ", bitArray2);
-    // console.log("turned to value: ", value);
+export async function argumentsSMT(smt: any, key: bigint, masked_commitment: bigint) {
     
     // generate inclusion proof
     const proof = smt.createProof(key);
     const paddedSiblings = padSiblings(proof.siblings, SMT_DEPTH);
     
     return {
-        proof: { ...proof, siblings: paddedSiblings },
+        key,
+        proof: { ...proof, siblings: paddedSiblings},
+        root: smt.root,
+        masked_commitment
     };
 }

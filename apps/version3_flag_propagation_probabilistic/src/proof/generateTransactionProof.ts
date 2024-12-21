@@ -251,7 +251,7 @@ export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, e
     const indices = await computeBloomIndices(BigInt(masked_commitment), FILTER_SIZE);
     const bitArray2 = createBitArray(FILTER_SIZE, indices); // this would be a bloom filter with just one element (derived from the flagged masked commitment)
 
-    const smtData = argumentsSMT(bitArray2, smt, BigInt(event.index));
+    const smtData = await argumentsSMT(smt, BigInt(event.index), BigInt(masked_commitment));
     const input = await generateCircuitInput(bitArray1, bitArray2, smtData);
 
     // @ts-ignore
