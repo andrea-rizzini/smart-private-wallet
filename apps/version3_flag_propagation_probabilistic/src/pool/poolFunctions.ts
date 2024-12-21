@@ -12,13 +12,10 @@ import { toFixedHex } from "../utils/toHex";
 import { Utxo } from "./utxo";
 
 const contractAddress = process.env.POOL_USERS_ADDRESS || '';
-const FILTER_SIZE = 16384;
 const MERKLE_TREE_HEIGHT = 20;
 const MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC || '';
 
 export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){
-
-  const chainStateSize = 63;
 
   // 1) fetch all nullifiers
   const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
@@ -40,21 +37,17 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
     try {
       const utxo = Utxo.decrypt(senderKeyPair, encryptedOutput, index);
       // @ts-ignore
-      const buf = senderKeyPair.decrypt(event.args[3]) 
+      const buffBloomFilter = senderKeyPair.decrypt(event.args[3]) 
+      const bloomFilter: number[] = []
 
-      // for (let i = 0; i < buf.length; i += chainStateSize) {
-      //   const index = BigInt('0x' + buf.slice(i, i + 31).toString('hex'));
-      //   const maskedCommitment = BigInt('0x' + buf.slice(i + 31, i+chainStateSize).toString('hex'));
-      //   // console.log("Index:", buf.slice(i, i + 31).toString('hex'))
-      //   // console.log("Masked:", '0x'+buf.slice(i + 31, chainStateSize).toString('hex'))
-      //   const chainState: Chainstate = { index, maskedCommitment: maskedCommitment }
-      //   chainStates.push(chainState)
-      // }
+      for (let i = 0; i < buffBloomFilter.length; i++) {
+        bloomFilter.push(buffBloomFilter[i]); // Aggiungi il bit all'array
+      }
 
-      utxo.chainState.chainstateBitArray = 
+      const chainState: Chainstate = { chainstateBitArray: bloomFilter}
+      utxo.chainState = chainState 
       myUtxo.push(utxo)
 
-      // console.log(myUtxo)
 
     } catch (e) {
       // console.log(e)
@@ -68,6 +61,7 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
 
   myUtxo.forEach(utxo => {
     const nullifier = utxo.getNullifier();
+    // @ts-ignore
     const isSpent = eventsNullifiers.some(event => toFixedHex(event.args[0]) === toFixedHex(nullifier));
     if (!isSpent) {
       unspentUtxo.push(utxo);
@@ -102,17 +96,15 @@ export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSende
     try {
       const utxo = Utxo.decrypt(senderKeyPair, encryptedOutput, index);
       // @ts-ignore
-      const buf = senderKeyPair.decrypt(event.args[3]) 
+      const buffBloomFilter = senderKeyPair.decrypt(event.args[3]) 
+      const bloomFilter: number[] = []
 
-      // for (let i = 0; i < buf.length; i += chainStateSize) {
-      //   const index = BigInt('0x' + buf.slice(i, i + 31).toString('hex'));
-      //   const maskedCommitment = BigInt('0x' + buf.slice(i + 31, i+chainStateSize).toString('hex'));
-      //   // console.log(buf.slice(i + 31, i + chainStateSize).toString('utf-8'))
-      //   const chainState: Chainstate = { index, maskedCommitment: maskedCommitment }
-      //   chainStates.push(chainState)
-      // }
+      for (let i = 0; i < buffBloomFilter.length; i++) {
+        bloomFilter.push(buffBloomFilter[i]); // Aggiungi il bit all'array
+      }
 
-      utxo.chainState.chainstateBitArray = 
+      const chainState: Chainstate = { chainstateBitArray: bloomFilter}
+      utxo.chainState = chainState 
       myUtxo.push(utxo)
 
       // console.log(myUtxo)
@@ -128,6 +120,7 @@ export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSende
 
   myUtxo.forEach(utxo => {
     const nullifier = utxo.getNullifier();
+    // @ts-ignore
     const isSpent = eventsNullifiers.some(event => toFixedHex(event.args[0]) === toFixedHex(nullifier));
     if (!isSpent) {
       unspentUtxoOnb.push(utxo);
@@ -347,6 +340,7 @@ async function prepareOnboarding ({
       extAmount,
       tree: rootHex,
       smt: await buildSMTree({ events: eventsStatusTree }),
+      eventsStatusTree,
       recipient
   }
 
@@ -354,12 +348,12 @@ async function prepareOnboarding ({
     params.tree = await buildMerkleTree({ events })
   }
 
-  const { extData, args, argsSMT } = await getProofOnboarding(params)
+  const { extData, args, argsBloom } = await getProofOnboarding(params)
 
   return {
       extData,
       args,
-      argsSMT,
+      argsBloom,
       amount,
   }
 
@@ -403,6 +397,7 @@ async function prepareTransaction({
       extAmount,
       tree: rootHex,
       smt: await buildSMTree({ events: eventsStatusTree }),
+      eventsStatusTree,
       recipient,
       address
   }
@@ -413,12 +408,12 @@ async function prepareTransaction({
       params.tree = await buildMerkleTree({ events }) // build the tree off-chain
   }
 
-  const { extData, args, argsSMT } = await getProof(params)
+  const { extData, args, argsBloom } = await getProof(params)
 
   return {
       extData,
       args,
-      argsSMT,
+      argsBloom,
       amount,
   }
 
@@ -468,8 +463,8 @@ export async function createOnboardingData(params: CreateTransactionParams, keyp
   params.events = await fetchCommitments()
   params.eventsStatusTree = await fetchStatusTreeEvents()
   params.addressSender = addressSender
-  const { extData, args, argsSMT, amount } = await prepareOnboarding(params)
-  return { extData, args, argsSMT, amount }
+  const { extData, args, argsBloom, amount } = await prepareOnboarding(params)
+  return { extData, args, argsBloom, amount }
 }
 
 export async function createTransactionData(params: CreateTransactionParams, keypair: Keypair, signer: any, address ?: string){
@@ -486,6 +481,6 @@ export async function createTransactionData(params: CreateTransactionParams, key
     params.eventsStatusTree = await fetchStatusTreeEvents()
   }
 
-  const { extData, args, argsSMT, amount } = await prepareTransaction(params)
-  return { extData, args, argsSMT, amount }
+  const { extData, args, argsBloom, amount } = await prepareTransaction(params)
+  return { extData, args, argsBloom, amount }
 }

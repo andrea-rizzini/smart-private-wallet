@@ -10,9 +10,12 @@ export type ArgsProof = {
   extDataHash: string
 }
 
-export type ArgsSMT = {
+export type ArgsBloom = {
   proofs: BytesLike []
   root: BytesLike
+  keys: bigint []
+  isExclusion: number  
+  k: number
 }
 
 export type ArgsPOI = {
@@ -27,6 +30,7 @@ export type ProofParams = {
   tree: any
   // eslint-disable-next-line
   smt: any
+  eventsStatusTree: StatusTreeEvents
   extAmount: bigint
   recipient: string | bigint
   address?: string

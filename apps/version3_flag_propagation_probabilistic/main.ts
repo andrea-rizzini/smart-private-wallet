@@ -5,7 +5,7 @@ import { inputFromCLI } from './src/utils/inputFromCLI';
 
 async function main() {
 
-  await figlet('Smart  private  wallet  v3 with probabilistic compliance!', function(err, data) {
+  await figlet('Smart  private  wallet!', function(err, data) {
       if (err) {
         console.log('Something went wrong...');
         console.dir(err);

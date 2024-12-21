@@ -9,7 +9,7 @@ import "@solarity/solidity-lib/libs/data-structures/SparseMerkleTree.sol";
 import "../Transfers/MerkleTreeWithHistory.sol";
 import { IVerifier } from "../Transfers/interfaces/IVerifier.sol";
 import { IVerifierMaskedCommitment } from "../FlagPropagation/IVerifierMaskedCommitment.sol";
-import { IVerifierNonMembership } from "../FlagPropagation/IVerifierNonMembership.sol";
+import { IVerifierNonMembershipBloom } from "./IVerifierNonMembershipBloom.sol";
 
 interface IHasherSMT {
   function poseidon(bytes32[2] calldata inputs) external view returns (bytes32);
@@ -37,7 +37,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
 
   IVerifierMaskedCommitment public immutable verifierMaskedCommitment;
 
-  IVerifierNonMembership public immutable verifierNonMembership;
+  IVerifierNonMembershipBloom public immutable verifierNonMembershipBloom;
 
   //MerkleTreeWithHistory public statusTree;
   SparseMerkleTree.Bytes32SMT internal statusTree;
@@ -62,9 +62,12 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     bytes32 extDataHash;
   }
 
-  struct ProofSMT {
+  struct ProofBloom {
     bytes[] proofs;
     bytes32 root;
+    uint256[] keys;
+    uint32 isExclusion;
+    uint32 k;
   }
 
   // Events for transactions
@@ -83,7 +86,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     IVerifier _verifier2,
     IVerifier _verifier16,
     IVerifierMaskedCommitment _verifierMaskedCommitment,
-    IVerifierNonMembership _verifierNonMembership,
+    IVerifierNonMembershipBloom _verifierNonMembershipBloom,
     address _hasherTransactions,
     address _hasherPoseidon3Inputs,
     IERC20 _token,
@@ -94,7 +97,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     verifier2 = _verifier2;
     verifier16 = _verifier16;
     verifierMaskedCommitment = _verifierMaskedCommitment;
-    verifierNonMembership = _verifierNonMembership;
+    verifierNonMembershipBloom = _verifierNonMembershipBloom;
     hasherSMT = IHasherSMT(_hasherTransactions);
     hasherSMT3Inputs = IHasherSMT3Inputs(_hasherPoseidon3Inputs);
     token = _token;
@@ -115,24 +118,6 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
   ) internal view returns (bytes32) {
       return bytes32(hasherSMT3Inputs.poseidon([element1_, element2_, element3_]));
   }
-
-  // function _hash2(bytes32 element1_, bytes32 element2_) internal pure returns (bytes32) {
-  //   return bytes32(PoseidonUnit2L.poseidon([uint256(element1_), uint256(element2_)]));
-  // }
-
-  // function _hash3(
-  //   bytes32 element1_,
-  //   bytes32 element2_,
-  //   bytes32 element3_
-  // ) internal pure returns (bytes32) {
-  //     return
-  //       bytes32(
-  //           PoseidonUnit3L.poseidon(
-  //               [uint256(element1_), uint256(element2_), uint256(element3_)]
-  //           )
-  //       );
-  // }
-
 
   function getRootSMT() public view returns (bytes32) {
     return statusTree.getRoot();
@@ -186,21 +171,21 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     token.safeTransferFrom(msg.sender, address(this), uint256(_extData.extAmount));
   }
 
-  function transact(Proof memory _args, ProofSMT memory _argsSMT, ExtData memory _extData) external payable { 
+  function transact(Proof memory _args, ProofBloom memory _argsBloom, ExtData memory _extData) external payable { 
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
-    _transact(_args, _argsSMT, _extData);
+    _transact(_args, _argsBloom, _extData);
   }
 
-  function _transact(Proof memory _args, ProofSMT memory _argsSMT, ExtData memory _extData) internal nonReentrant {
+  function _transact(Proof memory _args, ProofBloom memory _argsBloom, ExtData memory _extData) internal nonReentrant {
     require(isKnownRoot_(_args.root), "Invalid merkle root");
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
     }
     require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
 
-    require(verifyNonMembershipProofs(_argsSMT));
+    require(verifyProofsBloom(_argsBloom));
     require(verifyProof(_args), "Invalid transaction proof");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
@@ -216,14 +201,14 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
   }
 
   // function that allows transfers
-  function withdraw(Proof memory _args, ProofSMT memory _argsSMT, ExtData memory _extData) external payable { 
+  function withdraw(Proof memory _args, ProofBloom memory _argsBloom, ExtData memory _extData) external payable { 
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
-    _withdraw(_args, _argsSMT, _extData); 
+    _withdraw(_args, _argsBloom, _extData); 
   }
 
-  function _withdraw(Proof memory _args, ProofSMT memory _argsSMT, ExtData memory _extData) internal nonReentrant {
+  function _withdraw(Proof memory _args, ProofBloom memory _argsBloom, ExtData memory _extData) internal nonReentrant {
     require(isKnownRoot_(_args.root), "Invalid merkle root");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
@@ -231,7 +216,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     }
     require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
 
-    require(verifyNonMembershipProofs(_argsSMT));
+    require(verifyProofsBloom(_argsBloom));
     require(verifyProof(_args), "Invalid transaction proof");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
@@ -307,12 +292,15 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     return verifierMaskedCommitment.verifyProofMaskCommitment(maskProof, [uint256(maskedCommitment)]);
   }
 
-function verifyNonMembershipProofs(ProofSMT memory _argsSMT) public view returns (bool) {
+function verifyProofsBloom(ProofBloom memory _argsBloom) public view returns (bool) {
 
-  for (uint256 i = 0; i < _argsSMT.proofs.length; i++) {
-    bool isValid = verifierNonMembership.verifyProofNonMembership(
-        _argsSMT.proofs[i],
-        [uint256(_argsSMT.root)] 
+  for (uint256 i = 0; i < _argsBloom.proofs.length; i++) {
+    bool isValid = verifierNonMembershipBloom.verifyProofBloom(
+        _argsBloom.proofs[i],
+        [uint256(_argsBloom.root),
+        uint256(_argsBloom.keys[i]),
+        uint256(_argsBloom.isExclusion),
+        uint256(_argsBloom.k)] 
     );
 
     if (!isValid) {

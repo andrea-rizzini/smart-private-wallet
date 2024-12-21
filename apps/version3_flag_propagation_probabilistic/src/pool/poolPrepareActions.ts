@@ -27,8 +27,8 @@ export async function prepareTransferForOnboarding(amount: string, recipientUtxo
 
   const outputs = (totalAmount - (hre.ethers.parseUnits(amount, 6))) == BigInt(0) ? [recipientUtxoOnboarding] : [recipientUtxoOnboarding, senderChangeUtxo]
 
-  const { extData, args, argsSMT } = await createOnboardingData({ outputs, inputs: unspentUtxo }, senderKeyPair, signer, addressSender)
-  return { args, argsSMT, extData }
+  const { extData, args, argsBloom } = await createOnboardingData({ outputs, inputs: unspentUtxo }, senderKeyPair, signer, addressSender)
+  return { args, argsBloom, extData }
 }
 
 export async function prepareTransfer(amount: string, username: string, addressSender: string, addressReceiver: string, signer: any) {
@@ -53,8 +53,8 @@ export async function prepareTransfer(amount: string, username: string, addressS
 
     const outputs = (totalAmount - (hre.ethers.parseUnits(amount, 6))) == BigInt(0) ? [recipientUtxo] : [recipientUtxo, senderChangeUtxo]
 
-    const { extData, args, argsSMT } = await createTransactionData({ outputs, inputs: unspentUtxo }, senderKeyPair, signer)
-    return { args, argsSMT, extData }
+    const { extData, args, argsBloom } = await createTransactionData({ outputs, inputs: unspentUtxo }, senderKeyPair, signer)
+    return { args, argsBloom, extData }
 
 
   } else {
@@ -68,7 +68,7 @@ export async function prepareWithdrawal(amount: string, username: string, addres
 
   const outputs = [new Utxo({ amount: totalAmount - (hre.ethers.parseUnits(amount, 6)), keypair: senderKeyPair })]
 
-  const { extData, args, argsSMT } = await createTransactionData(
+  const { extData, args, argsBloom } = await createTransactionData(
     {
       outputs,
       inputs: unspentUtxo,
@@ -77,6 +77,6 @@ export async function prepareWithdrawal(amount: string, username: string, addres
     senderKeyPair,
     signer
   )
-  return { extData, args, argsSMT }
+  return { extData, args, argsBloom }
 
 }

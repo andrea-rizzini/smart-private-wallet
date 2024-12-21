@@ -145,7 +145,7 @@ export async function acceptInvite() {
   console.log('\nCreating smart account ...');
 
   // deploy new account
-  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/FlagPropagation/AccountForV3.sol:AccountFactory"); 
+  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:AccountFactory"); 
   const signers = await hre.ethers.getSigners(); // signers[i] is the whole object
   const address = await signers[index].getAddress(); 
 
@@ -160,7 +160,7 @@ export async function acceptInvite() {
     account = "0x" + error.data.slice(-40); 
   }
 
-  const _account = await hre.ethers.getContractAt("contracts/src/FlagPropagation/AccountForV3.sol:Account", account);
+  const _account = await hre.ethers.getContractAt("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:Account", account);
 
   console.log("\nRegistering account's public key in the pool ...")
   await setup(username, account, initCode, signers[index]);
@@ -187,7 +187,7 @@ export async function acceptInvite() {
       const { args, extData } = result;
 
       try {
-          await call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, extData], account , initCode, signers[index]);
+          await call_userop("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:Account", "callDeposit", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, extData], account , initCode, signers[index]);
           console.log(`\nFunded private amount with 0.01 USDC`)          
       }
       catch (error) {
@@ -314,7 +314,7 @@ export async function login() {
   const address = await signers[index].getAddress(); 
 
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, signers[2]);
-  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/FlagPropagation/AccountForV3.sol:AccountFactory"); 
+  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:AccountFactory"); 
 
   let initCode = ACCOUNT_FACTORY_V3_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2); // first 20 byte are the factory address, the rest is calldata
   let account: string = "0x";
@@ -444,7 +444,7 @@ export async function onboardViaLink() {
 
   let index: number = insertUser(username, passwordHash) - 1;
 
-  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/FlagPropagation/AccountForV3.sol:AccountFactory"); 
+  const AccountFactory = await hre.ethers.getContractFactory("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:AccountFactory"); 
   const signers = await hre.ethers.getSigners(); // signers[i] is the whole object
   const address = await signers[index].getAddress(); 
 
@@ -459,7 +459,7 @@ export async function onboardViaLink() {
     account = "0x" + error.data.slice(-40); 
   }
 
-  const _account = await hre.ethers.getContractAt("contracts/src/FlagPropagation/AccountForV3.sol:Account", account);
+  const _account = await hre.ethers.getContractAt("contracts/src/FlagPropagation/AccountForV3Probabilistic.sol:Account", account);
 
   // generate pubKey and register it in the pool
   await setup(username, account, initCode, signers[index]);
@@ -494,7 +494,7 @@ export async function onboardViaLink() {
   
       const bytes = Buffer.concat([toBuffer(link.challenge, 31), toBuffer(BigInt(account), 19), toBuffer(link.receiver, link.receiver.length)]);
   
-      call_userop("contracts/src/FlagPropagation/AccountForV3.sol:Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, keypair.encrypt(bytes)], account, initCode, signers[index]);
+      call_userop("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, keypair.encrypt(bytes)], account, initCode, signers[index]);
     }
     
     // start the wallet

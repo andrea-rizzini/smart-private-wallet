@@ -2,13 +2,14 @@ import hre from "hardhat";
 import fs from 'fs';
 import path from 'path';
 
-import { ArgsProof, ArgsSMT, BaseUtxo, Chainstate, Params, ProofParams } from "../pool/types";
+import { ArgsBloom, ArgsProof, BaseUtxo, Chainstate, Params, ProofParams } from "../pool/types";
 import { BytesLike } from '@ethersproject/bytes'
 import { createBitArray, computeBloomIndices } from "../utils/bloomUtils";
 import { getIdAndMaskedCommitmentByDepositorAddress, insertMaskedCommitment } from "../../database/database";
 import { poseidonHash } from "../utils/hashFunctions";
 import  { prove } from "./prover";
 import { randomBN } from "../pool/utxo";
+import { argumentsSMT, generateCircuitInput } from "../utils/bloomUtils";
 import { toBuffer } from "../pool/utxo";
 import { toFixedHex } from "../utils/toHex";
 
@@ -61,7 +62,7 @@ function getExtDataHash({ recipient, extAmount, encryptedOutput1, encryptedOutpu
   }
 
 // to be moved to the proof folder
-export async function getProof({ inputs, outputs, tree, smt, extAmount, recipient, address }: ProofParams) {
+export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, extAmount, recipient, address }: ProofParams) {
   inputs = shuffle(inputs)
   outputs = shuffle(outputs)
 
@@ -247,73 +248,53 @@ export async function getProof({ inputs, outputs, tree, smt, extAmount, recipien
   }
 
   // proofs for each masked commitment
-  fileName = `non_membership.wasm`;
+  const proofs: BytesLike[] = []
+  const keys: bigint[] = []
+
+  fileName = `non_membership_bloom.wasm`;
   filePath = path.join(dirPath, fileName);
   wasmBuffer = fs.readFileSync(filePath);
   
-  fileName = `non_membership.zkey`;
+  fileName = `non_membership_bloom.zkey`;
   filePath = path.join(dirPath, fileName);
   zKeyBuffer = fs.readFileSync(filePath);
 
-  const proofs = []
+  for (const event of eventsStatusTree) { // for each masked commitment flagged
 
-  let totalTime = 0;
-  for (const status of statusToEncrypt) {
-    const proof_ = smt.createProof(status.index)
-    proof_.siblings = padSiblings(proof_.siblings, SMT_HEIGHT)
+    const bitArray1 = statusMerged.chainstateBitArray // this would be the bloom filter representing the utxo chainstate
 
-    const input = {
-      root: smt.root,
-      siblings: proof_.siblings,
-      key: status.index,
-      value: 0,
-      auxKey: 0,
-      auxValue: 0,
-      auxIsEmpty: 1,
-      isExclusion: 1
-    }
+    const masked_commitment = event.maskedCommitment;
+    const indices = await computeBloomIndices(BigInt(masked_commitment), FILTER_SIZE);
+    const bitArray2 = createBitArray(FILTER_SIZE, indices); // this would be a bloom filter with just one element (derived from the flagged masked commitment)
 
-    const originalLog = console.log;
+    const smtData = argumentsSMT(bitArray2, smt, BigInt(event.index));
+    const input = await generateCircuitInput(bitArray1, bitArray2, smtData);
 
-    try {
-      // console.log = function (...args) {
-      //     if (args[0] !== "ERROR:") return;
-      // };
+    // @ts-ignore
+    const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer);
 
-      const start = performance.now();
-      // @ts-ignore
-      const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer);
-      const end = performance.now();
-      const time = end - start;
-      console.log(`Time to generate proof: ${time} ms`);
-      totalTime += time;
-
-      proofs.push(proof);
-    } catch (error) {
-        throw (`\nError in the transaction preparation: you are trying to include a tainted UTXO!\nMasked commitment: ${toFixedHex(status.maskedCommitment)}\n`);
-    } finally {
-        console.log = originalLog;
-    }
-  
+    proofs.push(proof);
+    keys.push(BigInt(event.index));
   }
 
-  console.log(`Total time to generate all proofs: ${totalTime} ms`);
-
-  const argsSMT: ArgsSMT = {
+  const argsBloom: ArgsBloom = {
     proofs,
     root: toFixedHex(smt.root),
+    keys: keys,
+    isExclusion: 0,
+    k: 2
   }
 
   return {
     extData,
     proof,
     args,
-    argsSMT,
+    argsBloom,
   }
 
 }
 
-export async function getProofOnboarding({ inputs, outputs, tree, smt, extAmount, recipient, addressSender}: ProofParams) {
+export async function getProofOnboarding({ inputs, outputs, tree, smt, eventsStatusTree, extAmount, recipient, addressSender}: ProofParams) {
   inputs = shuffle(inputs)
   outputs = shuffle(outputs)
 
@@ -482,54 +463,47 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, extAmount
   }
 
   // proofs for each masked commitment
-  fileName = `non_membership.wasm`;
+  const proofs: BytesLike[] = []
+  const keys: bigint[] = []
+
+  fileName = `non_membership_bloom.wasm`;
   filePath = path.join(dirPath, fileName);
   wasmBuffer = fs.readFileSync(filePath);
   
-  fileName = `non_membership.zkey`;
+  fileName = `non_membership_bloom.zkey`;
   filePath = path.join(dirPath, fileName);
   zKeyBuffer = fs.readFileSync(filePath);
 
-  const proofs: BytesLike[] = []
-  for (const status of statusToEncrypt) {
-    const proof_ = smt.createProof(status.index)
-    proof_.siblings = padSiblings(proof_.siblings, SMT_HEIGHT)
+  for (const event of eventsStatusTree) { // for each masked commitment flagged
 
-    const input = {
-      root: smt.root,
-      siblings: proof_.siblings,
-      key: status.index,
-      value: 0,
-      auxKey: 0,
-      auxValue: 0,
-      auxIsEmpty: 1,
-      isExclusion: 1
-    }
+    const bitArray1 = statusMerged.chainstateBitArray // this would be the bloom filter representing the utxo chainstate
 
-    try {
-      const start = performance.now();
-      // @ts-ignore
-      const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer)
-      const end = performance.now();
-      const time = end - start;
-      console.log(`Time to generate proof: ${time} ms`);
-      proofs.push(proof)
-    }
-    catch (e) {
-      throw (`\nYou are trying to include a tainted UTXO!\nMasked commtiment: ${toFixedHex(status.maskedCommitment)}\n`);
-    }
-        
+    const masked_commitment = event.maskedCommitment;
+    const indices = await computeBloomIndices(BigInt(masked_commitment), FILTER_SIZE);
+    const bitArray2 = createBitArray(FILTER_SIZE, indices); // this would be a bloom filter with just one element (derived from the flagged masked commitment)
+
+    const smtData = argumentsSMT(bitArray2, smt, BigInt(event.index));
+    const input = await generateCircuitInput(bitArray1, bitArray2, smtData);
+
+    // @ts-ignore
+    const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer);
+
+    proofs.push(proof);
+    keys.push(BigInt(event.index));
   }
 
-  const argsSMT: ArgsSMT = {
-    proofs: proofs,
+  const argsBloom: ArgsBloom = {
+    proofs,
     root: toFixedHex(smt.root),
+    keys: keys,
+    isExclusion: 0,
+    k: 2
   }
 
   return {
     extData,
     proof,
     args,
-    argsSMT,
+    argsBloom,
   }
 }

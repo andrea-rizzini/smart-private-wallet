@@ -12,16 +12,16 @@ async function main () {
     const VERIFIER_2 = process.env.VERIFIER_2 || '';
     const VERIFIER_16 = process.env.VERIFIER_16 || '';
     const VERIFIER_MASKED_COMMITMENT = process.env.VERIFIER_MASKED_COMMITMENT || '';
-    const VERIFIER_NON_MEMBERSHIP = process.env.VERIFIER_NON_MEMBERSHIP || '';
+    const VERIFIER_NON_MEMBERSHIP_BLOOM = process.env.VERIFIER_NON_MEMBERSHIP_BLOOM || '';
     const HASHER_TRANSFERS = process.env.HASHER_TRANSFERS || '';
     const HASHER_POSEIDON_3_INPUTS = process.env.HASHER_POSEIDON_3_INPUTS || '';
 
     const signers = await hre.ethers.getSigners();
     const faucet = signers[2];    
 
-    const mixer = await hre.ethers.getContractFactory("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3Probabilistic.sol:MixerOnboardingAndTransfers", faucet);
+    const mixer = await hre.ethers.getContractFactory("contracts/src/FlagPropagationProbabilistic/MixerOnboardingAndTransfersV3Probabilistic.sol:MixerOnboardingAndTransfers", faucet);
 
-    const mixer_onb_and_transf_V3 = await mixer.deploy(VERIFIER_2, VERIFIER_16,  VERIFIER_MASKED_COMMITMENT, VERIFIER_NON_MEMBERSHIP, HASHER_TRANSFERS, HASHER_POSEIDON_3_INPUTS, USDC_ADDRESS, 20, AUTHORITY_ADDRESS);
+    const mixer_onb_and_transf_V3 = await mixer.deploy(VERIFIER_2, VERIFIER_16,  VERIFIER_MASKED_COMMITMENT, VERIFIER_NON_MEMBERSHIP_BLOOM, HASHER_TRANSFERS, HASHER_POSEIDON_3_INPUTS, USDC_ADDRESS, 20, AUTHORITY_ADDRESS);
     await mixer_onb_and_transf_V3.waitForDeployment();
     console.log(`Mixer for oboarding and transfers V3 probabilistic deployed at: ${mixer_onb_and_transf_V3.target}`);
     envConfig.MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC = mixer_onb_and_transf_V3.target.toString();
@@ -29,7 +29,7 @@ async function main () {
     //verify the contract
     await run("verify:verify", {
         address: mixer_onb_and_transf_V3.target,
-        constructorArguments: [VERIFIER_2, VERIFIER_16,  VERIFIER_MASKED_COMMITMENT, VERIFIER_NON_MEMBERSHIP, HASHER_TRANSFERS, HASHER_POSEIDON_3_INPUTS, USDC_ADDRESS, 20, AUTHORITY_ADDRESS]
+        constructorArguments: [VERIFIER_2, VERIFIER_16,  VERIFIER_MASKED_COMMITMENT, VERIFIER_NON_MEMBERSHIP_BLOOM, HASHER_TRANSFERS, HASHER_POSEIDON_3_INPUTS, USDC_ADDRESS, 20, AUTHORITY_ADDRESS]
     });
     
     // write new addresses to .env file

@@ -26,7 +26,6 @@ template BitArrayIntersection(n) {
 
 
 template BloomFilter(n, k, depth) {
-
     
     signal private input bitArray[n]; // this would be the bloom filter representing the utxo chainstate
     signal private input bitArray2[n]; // this would be a bloom filter with just one element (derived from the flagged masked commitment)
