@@ -18,7 +18,7 @@ import { toBuffer } from './pool/utxo';
 
 const ENCRYPTED_DATA_ADDRESS: string = process.env.ENCRYPTED_DATA_ADDRESS || '';
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
-const ACCOUNT_FACTORY_V3_ADDRESS: string = process.env.ACCOUNT_FACTORY_V3_ADDRESS || '';
+const ACCOUNT_FACTORY_V3_PROBABILISTIC_ADDRESS: string = process.env.ACCOUNT_FACTORY_V3_PROBABILISTIC_ADDRESS || '';
 const MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC || '';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
@@ -151,7 +151,7 @@ export async function acceptInvite() {
 
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, signers[2]);
 
-  let initCode = ACCOUNT_FACTORY_V3_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
+  let initCode = ACCOUNT_FACTORY_V3_PROBABILISTIC_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
   let account: string = "0x";
   try {
     await ep.getSenderAddress(initCode);
@@ -316,7 +316,7 @@ export async function login() {
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, signers[2]);
   const AccountFactory = await hre.ethers.getContractFactory("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:AccountFactory"); 
 
-  let initCode = ACCOUNT_FACTORY_V3_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2); // first 20 byte are the factory address, the rest is calldata
+  let initCode = ACCOUNT_FACTORY_V3_PROBABILISTIC_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2); // first 20 byte are the factory address, the rest is calldata
   let account: string = "0x";
   try {
     await ep.getSenderAddress(initCode);
@@ -450,7 +450,7 @@ export async function onboardViaLink() {
 
   const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, signers[2]);
 
-  let initCode = ACCOUNT_FACTORY_V3_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
+  let initCode = ACCOUNT_FACTORY_V3_PROBABILISTIC_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
   let account: string = "0x";
   try {
     await ep.getSenderAddress(initCode);
@@ -459,7 +459,7 @@ export async function onboardViaLink() {
     account = "0x" + error.data.slice(-40); 
   }
 
-  const _account = await hre.ethers.getContractAt("contracts/src/FlagPropagation/AccountForV3Probabilistic.sol:Account", account);
+  const _account = await hre.ethers.getContractAt("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:Account", account);
 
   // generate pubKey and register it in the pool
   await setup(username, account, initCode, signers[index]);

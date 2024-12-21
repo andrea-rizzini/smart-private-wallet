@@ -10,20 +10,12 @@ import { poseidonHash } from "../utils/hashFunctions";
 import  { prove } from "./prover";
 import { randomBN } from "../pool/utxo";
 import { argumentsSMT, generateCircuitInput } from "../utils/bloomUtils";
-import { toBuffer } from "../pool/utxo";
 import { toFixedHex } from "../utils/toHex";
 
 const ADDRESS_BYTES_LENGTH = 20
 const FIELD_SIZE = BigInt('21888242871839275222246405745257275088548364400416034343698204186575808495617')
 const FILTER_SIZE = 16384;
 const MERKLE_TREE_HEIGHT = 20;
-const SMT_HEIGHT = 20;
-
-function padSiblings(siblings: bigint[], height: number): bigint[] {
-  return siblings.length < height
-      ? siblings.concat(Array(height - siblings.length).fill(0n))
-      : siblings;
-}
 
 function shuffle(array: BaseUtxo[]) {
     let currentIndex = array.length
@@ -69,20 +61,12 @@ export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, e
   const inputMerklePathIndices = [] 
   const inputMerklePathElements = [] // array of arrays, each array is a merkle branch
 
-  // const statusToEncrypt: Chainstate[] = []
-  const statusMerged: Chainstate = { chainstateBitArray: [] }; // will have always the same size
+  const statusMerged: Chainstate = { chainstateBitArray: [] }; 
+  statusMerged.chainstateBitArray = new Array(FILTER_SIZE).fill(0);
   
   for (const input of inputs) {
     if (input.amount > 0) {
       input.index = tree.indexOf(toFixedHex(input.getCommitment())) // from the tree we get the index of the commitment
-
-      // for (const chainState of input.chainStates as ChainStates) {
-
-        // here is the case there are multiple utxo from Alice's deposits, each one will have the same masked commitment (the one of the first deposit)
-        // if (!statusToEncrypt.includes({index: chainState.index, maskedCommitment: chainState.maskedCommitment})) {
-        //   statusToEncrypt.push({index: chainState.index, maskedCommitment: chainState.maskedCommitment});
-        // }
-      // }
 
       statusMerged.chainstateBitArray = statusMerged.chainstateBitArray.map((bit, i) => bit | input.chainState!.chainstateBitArray[i]);
 
@@ -301,20 +285,12 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, eventsSta
   const inputMerklePathIndices = []
   const inputMerklePathElements = []
 
-  // const statusToEncrypt: Chainstate[] = []
   const statusMerged: Chainstate = { chainstateBitArray: [] }; 
+  statusMerged.chainstateBitArray = new Array(FILTER_SIZE).fill(0);
   
   for (const input of inputs) {
     if (input.amount > 0) {
       input.index = tree.indexOf(toFixedHex(input.getCommitment())) // from the tree we get the index of the commitment
-
-      // for (const chainState of input.chainStates as ChainStates) {
-
-      //   // here is the case there are multiple utxo from Alice's deposits, each one will have the same masked commitment (the one of the first deposit)
-      //   if (!statusToEncrypt.includes({index: chainState.index, maskedCommitment: chainState.maskedCommitment})) {
-      //     statusToEncrypt.push({index: chainState.index, maskedCommitment: chainState.maskedCommitment});
-      //   }
-      // }
 
       statusMerged.chainstateBitArray = statusMerged.chainstateBitArray.map((bit, i) => bit | input.chainState!.chainstateBitArray[i]);
 
@@ -336,78 +312,11 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, eventsSta
 
   let encryptedChainState1, encryptedChainState2;
 
-  if (extAmount > 0) { // meaning that the transaction is a deposit
+  const bytes = Buffer.concat([Buffer.from(statusMerged.chainstateBitArray)]); 
 
-    const tuple = getIdAndMaskedCommitmentByDepositorAddress(addressSender as string);
+  encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
+  encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
 
-    if (!tuple) { // first deposit by Alice
-
-      // we create the masked commitment for the one which has the same amount as the deposit, the other is the fictitious output with amount 0
-      // this just for deposit case
-
-      if (outputs[0].amount === extAmount) { 
-        const commitment_output_one = outputs[0].getCommitment();
-        const blinding_output_one = randomBN();
-        const masked_commitment_one = poseidonHash([commitment_output_one, blinding_output_one]);
-        const indices = await computeBloomIndices(masked_commitment_one, FILTER_SIZE);
-        const chainstateBitArray = createBitArray(FILTER_SIZE, indices);
-        const index = insertMaskedCommitment(addressSender as string, commitment_output_one.toString(), blinding_output_one.toString(), toFixedHex(masked_commitment_one));
-
-        const chainState: Chainstate = { chainstateBitArray: chainstateBitArray };
-        const bytes = Buffer.concat([Buffer.from(chainState.chainstateBitArray)]); 
-        encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
-        encryptedChainState2 = encryptedChainState1;  
-        
-        // console.log("Size of chainState , deposit, before encryption:", bytes.length);
-      }
-
-      else {
-        const commitment_output_two = outputs[1].getCommitment();
-        const blinding_output_two = randomBN();
-        const masked_commitment_two = poseidonHash([commitment_output_two, blinding_output_two]);
-        const indices = await computeBloomIndices(masked_commitment_two, FILTER_SIZE);
-        const chainstateBitArray = createBitArray(FILTER_SIZE, indices);
-        const index = insertMaskedCommitment(addressSender as string, commitment_output_two.toString(), blinding_output_two.toString(), toFixedHex(masked_commitment_two));
-        
-        const chainState: Chainstate = { chainstateBitArray: chainstateBitArray };
-        const bytes2 = Buffer.concat([Buffer.from(chainState.chainstateBitArray)]); 
-        encryptedChainState2 = outputs[1].keypair.encrypt(bytes2);
-        encryptedChainState1 = encryptedChainState2;  
-      }
-
-    }
-
-    else { // use the first masked commitment also for other deposits
-
-      // @ts-ignore
-      const masked_commitment = tuple.maskedCommitment;
-      const indices = await computeBloomIndices(masked_commitment, FILTER_SIZE);
-      const chainstateBitArray = createBitArray(FILTER_SIZE, indices);
-
-      // @ts-ignore
-      const chainState: Chainstate = { chainstateBitArray: chainstateBitArray };
-
-      const bytes = Buffer.concat([Buffer.from(chainState.chainstateBitArray)]); 
-
-      if (outputs[0].amount === extAmount) { 
-        encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
-        encryptedChainState2 = encryptedChainState1;
-      } else {
-        encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
-        encryptedChainState1 = encryptedChainState2;
-      }
-
-    }
-
-  }
-
-  else { // meaning that the transaction is a transfer or a withdrawal
-    const bytes = Buffer.concat([Buffer.from(statusMerged.chainstateBitArray)]); 
-
-    encryptedChainState1 = outputs[0].keypair.encrypt(bytes);
-    encryptedChainState2 = outputs[1].keypair.encrypt(bytes);
-  }
-  
   // prepare extData
   const extData = {
     recipient: toFixedHex(recipient, ADDRESS_BYTES_LENGTH),

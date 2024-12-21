@@ -18,7 +18,7 @@ const MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC = process.env.MIXER_ONBOAR
 export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){
 
   // 1) fetch all nullifiers
-  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
+  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagationProbabilistic/MixerOnboardingAndTransfersV3Probabilistic.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
   let filter = contract.filters.NewNullifier();
   const eventsNullifiers = await contract.queryFilter(filter);
 
@@ -73,11 +73,8 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
 
 export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){ 
 
-  const chainStateSize = 63; 
-  const chainStates : Chainstate[] = []
-
   // 1) fetch all nullifiers
-  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
+  const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagationProbabilistic/MixerOnboardingAndTransfersV3Probabilistic.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
   let filter = contract.filters.NewNullifier();
   const eventsNullifiers = await contract.queryFilter(filter);
 
@@ -106,8 +103,6 @@ export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSende
       const chainState: Chainstate = { chainstateBitArray: bloomFilter}
       utxo.chainState = chainState 
       myUtxo.push(utxo)
-
-      // console.log(myUtxo)
 
     } catch (e) {
       // do nothing, we are trying to decrypt an utxo which is not owned by the sender
