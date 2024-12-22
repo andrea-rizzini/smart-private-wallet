@@ -93,7 +93,6 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     uint32 _merkleTreesHeight,
     address _authority
   )  MerkleTreeWithHistory(_merkleTreesHeight, _hasherTransactions) {
-    //statusTree = new MerkleTreeWithHistory(_merkleTreesHeight, _hasherTransactions);
     verifier2 = _verifier2;
     verifier16 = _verifier16;
     verifierMaskedCommitment = _verifierMaskedCommitment;
@@ -172,21 +171,21 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     token.safeTransferFrom(msg.sender, address(this), uint256(_extData.extAmount));
   }
 
-  function transact(Proof memory _args, ProofBloom memory _argsBloom, ExtData memory _extData) external payable { 
+  function transact(Proof memory _args, bytes memory _proofBloom, uint256[3] memory _publicSignalsBloom, ExtData memory _extData) external payable { 
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
-    _transact(_args, _argsBloom, _extData);
+    _transact(_args, _proofBloom, _publicSignalsBloom, _extData);
   }
 
-  function _transact(Proof memory _args, ProofBloom memory _argsBloom, ExtData memory _extData) internal nonReentrant {
+  function _transact(Proof memory _args, bytes memory _proofBloom, uint256[3] memory _publicSignalsBloom, ExtData memory _extData) internal nonReentrant {
     require(isKnownRoot_(_args.root), "Invalid merkle root");
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
     }
     require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
 
-    require(verifyProofsBloom(_argsBloom));
+    require(verifyProofsBloom(_proofBloom, _publicSignalsBloom), "Invalid bloom proof");
     require(verifyProof(_args), "Invalid transaction proof");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
@@ -202,14 +201,14 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
   }
 
   // function that allows transfers
-  function withdraw(Proof memory _args, ProofBloom memory _argsBloom, ExtData memory _extData) external payable { 
+  function withdraw(Proof memory _args, bytes memory _proofBloom, uint256[3] memory _publicSignalsBloom, ExtData memory _extData) external payable { 
     if (_extData.extAmount > 0) {
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
-    _withdraw(_args, _argsBloom, _extData); 
+    _withdraw(_args, _proofBloom, _publicSignalsBloom, _extData); 
   }
 
-  function _withdraw(Proof memory _args, ProofBloom memory _argsBloom, ExtData memory _extData) internal nonReentrant {
+  function _withdraw(Proof memory _args, bytes memory _proofBloom, uint256[3] memory _publicSignalsBloom, ExtData memory _extData) internal nonReentrant {
     require(isKnownRoot_(_args.root), "Invalid merkle root");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
@@ -217,7 +216,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     }
     require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
 
-    require(verifyProofsBloom(_argsBloom));
+    require(verifyProofsBloom(_proofBloom, _publicSignalsBloom), "Invalid bloom proof");
     require(verifyProof(_args), "Invalid transaction proof");
 
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
@@ -293,22 +292,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     return verifierMaskedCommitment.verifyProofMaskCommitment(maskProof, [uint256(maskedCommitment)]);
   }
 
-function verifyProofsBloom(ProofBloom memory _argsBloom) public view returns (bool) {
+  function verifyProofsBloom(bytes memory _proofBloom, uint256[3] memory _publicSignalsBloom) public view returns (bool) {
 
-  for (uint256 i = 0; i < _argsBloom.proofs.length; i++) {
-    bool isValid = verifierNonMembershipBloom.verifyProofBloom(
-        _argsBloom.proofs[i],
-        [uint256(_argsBloom.root),
-        uint256(_argsBloom.keys[i]),
-        uint256(_argsBloom.isExclusion),
-        uint256(_argsBloom.k)] 
-    );
-
-    if (!isValid) {
-        return false;
-    }
+    return verifierNonMembershipBloom.verifyProofBloom(_proofBloom, _publicSignalsBloom);
   }
-
-  return true;
-}
 }

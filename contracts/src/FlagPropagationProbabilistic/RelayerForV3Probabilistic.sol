@@ -28,15 +28,7 @@ interface IMixerOnboardingAndTransfersV3 {
         bytes32 extDataHash;
     }
 
-    struct ProofBloom {
-        bytes[] proofs;
-        bytes32 root;
-        uint256[] keys;
-        uint32 isExclusion;
-        uint32 k;
-    }
-
-    function transact(Proof memory _args, ProofBloom memory _argsBloom, ExtData memory _extData) external;
+    function transact(Proof memory _args, bytes memory _proofBloom, uint256[3] memory _publicSignalsBloom, ExtData memory _extData) external;
 
 } 
 
@@ -79,11 +71,11 @@ contract Relayer is IAccount {
     function callTransact(
         address poolAddress,
         IMixerOnboardingAndTransfersV3.Proof memory _proofArgs,
-        IMixerOnboardingAndTransfersV3.ProofBloom memory _argsBloom,
+        bytes memory _proofBloom, 
+        uint256[3] memory _publicSignalsBloom,
         IMixerOnboardingAndTransfersV3.ExtData memory _extData
     ) external payable {
-        emit Log("Calling transact");
-        IMixerOnboardingAndTransfersV3(poolAddress).transact(_proofArgs, _argsBloom, _extData);
+        IMixerOnboardingAndTransfersV3(poolAddress).transact(_proofArgs, _proofBloom, _publicSignalsBloom, _extData);
     }
 
 }

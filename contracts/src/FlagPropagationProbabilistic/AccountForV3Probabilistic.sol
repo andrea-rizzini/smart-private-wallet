@@ -28,16 +28,8 @@ interface IMixerOnboardingAndTransfers {
         bytes32 extDataHash;
     }
 
-    struct ProofBloom {
-        bytes[] proofs;
-        bytes32 root;
-        uint256[] keys;
-        uint32 isExclusion;
-        uint32 k;
-    }
-
     function deposit(Proof memory _proofArgs, ExtData memory _extData) external;
-    function withdraw(Proof memory _args, ProofBloom memory _argsBloom, ExtData memory _extData) external;
+    function withdraw(Proof memory _args, bytes memory _proofBloom, uint256[3] memory _publicSignalsBloom, ExtData memory _extData) external;
     
 } 
 
@@ -116,10 +108,11 @@ contract Account is IAccount {
     function callWithdraw(
         address poolAddress,
         IMixerOnboardingAndTransfers.Proof memory _proofArgs,
-        IMixerOnboardingAndTransfers.ProofBloom memory _argsBloom,
+        bytes memory _proofBloom, 
+        uint256[3] memory _publicSignalsBloom, 
         IMixerOnboardingAndTransfers.ExtData memory _extData
     ) external payable {
-        IMixerOnboardingAndTransfers(poolAddress).withdraw(_proofArgs, _argsBloom, _extData);
+        IMixerOnboardingAndTransfers(poolAddress).withdraw(_proofArgs, _proofBloom, _publicSignalsBloom, _extData);
     }
 
 }

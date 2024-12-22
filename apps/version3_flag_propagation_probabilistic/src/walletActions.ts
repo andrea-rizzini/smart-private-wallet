@@ -134,9 +134,9 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     if (result) {
         const signers = await hre.ethers.getSigners();
-        const { args, argsBloom, extData } = result;
+        const { args, proofBloom, publicSignalsBloom, extData } = result;
         try {
-            await call_userop("contracts/src/FlagPropagationProbabilistic/RelayerForV3Probabilistic.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, argsBloom, extData], RELAYER_V3_PROBABILISTIC_ADDRESS , INIT_CODE_RELAYER_V3_PROBABILISTIC, signers[3]); 
+            await call_userop("contracts/src/FlagPropagationProbabilistic/RelayerForV3Probabilistic.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, proofBloom, publicSignalsBloom, extData], RELAYER_V3_PROBABILISTIC_ADDRESS , INIT_CODE_RELAYER_V3_PROBABILISTIC, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed succesfully!\n`);
         }
         catch (error) {
@@ -276,10 +276,10 @@ export async function send(username: string, account: string, initCode: string, 
         
         if (result) {
           const signers = await hre.ethers.getSigners();
-          const { args, argsBloom, extData } = result;
+          const { args, proofBloom, publicSignalsBloom, extData } = result;
           try {
             await call_userop("contracts/src/FlagPropagationProbabilistic/RelayerForV3Probabilistic.sol:Relayer", "callTransact", 
-                              [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, argsBloom, extData], 
+                              [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, proofBloom, publicSignalsBloom, extData], 
                               RELAYER_V3_PROBABILISTIC_ADDRESS, INIT_CODE_RELAYER_V3_PROBABILISTIC, signers[3]); 
             console.log(`\nTransfer of ${choiceAmount} USDC completed successfully!\n`);
           } catch (error) {
@@ -463,12 +463,12 @@ export async function withdraw(username: string, account: string, initCode: stri
     const result = await prepareWithdrawal(choiceAmount, username, account, addressWithdrawal, signer);
 
     if (result) {
-        const { args, argsBloom, extData } = result;
+        const { args, proofBloom, publicSignalsBloom, extData } = result;
         try {
 
             console.log ('\nChecking Proof of Innocence ...');
             
-            await call_userop("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, argsBloom, extData], account, initCode, signer);
+            await call_userop("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, proofBloom, publicSignalsBloom, extData], account, initCode, signer);
 
             console.log(`\nWithdrawal of ${choiceAmount} USDC completed succesfully!\n`);
         }

@@ -285,25 +285,14 @@ function buildMerkleTree({ events }: { events: CommitmentEvents }): typeof Merkl
   return new MerkleTree(MERKLE_TREE_HEIGHT, leaves, { hashFunction: poseidonHash2 })
 }
 
-async function buildSMTree({ events }: { events: StatusTreeEvents }): Promise<SMT>  /*MerkleTreeIden3*/ {
+async function buildSMTree({ events }: { events: StatusTreeEvents }): Promise<SMT> {
   const smt = new SMT(poseidonHash, true);
   for (const event of events) {
     smt.add(BigInt(event.index), BigInt(event.maskedCommitment))
   }
-
-  // console.log(`Proof for 3: `, smt.createProof(BigInt(3)))
   
   return smt;
-  
-  // const localStorage = new LocalStorageDB(str2Bytes(''));
-  // const inMemoryDb = new InMemoryDB(str2Bytes(''));
-  // const smt = new MerkleTreeIden3 (inMemoryDb, true, 20);
-  // for (const event of events) {
-  //   await smt.add(BigInt(event.index), BigInt(event.maskedCommitment))
-  // }
-  // const root = await smt.root();
-  // console.log("Root2: ", BigInt(root.string()))  
-  //return smt;
+
 }
 
 async function prepareOnboarding ({
@@ -342,12 +331,13 @@ async function prepareOnboarding ({
     params.tree = await buildMerkleTree({ events })
   }
 
-  const { extData, args, argsBloom } = await getProofOnboarding(params)
+  const { extData, args, proofBloom, publicSignalsBloom } = await getProofOnboarding(params)
 
   return {
       extData,
       args,
-      argsBloom,
+      proofBloom,
+      publicSignalsBloom,
       amount,
   }
 
@@ -402,12 +392,13 @@ async function prepareTransaction({
       params.tree = await buildMerkleTree({ events }) // build the tree off-chain
   }
 
-  const { extData, args, argsBloom } = await getProof(params)
+  const { extData, args, proofBloom, publicSignalsBloom } = await getProof(params)
 
   return {
       extData,
       args,
-      argsBloom,
+      proofBloom,
+      publicSignalsBloom,
       amount,
   }
 
@@ -457,8 +448,8 @@ export async function createOnboardingData(params: CreateTransactionParams, keyp
   params.events = await fetchCommitments()
   params.eventsStatusTree = await fetchStatusTreeEvents()
   params.addressSender = addressSender
-  const { extData, args, argsBloom, amount } = await prepareOnboarding(params)
-  return { extData, args, argsBloom, amount }
+  const { extData, args, proofBloom, publicSignalsBloom, amount } = await prepareOnboarding(params)
+  return { extData, args, proofBloom, publicSignalsBloom, amount }
 }
 
 export async function createTransactionData(params: CreateTransactionParams, keypair: Keypair, signer: any, address ?: string){
@@ -475,6 +466,6 @@ export async function createTransactionData(params: CreateTransactionParams, key
     params.eventsStatusTree = await fetchStatusTreeEvents()
   }
 
-  const { extData, args, argsBloom, amount } = await prepareTransaction(params)
-  return { extData, args, argsBloom, amount }
+  const { extData, args, proofBloom, publicSignalsBloom, amount } = await prepareTransaction(params)
+  return { extData, args, proofBloom, publicSignalsBloom, amount }
 }

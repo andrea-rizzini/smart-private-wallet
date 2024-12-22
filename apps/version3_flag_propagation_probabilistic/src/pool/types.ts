@@ -11,11 +11,11 @@ export type ArgsProof = {
 }
 
 export type ArgsBloom = {
-  proofs: BytesLike []
-  root: BytesLike
-  keys: bigint []
-  isExclusion: number  
-  k: number
+  proof: BytesLike 
+  k: bigint
+  root: bigint
+  key: bigint
+  isExclusion: bigint
 }
 
 export type ArgsPOI = {
