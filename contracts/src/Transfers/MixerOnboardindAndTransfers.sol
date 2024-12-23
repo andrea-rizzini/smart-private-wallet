@@ -49,9 +49,21 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
 
   event Log(string message);
 
+  // Events for onboarding
+  event CommitmentCreated(
+    bytes32 indexed commitment,
+    uint32 leafIndex,
+    uint256 timestamp
+  );
+
+  event Redeemed(
+    address to, 
+    bytes32 indexed nullifierHash
+  );
+
   // Events for transactions
 
-  event NewCommitment(bytes32 commitment, uint256 index);
+  event NewCommitment(bytes32 commitment, uint256 index, bytes encryptedOutput);
   event NewCommitmentPOI(bytes32 commitment, uint256 index);
   event NewNullifier(bytes32 nullifier);
 
@@ -95,8 +107,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
@@ -109,7 +121,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
       require(uint256(_extData.extAmount) <= maximumDepositAmount, "amount is larger than maximumDepositAmount");
     }
     _transact(_args, _extData);
-    _depositPOI(commitmentsPOI);
+    _depositPOI(commitmentsPOI); // in future add with delay, to check the funds before append to the tree
   }
 
   function _transact(Proof memory _args, ExtData memory _extData) internal nonReentrant {
@@ -125,8 +137,8 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
@@ -158,12 +170,12 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
 
     if (_extData.extAmount < 0) { // we should always enter here
       require(_extData.recipient != address(0), "Can't withdraw to zero address");
-      token.safeTransfer(_extData.recipient, uint256(-_extData.extAmount));require(verifyProof(_args), "Invalid transaction proof");
+      token.safeTransfer(_extData.recipient, uint256(-_extData.extAmount));
     }
 
     _insert(_args.outputCommitments[0], _args.outputCommitments[1]);
-    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2);
-    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1);
+    emit NewCommitment(_args.outputCommitments[0], nextIndex - 2, _extData.encryptedOutput1);
+    emit NewCommitment(_args.outputCommitments[1], nextIndex - 1, _extData.encryptedOutput2);
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       emit NewNullifier(_args.inputNullifiers[i]);
     }
@@ -174,6 +186,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
     emit NewCommitmentPOI(commitmentsPOI[0], nextIndexP - 2);
     emit NewCommitmentPOI(commitmentsPOI[1], nextIndexP - 1);
   }
+
 
   function isSpent(bytes32 _nullifierHash) public view returns (bool) {
     return nullifierHashes[_nullifierHash];
@@ -236,4 +249,5 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, MerkleTreeWithHis
       revert("unsupported input count");
     }
   }
+
 }

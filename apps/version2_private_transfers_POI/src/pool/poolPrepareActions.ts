@@ -56,7 +56,6 @@ export async function prepareTransfer(amount: string, username: string, addressS
     const { extData, args } = await createTransactionData({ outputs, inputs: unspentUtxo }, senderKeyPair, signer)
     return { args, extData }
 
-
   } else {
     console.log('\nRecipient not registered in the pool');
   }  

@@ -27,10 +27,10 @@ async function main () {
     envConfig.MIXER_ONBOARDING_AND_TRANSFERS_V3 = mixer_onb_and_transf_V3.target.toString();
 
     //verify the contract
-    await run("verify:verify", {
-        address: mixer_onb_and_transf_V3.target,
-        constructorArguments: [VERIFIER_2, VERIFIER_16,  VERIFIER_MASKED_COMMITMENT, VERIFIER_NON_MEMBERSHIP, HASHER_TRANSFERS, HASHER_POSEIDON_3_INPUTS, USDC_ADDRESS, 20, AUTHORITY_ADDRESS]
-    });
+    // await run("verify:verify", {
+    //     address: mixer_onb_and_transf_V3.target,
+    //     constructorArguments: [VERIFIER_2, VERIFIER_16,  VERIFIER_MASKED_COMMITMENT, VERIFIER_NON_MEMBERSHIP, HASHER_TRANSFERS, HASHER_POSEIDON_3_INPUTS, USDC_ADDRESS, 20, AUTHORITY_ADDRESS]
+    // });
     
     // write new addresses to .env file
     const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');

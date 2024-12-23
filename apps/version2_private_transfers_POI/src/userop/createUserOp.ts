@@ -31,6 +31,10 @@ export async function call_userop(contract:string, function_name: string, args: 
       EP_ADDRESS,
     ]);
 
+  console.log("preVerificationGas: ", preVerificationGas);
+  console.log("verificationGasLimit: ", verificationGasLimit);
+  console.log("callGasLimit: ", callGasLimit);
+
   userOp.preVerificationGas = preVerificationGas;
   userOp.verificationGasLimit = verificationGasLimit;
   userOp.callGasLimit = callGasLimit;
@@ -42,11 +46,42 @@ export async function call_userop(contract:string, function_name: string, args: 
   );
   userOp.maxPriorityFeePerGas = maxPriorityFeePerGas;
 
+  // fee estimation
+  const block = await hre.ethers.provider.getBlock("latest");
+
+  const gasFee = Math.min(Number(maxFeePerGas), maxPriorityFeePerGas + block?.baseFeePerGas)
+
+  const fee = gasFee * (Number(preVerificationGas))
+
+  console.log("Gas fee: ", gasFee);
+  console.log("Gas: ", preVerificationGas);
+  console.log("Fee: ", fee);
+
   const userOpHash = await ep.getUserOpHash(userOp); // except the signature
   userOp.signature = await signer.signMessage(hre.ethers.getBytes(userOpHash)); // we sign the hash of the userOp itself, that is unqiue; in this way we avoid replay attacks
   const opHash = await hre.ethers.provider.send("eth_sendUserOperation", [
     userOp, // userOp object   
     EP_ADDRESS, // The entrypoint address the request should be sent through. 
   ]);
+
+  await new Promise(resolve => setTimeout(resolve, 3000));
+
+  let receipt = await hre.ethers.provider.send("eth_getUserOperationReceipt", [opHash]);
+  console.log(receipt)
+
+  await new Promise(resolve => setTimeout(resolve, 3000));
+
+  receipt = await hre.ethers.provider.send("eth_getUserOperationReceipt", [opHash]);
+  console.log(receipt);
+
+  await new Promise(resolve => setTimeout(resolve, 3000));
+
+  receipt = await hre.ethers.provider.send("eth_getUserOperationReceipt", [opHash]);
+  console.log(receipt);
+
+  await new Promise(resolve => setTimeout(resolve, 3000));
+
+  receipt = await hre.ethers.provider.send("eth_getUserOperationReceipt", [opHash]);
+  console.log(receipt);
 
 }

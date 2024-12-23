@@ -49,6 +49,8 @@ export async function call_userop(contract:string, function_name: string, args: 
 
   const fee = gasFee * (Number(preVerificationGas))
 
+  console.log("Gas fee: ", gasFee);
+  console.log("Gas: ", preVerificationGas);
   console.log("Fee: ", fee);
 
   const userOpHash = await ep.getUserOpHash(userOp); // except the signature

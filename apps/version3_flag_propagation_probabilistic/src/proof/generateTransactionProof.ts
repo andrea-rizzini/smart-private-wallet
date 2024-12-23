@@ -257,15 +257,20 @@ export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, e
     const smtData = await argumentsSMT(smt, BigInt(eventsStatusTree[0].index), BigInt(masked_commitment));
     const inputBloom = await generateCircuitInput(bitArray1, bitArray2, smtData);
 
-    const originalLog = console.log;
+    // const originalLog = console.log;
 
     try {
 
-      console.log = function (...args) {
-          if (args[0] !== "ERROR:") return;
-      };
+      // console.log = function (...args) {
+      //     if (args[0] !== "ERROR:") return;
+      // };
+
+      const start = performance.now();
       // @ts-ignore
       ({ proofBloom, publicSignalsBloom } = await proveBloom(inputBloom, wasmBuffer, zKeyBuffer));
+      const end = performance.now();
+      const time = end - start;
+      console.log(`Time to generate proof: ${time} ms`);
 
     }catch (error) {
 
@@ -277,7 +282,7 @@ export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, e
       // Fp probability hardcoded for the moment, since we are considering just one masked commitment flagged
       throw (`\nError in the transaction preparation: your bloom filter may contain a taitned UTXO!\nFalse positive probability: ${fpPropbability}\n` );
     } finally {
-        console.log = originalLog;
+        // console.log = originalLog;
     }
 
   }

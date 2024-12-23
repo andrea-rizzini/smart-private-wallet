@@ -26,10 +26,10 @@ async function main () {
   console.log(`Mixer for oboarding and transfers deployed at: ${mixer_onb_and_transf.target}`);
   envConfig.MIXER_ONBOARDING_AND_TRANSFERS = mixer_onb_and_transf.target.toString();
 
-  await run(`verify:verify`, {
-      address: mixer_onb_and_transf.target,
-      constructorArguments: [VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, HASHER_TRANSFERS, USDC_ADDRESS, 20],
-  });
+  // await run(`verify:verify`, {
+  //     address: mixer_onb_and_transf.target,
+  //     constructorArguments: [VERIFIER_2, VERIFIER_16, VERIFIER_POI_2, VERIFIER_POI_16, HASHER_TRANSFERS, USDC_ADDRESS, 20],
+  // });
   
   // write new addresses to .env file
   const updatedEnv = Object.entries(envConfig).map(([key, value]) => `${key}=${value}`).join('\n');

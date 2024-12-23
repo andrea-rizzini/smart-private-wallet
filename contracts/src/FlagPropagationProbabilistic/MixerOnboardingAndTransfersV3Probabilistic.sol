@@ -51,7 +51,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     bytes encryptedOutput2;
     bytes encryptedChainState1;
     bytes encryptedChainState2;
-  }
+  } 
 
   struct Proof {
     bytes proof;

@@ -16,7 +16,7 @@ const MIXER_ONBOARDING_AND_TRANSFERS = process.env.MIXER_ONBOARDING_AND_TRANSFER
 export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){
 
   // 1) fetch all nullifiers
-  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
+  const contract = await hre.ethers.getContractAt("contracts/src/Transfers/MixerOnboardindAndTransfers.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
   let filter = contract.filters.NewNullifier();
   const eventsNullifiers = await contract.queryFilter(filter);
 
@@ -55,7 +55,7 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
 export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){ 
 
   // 1) fetch all nullifiers
-  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
+  const contract = await hre.ethers.getContractAt("contracts/src/Transfers/MixerOnboardindAndTransfers.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
   let filter = contract.filters.NewNullifier();
   const eventsNullifiers = await contract.queryFilter(filter);
 
@@ -347,7 +347,7 @@ async function prepareTransaction({
 }
 
 async function fetchCommitments(): Promise<CommitmentEvents>{
-  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
+  const contract = await hre.ethers.getContractAt("contracts/src/Transfers/MixerOnboardindAndTransfers.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
   const filter = contract.filters.NewCommitment();
   const events = await contract.queryFilter(filter);
   const commitments: CommitmentEvents = [];
@@ -364,7 +364,7 @@ async function fetchCommitments(): Promise<CommitmentEvents>{
 }
 
 export async function fetchCommitmentsPOI(): Promise<CommitmentPOIEvents>{
-  const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
+  const contract = await hre.ethers.getContractAt("contracts/src/Transfers/MixerOnboardindAndTransfers.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS);
   const filter = contract.filters.NewCommitmentPOI();
   const events = await contract.queryFilter(filter);
   const commitments: CommitmentPOIEvents = [];  
@@ -387,7 +387,7 @@ export async function createOnboardingData(params: CreateTransactionParams, keyp
 
 export async function createTransactionData(params: CreateTransactionParams, keypair: Keypair, signer: any){
   if (!params.inputs || !params.inputs.length) { // enter here for the deposit
-    const contract = await hre.ethers.getContractAt("MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS, signer);
+    const contract = await hre.ethers.getContractAt("contracts/src/Transfers/MixerOnboardindAndTransfers.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS, signer);
     const root = await contract.getLastRoot_(); // take the last root, used in prepareTransaction to skip off-chain tree construction since for deposit is useless
 
     params.events = []
