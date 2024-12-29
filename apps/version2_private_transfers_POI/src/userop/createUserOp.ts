@@ -31,10 +31,6 @@ export async function call_userop(contract:string, function_name: string, args: 
       EP_ADDRESS,
     ]);
 
-  console.log("preVerificationGas: ", preVerificationGas);
-  console.log("verificationGasLimit: ", verificationGasLimit);
-  console.log("callGasLimit: ", callGasLimit);
-
   userOp.preVerificationGas = preVerificationGas;
   userOp.verificationGasLimit = verificationGasLimit;
   userOp.callGasLimit = callGasLimit;

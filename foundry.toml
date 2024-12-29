@@ -17,4 +17,5 @@ remappings = [
     "snarkjs/=node_modules/fixed-merkle-tree/node_modules/snarkjs/",
 ]
 
+
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

@@ -3,7 +3,7 @@ import fs from 'fs';
 import hre from "hardhat";
 
 const EP_ADDRESS: string = process.env.ENTRY_POINT_ADDRESS || '';
-const FACTORY_ADDRESS: string = process.env.ACCOUNT_FACTORY_ADDRESS || '';
+const ACCOUNT_FACTORY_RELAYER_ADDRESS: string = process.env.ACCOUNT_FACTORY_RELAYER_ADDRESS || '';
 
 async function main() {
 
@@ -16,7 +16,7 @@ async function main() {
 
     const ep = await hre.ethers.getContractAt("EntryPoint", EP_ADDRESS, signers[2]);
 
-    let initCode = FACTORY_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
+    let initCode = ACCOUNT_FACTORY_RELAYER_ADDRESS + AccountFactory.interface.encodeFunctionData("createAccount", [address]).slice(2);
     let relayer: string = "0x";
     try {
         await ep.getSenderAddress(initCode);
