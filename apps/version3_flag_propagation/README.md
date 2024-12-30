@@ -7,21 +7,21 @@ Here’s a high-level overview: each deposit commitment will be associated with 
 # Quickstart for version3_flag_propagation:
 1) ```npm i``` on the root of the project
 2) Make sure to have as many private keys as you need and add them to the .env file  
-To test the demo you need at least: two users, a faucet and a relayer; hence at least four private keys
+To test the demo you need: two users, a faucet and a relayer; hence at least four private keys
 3) Make sure to have enough funds on your faucet
 4) Circuits setup:  
 ```cd circuits```  
 Execute ```./script_v2.sh 2```  
 Execute ```./script_v2.sh 16```   
 Execute ```./script_v3.sh```  
-A folder ```/artifacts``` inside ```/circuits``` will be created with the compiled circom stuff needed to generate zk-proofs and verification, from that folder move ```Verifier2.sol```, ```Verifier16.sol``` into the folder ```contracts/src/Compliance/```  and ```VerifierNonMembership.sol```, ```VerifierMaskCommitment.sol``` into the folder ```contracts/src/FlagPropagation/```  
+A folder ```/artifacts``` inside ```/circuits``` will be created with the compiled circom stuff needed to generate zk-proofs and verification, from that folder move ```Verifier2.sol```, ```Verifier16.sol``` into the folder ```contracts/src/Transfer/```  and ```VerifierNonMembership.sol```, ```VerifierMaskCommitment.sol``` into the folder ```contracts/src/FlagPropagation/```  
 You will have to modify the .sol files with the correct declaration name, since circom will generate all the verifier contract as ```contract Verifier [...]```  
 ```Verifier2.sol``` : ```contract Verifier [...]``` --> ```contract Verifier2 [...]```  
 ```Verifier16.sol``` : ```contract Verifier [...]``` --> ```contract Verifier16 [...]```  
 ```VerifierMaskCommitment.sol``` : ```contract Verifier [...]``` --> ```contract VerifierMaskCommitment [...]```  
 ```VerifierNonMembership.sol``` : ```contract Verifier [...]``` --> ```contract VerifierNonMembership [...]```  
-Rename ```verifyProof``` in ```verifyProofNonMembership``` in ```VerifierNonMembership.sol``` contract.  
-Rename ```verifyProof``` in ```verifyProofMaskCommitment``` in ```VerifierMaskCommitment.sol``` contract.  
+Rename ```verifyProof``` with ```verifyProofNonMembership``` in ```VerifierNonMembership.sol``` contract.  
+Rename ```verifyProof``` with ```verifyProofMaskCommitment``` in ```VerifierMaskCommitment.sol``` contract.  
 5) Base contract setup:   
 Deploy ```Paymaster``` and ```AccountFactory``` using ```npx hardhat run ./contracts/scripts/deployPaymasterAndAccFactory.ts```    
 6) Mixer setup:    
