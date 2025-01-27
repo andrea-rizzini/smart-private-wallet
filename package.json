@@ -35,7 +35,8 @@
     "node-localstorage": "^3.0.5",
     "readline-sync": "^1.4.10",
     "snarkjs": "git+https://github.com/tornadocash/snarkjs.git#f37f146948f3b28086493e71512006b030588fc2",
-    "websnark": "git+https://github.com/tornadocash/websnark.git#4c0af6a8b65aabea3c09f377f63c44e7a58afa6d"
+    "websnark": "git+https://github.com/tornadocash/websnark.git#4c0af6a8b65aabea3c09f377f63c44e7a58afa6d",
+    "zkverifyjs": "^0.6.0"
   },
   "devDependencies": {
     "@nomiclabs/hardhat-etherscan": "^3.1.8",
