@@ -185,6 +185,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
     }
     require(uint256(_args.extDataHash) == uint256(keccak256(abi.encode(_extData))) % FIELD_SIZE_, "Incorrect external data hash");
 
+    // a check for the smt root needs to be added here
     require(verifyProofsBloom(_proofBloom, _publicSignalsBloom), "Invalid bloom proof");
     require(verifyProof(_args), "Invalid transaction proof");
 
