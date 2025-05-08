@@ -179,7 +179,7 @@ contract MixerOnboardingAndTransfers is MerkleTreeWithHistory, ReentrancyGuard {
   }
 
   function _transact(Proof memory _args, bytes memory _proofBloom, uint256[3] memory _publicSignalsBloom, ExtData memory _extData) internal nonReentrant {
-    require(isKnownRoot_(_args.root), "Invalid merkle root");
+    require(isKnownRoot_(_args.root), "Invalid merkle root"); // the root I'm generating locally has to be among the last 100 roots viewed by the contract
     for (uint256 i = 0; i < _args.inputNullifiers.length; i++) {
       require(!isSpent(_args.inputNullifiers[i]), "Input is already spent");
     }
