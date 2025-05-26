@@ -5,6 +5,7 @@ import * as readline from 'readline';
 
 import { call_userop } from "./userop/createUserOp";
 import { checkSanctionedAddress } from './poi/checkIfSanctioned';
+import { delay } from "./utils/delay";
 import { getAccountAddress, getAccountKeyPair, getOnbUtxoFromKeypair, getTotalAmount } from "./pool/poolFunctions";
 import { getAddressOfContactOfUser, getContactsByUserId, getID, getKeyPairOnboardingByUserId, insertChallenge, insertContact, 
     insertKeypair, isChallengeRedeemed, updateContact, updateChallengeRedeemed} from '../database/database';
@@ -348,6 +349,8 @@ export async function receive(signer: any, account: string, initCode: string) {
     const usdcAmount = hre.ethers.parseUnits(choiceAmount, 6);
   
     await usdc.approve(account, usdcAmount);
+
+    await delay(5000); // wait for 5 seconds to avoid nonce issues
   
     const transferTx = await usdc.transfer(account, usdcAmount);
     await transferTx.wait();

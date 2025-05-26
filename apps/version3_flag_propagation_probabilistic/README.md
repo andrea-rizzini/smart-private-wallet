@@ -42,7 +42,7 @@ You need 2 terminals, T1, T2 and T3.
 2) (T1): type ```1```, type ```testnet``` and choose username (Alice) and password for your account: you will be fund in seconds with 0.01 USDC from the faucet.
 3) (T1): type  ```1``` to check your smart contract address and your private balance
 4) (T1): in the menu type ```2``` to invite someone, select a name (Bob) for him and select the amount you want onboard him with. You can check your amount after having spent funds to onboard Bob typing  ```1```.
-5) (T2): ```npx hardhat run apps/version3_flag_propagation/main.ts``` 
+5) (T2): ```npx hardhat run apps/version3_flag_propagation_probabilistic/main.ts``` 
 6) (T2): type ```3```, choose username (Bob) and password and wait for the onboarding to be complete: now you are in.
 7) (T2): in the menu type ```6``` to verify if the person who invited you is present in the contacts (there should be Alice with her address).
 8) (T1): in the menu type ```7``` to refresh, this will check if the user has completed the onboarding procedure. 

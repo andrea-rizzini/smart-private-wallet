@@ -15,16 +15,38 @@ const contractAddress = process.env.POOL_USERS_ADDRESS || '';
 const MERKLE_TREE_HEIGHT = 20;
 const MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC = process.env.MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC || '';
 
+const startBlock = process.env.POOL_USERS_DEPLOY_BLOCK
+  ? parseInt(process.env.POOL_USERS_DEPLOY_BLOCK)
+  : 0
+
+const blockRange = 500; 
+
 export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){
 
   // 1) fetch all nullifiers
   const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagationProbabilistic/MixerOnboardingAndTransfersV3Probabilistic.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
   let filter = contract.filters.NewNullifier();
-  const eventsNullifiers = await contract.queryFilter(filter);
+  let eventsNullifiers: any[] = [];
+
+  const endBlock = await hre.ethers.provider.getBlockNumber();
+
+  for (let i = startBlock; i <= endBlock; i += blockRange) {
+    const fromBlock = i;
+    const toBlock = Math.min(i + blockRange - 1, endBlock);
+    const events = await contract.queryFilter(filter, fromBlock, toBlock);
+    eventsNullifiers = eventsNullifiers.concat(events);
+
+  }
 
   // 2) fetch all commitment events
   filter = contract.filters.NewCommitmentV2();
-  const eventsCommitments = await contract.queryFilter(filter);
+  let eventsCommitments: any[] = [];
+  for (let i = startBlock; i <= endBlock; i += blockRange) {
+    const fromBlock = i;
+    const toBlock = Math.min(i + blockRange - 1, endBlock);
+    const events = await contract.queryFilter(filter, fromBlock, toBlock);
+    eventsCommitments = eventsCommitments.concat(events);
+  }
 
   // 3) for each event, take the encrypted output field, decrypt it and if it's owned by the sender, add it to the myUtxo array
   let myUtxo: BaseUtxo[] = []
@@ -72,15 +94,31 @@ export async function getUtxoFromKeypair(senderKeyPair: Keypair, addressSender: 
 }
 
 export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSender: string){ 
-
+  
   // 1) fetch all nullifiers
   const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagationProbabilistic/MixerOnboardingAndTransfersV3Probabilistic.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
   let filter = contract.filters.NewNullifier();
-  const eventsNullifiers = await contract.queryFilter(filter);
+  let eventsNullifiers: any[] = [];
+
+  const endBlock = await hre.ethers.provider.getBlockNumber();
+
+  for (let i = startBlock; i <= endBlock; i += blockRange) {
+    const fromBlock = i;
+    const toBlock = Math.min(i + blockRange - 1, endBlock);
+    const events = await contract.queryFilter(filter, fromBlock, toBlock);
+    eventsNullifiers = eventsNullifiers.concat(events);
+
+  }
 
   // 2) fetch all commitment events
   filter = contract.filters.NewCommitmentV2();
-  const eventsCommitments = await contract.queryFilter(filter);
+  let eventsCommitments: any[] = [];
+  for (let i = startBlock; i <= endBlock; i += blockRange) {
+    const fromBlock = i;
+    const toBlock = Math.min(i + blockRange - 1, endBlock);
+    const events = await contract.queryFilter(filter, fromBlock, toBlock);
+    eventsCommitments = eventsCommitments.concat(events);
+  }
 
   // 3) for each event, take the encrypted output field, decrypt it and if it's owned by the sender, add it to the myUtxo array
   let myUtxo: BaseUtxo[] = []
@@ -129,11 +167,7 @@ export async function getAccountAddress(account: string): Promise<string | undef
   const contract = await hre.ethers.getContractAt("PoolUsers", contractAddress);
   const filter = contract.filters.PublicKey();
 
-  const startBlock = process.env.POOL_USERS_DEPLOY_BLOCK
-    ? parseInt(process.env.POOL_USERS_DEPLOY_BLOCK)
-    : 0
   const endBlock = await hre.ethers.provider.getBlockNumber();
-  const blockRange = 500; 
 
   for (let i = startBlock; i <= endBlock; i += blockRange) {
     const fromBlock = i;
@@ -419,9 +453,16 @@ async function prepareTransaction({
 async function fetchCommitments(): Promise<CommitmentEvents>{
   const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
   const filter = contract.filters.NewCommitmentV2();
-  const events = await contract.queryFilter(filter);
   const commitments: CommitmentEvents = [];
-  events.forEach((event) => {
+
+  const endBlock = await hre.ethers.provider.getBlockNumber();
+
+  for (let i = startBlock; i <= endBlock; i += blockRange) {
+    const fromBlock = i;
+    const toBlock = Math.min(i + blockRange - 1, endBlock);
+    const events = await contract.queryFilter(filter, fromBlock, toBlock);
+    
+    events.forEach((event) => {
     commitments.push({
       blockNumber: event.blockNumber,
       transactionHash: event.transactionHash,
@@ -435,24 +476,39 @@ async function fetchCommitments(): Promise<CommitmentEvents>{
       encryptedChainState: event.args[3]
     })
   });
+  }
+  
   return commitments
 }
+
 
 async function fetchStatusTreeEvents(): Promise<StatusTreeEvents> {
   const contract = await hre.ethers.getContractAt("contracts/src/FlagPropagation/MixerOnboardingAndTransfersV3.sol:MixerOnboardingAndTransfers", MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC);
   const filter = contract.filters.StatusFlagged();
-  const events = await contract.queryFilter(filter);
+
+  const endBlock = await hre.ethers.provider.getBlockNumber();
+
   const statusTreeEvents: StatusTreeEvents = [];
-  events.forEach((event) => {
-    statusTreeEvents.push({
-      blockNumber: event.blockNumber,
-      transactionHash: event.transactionHash,
-      // @ts-ignore
-      index: Number(event.args[0]),
-      // @ts-ignore
-      maskedCommitment: event.args[1]
-    })
-  });
+
+  for (let i = startBlock; i <= endBlock; i += blockRange) {
+    const fromBlock = i;
+    const toBlock = Math.min(i + blockRange - 1, endBlock);
+
+    const events = await contract.queryFilter(filter, fromBlock, toBlock);
+
+    events.forEach((event) => {
+      statusTreeEvents.push({
+        blockNumber: event.blockNumber,
+        transactionHash: event.transactionHash,
+        // @ts-ignore
+        index: Number(event.args[0]),
+        // @ts-ignore
+        maskedCommitment: event.args[1]
+      })
+    });
+
+  }
+  
   return statusTreeEvents
 }
 

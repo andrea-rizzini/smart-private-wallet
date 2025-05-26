@@ -6,6 +6,7 @@ import * as readline from 'readline';
 import * as readlineSync from 'readline-sync';
 
 import { call_userop } from './userop/createUserOp';
+import { delay } from './utils/delay';
 import { deleteUser, getID, getUserByUsername, insertContact, insertKeypairOnboarding, insertUser, usernameExists } from '../database/database';
 import { getAccountAddress, getUtxoFromKeypair } from './pool/poolFunctions';
 import { inputFromCLI } from './utils/inputFromCLI';
@@ -173,6 +174,8 @@ export async function acceptInvite() {
   const usdcAmount = hre.ethers.parseUnits("0.01", 6);
 
   await usdc.approve(account, usdcAmount);
+
+  await delay(5000); // wait for 5 seconds to avoid nonce issues
 
   const transferTx = await usdc.transfer(account, usdcAmount);
   await transferTx.wait();
