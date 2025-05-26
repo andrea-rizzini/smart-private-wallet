@@ -125,18 +125,30 @@ export async function getOnbUtxoFromKeypair(senderKeyPair: Keypair, addressSende
   return { unspentUtxoOnb }
 }
 
-export async function getAccountAddress(account: string){
+export async function getAccountAddress(account: string): Promise<string | undefined> {
   const contract = await hre.ethers.getContractAt("PoolUsers", contractAddress);
   const filter = contract.filters.PublicKey();
-  const events = await contract.queryFilter(filter);
-  let publicKey = undefined;
-  events.forEach((event) => {
-    const owner = event.args[0];
-    if(owner.toLowerCase() === account.toLowerCase()){ 
-      publicKey = event.args[1]; 
+
+  const startBlock = process.env.POOL_USERS_DEPLOY_BLOCK
+    ? parseInt(process.env.POOL_USERS_DEPLOY_BLOCK)
+    : 0
+  const endBlock = await hre.ethers.provider.getBlockNumber();
+  const blockRange = 500; 
+
+  for (let i = startBlock; i <= endBlock; i += blockRange) {
+    const fromBlock = i;
+    const toBlock = Math.min(i + blockRange - 1, endBlock);
+
+    const events = await contract.queryFilter(filter, fromBlock, toBlock);
+    for (const event of events) {
+      const owner = event.args[0];
+      if (owner.toLowerCase() === account.toLowerCase()) {
+        return event.args[1];
+      }
     }
-  });
-  return publicKey;
+  }
+
+  return undefined;
 }
 
 export async function getAccountKeyPair(username: string, addressSender: string): Promise<Keypair | undefined>{
