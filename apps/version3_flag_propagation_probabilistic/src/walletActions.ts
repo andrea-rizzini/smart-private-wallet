@@ -23,6 +23,12 @@ const POOL_USERS_ADDRESS = process.env.POOL_USERS_ADDRESS || '';
 const RELAYER_V3_PROBABILISTIC_ADDRESS = process.env.RELAYER_V3_PROBABILISTIC_ADDRESS || '';
 const USDC_ADDRESS: string = '0x036CbD53842c5426634e7929541eC2318f3dCF7e'
 
+const startBlock = process.env.POOL_USERS_DEPLOY_BLOCK
+  ? parseInt(process.env.POOL_USERS_DEPLOY_BLOCK)
+  : 0
+
+const blockRange = 500; 
+
 export async function setup(username: string, account: string, initCode: string, signer: any) {
 
     const poolAddress = await getAccountAddress(account);
@@ -381,6 +387,8 @@ export async function refresh(username: string, account: string) {
     console.log('\n');
 
     const address = await getAccountAddress(account) 
+    const endBlock = await hre.ethers.provider.getBlockNumber();
+    let encryptedData: any[] = [];
 
     if (address) {
         const keyPair = await getAccountKeyPair(username, address)
@@ -389,11 +397,17 @@ export async function refresh(username: string, account: string) {
         // 1) fetch all the events of EncryptedData
         const contract = await hre.ethers.getContractAt("EncryptedDataOnboardedUsers", ENCRYPTED_DATA_ADDRESS);
         let filter = contract.filters.EncryptedData();
-        const events= await contract.queryFilter(filter);
+
+        for (let i = startBlock; i <= endBlock; i += blockRange) {
+            const fromBlock = i;
+            const toBlock = Math.min(i + blockRange - 1, endBlock);
+            const events = await contract.queryFilter(filter, fromBlock, toBlock);
+            encryptedData = encryptedData.concat(events);
+        }
 
         // 2) filter the events of the user
 
-        events.forEach((event) => {
+        encryptedData.forEach((event) => {
             const encryptedData = event.args[0];
             try {
                 const decryptedData = keypair_.decrypt(encryptedData);

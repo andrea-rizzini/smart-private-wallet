@@ -405,22 +405,45 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, eventsSta
   let proofBloom: BytesLike = "";
   let publicSignalsBloom: any = {}; 
 
-  for (const event of eventsStatusTree) { // for each masked commitment flagged, for testing consider just one masked
+  for (const event of eventsStatusTree) { // for each masked commitment flagged
 
     const bitArray1 = statusMerged.chainstateBitArray // this would be the bloom filter representing the utxo chainstate
 
-    const masked_commitment = event.maskedCommitment;
+    const masked_commitment = eventsStatusTree[0].maskedCommitment;
     const indices = await computeBloomIndices(BigInt(masked_commitment), FILTER_SIZE);
     const bitArray2 = createBitArray(FILTER_SIZE, indices); // this would be a bloom filter with just one element (derived from the flagged masked commitment)
 
     const smtData = await argumentsSMT(smt, BigInt(eventsStatusTree[0].index), BigInt(masked_commitment));
-    const input = await generateCircuitInput(bitArray1, bitArray2, smtData);
+    const inputBloom = await generateCircuitInput(bitArray1, bitArray2, smtData);
 
-    // @ts-ignore
-    ({ proofBloom, publicSignalsBloom } = await prove(input, wasmBuffer, zKeyBuffer));
+    // const originalLog = console.log;
 
-  }
-    
+    try {
+
+      // console.log = function (...args) {
+      //     if (args[0] !== "ERROR:") return;
+      // };
+
+      const start = performance.now();
+      // @ts-ignore
+      ({ proofBloom, publicSignalsBloom } = await proveBloom(inputBloom, wasmBuffer, zKeyBuffer));
+      const end = performance.now();
+      const time = end - start;
+      console.log(`Time to generate proof: ${time} ms`);
+
+    }catch (error) {
+
+      let m = FILTER_SIZE; // size of the bloom filter
+      let k = 2; // number of hash functions
+      let n = bitArray1.filter(bit => bit === 1).length/2; // number of elements in the bloom filter
+      let fpPropbability = Math.pow(1 - Math.exp(-k * n / m), k);
+
+      // Fp probability hardcoded for the moment, since we are considering just one masked commitment flagged
+      throw (`\nError in the transaction preparation: your bloom filter may contain a taitned UTXO!\nFalse positive probability: ${fpPropbability}\n` );
+    } finally {
+        // console.log = originalLog;
+    }
+  }  
 
   return {
     extData,
