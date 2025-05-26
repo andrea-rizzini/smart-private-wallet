@@ -25,10 +25,6 @@ Execute ```./script_v2.sh 16```
 Execute ```./script_v2_POI.sh 2```  
 Execute ```./script_v2_POI.sh 16``` 
 A folder ```/artifacts``` inside ```/circuits``` will be created with the compiled circom stuff needed to generate zk-proofs and verification, from that folder move ```Verifier2.sol```, ```Verifier16.sol```, ```VerifierPOI2.sol``` and ```VerifierPOI16.sol``` into the folder ```contracts/src/Compliance/```  
-You will have to modify the .sol files with the correct declaration name, since circom will generate all the verifier contract as ```contract Verifier [...]```  
-f.i.: ```Verifier2.sol```: ```contract Verifier [...]``` --> ```contract Verifier2 [...]```  
-f.i.: ```VerifierPOI2.sol```: ```contract Verifier [...]``` --> ```contract VerifierPOI2 [...]```  
-Also rename ```verifyProof``` in ```verifyPOI2``` and ```verifyPOI16``` in POI verifier contracts, to avoid collisions in function names.
 5) Base contract setup:   
 Deploy ```Paymaster``` and ```AccountFactory``` using ```npx hardhat run ./contracts/scripts/deployPaymasterAndAccFactory.ts```    
 6) Mixer setup (that is unique for onboarding and transfers):      

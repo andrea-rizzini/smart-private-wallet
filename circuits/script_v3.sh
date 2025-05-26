@@ -3,7 +3,7 @@ POWERS_OF_TAU=18 # circuit will support max 2^POWERS_OF_TAU constraints
 mkdir -p artifacts/circuits
 if [ ! -f artifacts/circuits/ptau$POWERS_OF_TAU ]; then
   echo "Downloading powers of tau file"
-  curl -L https://hermez.s3-eu-west-1.amazonaws.com/powersOfTau28_hez_final_$POWERS_OF_TAU.ptau --create-dirs -o artifacts/circuits/ptau$POWERS_OF_TAU
+  curl -L https://storage.googleapis.com/zkevm/ptau/powersOfTau28_hez_final_$POWERS_OF_TAU.ptau --create-dirs -o artifacts/circuits/ptau$POWERS_OF_TAU
 fi
 
 npx circom -v -r artifacts/circuits/mask_commitment.r1cs -w artifacts/circuits/mask_commitment.wasm -s artifacts/circuits/mask_commitment.sym v3_flag_propagation/mask_commitment.circom
