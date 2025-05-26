@@ -135,7 +135,7 @@ contract VerifierNonMembershipBloom {
      * @returns Whether the proof is valid given the hardcoded verifying key
      *          above and the public inputs
      */
-    function verifyProof(
+    function verifyProofBloom(
         bytes memory proof,
         uint256[3] memory input
     ) public view returns (bool) {

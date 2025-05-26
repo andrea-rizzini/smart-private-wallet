@@ -391,8 +391,8 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, eventsSta
   }
 
   // proofs for each masked commitment
-  const proofs: BytesLike[] = []
-  const keys: bigint[] = []
+  // const proofs: BytesLike[] = []
+  // const keys: bigint[] = []
 
   fileName = `non_membership_bloom.wasm`;
   filePath = path.join(dirPath, fileName);
@@ -413,7 +413,7 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, eventsSta
     const indices = await computeBloomIndices(BigInt(masked_commitment), FILTER_SIZE);
     const bitArray2 = createBitArray(FILTER_SIZE, indices); // this would be a bloom filter with just one element (derived from the flagged masked commitment)
 
-    const smtData = argumentsSMT(bitArray2, smt, BigInt(event.index));
+    const smtData = await argumentsSMT(smt, BigInt(eventsStatusTree[0].index), BigInt(masked_commitment));
     const input = await generateCircuitInput(bitArray1, bitArray2, smtData);
 
     // @ts-ignore

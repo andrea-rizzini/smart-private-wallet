@@ -133,7 +133,7 @@ contract VerifierMaskCommitment {
      * @returns Whether the proof is valid given the hardcoded verifying key
      *          above and the public inputs
      */
-    function verifyProof(
+    function verifyProofMaskCommitment(
         bytes memory proof,
         uint256[1] memory input
     ) public view returns (bool) {
