@@ -12,7 +12,7 @@ import { getAccountAddress, getUtxoFromKeypair } from './pool/poolFunctions';
 import { inputFromCLI } from './utils/inputFromCLI';
 import { Keypair } from './pool/keypair';
 import { LinkNote } from './types/link';
-import { prepareDeposit } from './pool/poolPrepareActions';
+import { prepareDeposit, prepareTransfer } from './pool/poolPrepareActions';
 import { setup, checkAccountBalance, inviteUsingLink, send, receive, refresh, showContacts, withdraw, exit } from './walletActions';
 import { showMenu } from './menu/menu';
 import { toBuffer } from './pool/utxo';
@@ -499,6 +499,9 @@ export async function onboardViaLink() {
   
       call_userop("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, keypair.encrypt(bytes)], account, initCode, signers[index]);
     }
+
+    // todo: send the UTXO to yourself to remove the control over it by the sender (the one who created the link)
+    const result = await prepareTransfer(totalAmount.toString(), username, account, account, signers[index]);
     
     // start the wallet
   

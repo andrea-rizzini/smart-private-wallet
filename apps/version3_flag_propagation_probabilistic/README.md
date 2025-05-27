@@ -41,7 +41,7 @@ Note: a ```.db``` file will be created inside ```/apps/version3_flag_propagation
 
 # Demo for version3_flag_propagation_probabilistic:
 You need 2 terminals, T1, T2 and T3.
-First of all I suggest to delete the old database (if previous usage) and create a new one. Then I also suggest to make a new deploy for the paymaster and account factories, in order to get a fresh setup. 
+First of all I suggest to delete the old database (if previous usage) and create a new one. Then I also suggest to make a new deploy for the paymaster, account factories and mixer contracts, in order to get a fresh setup. 
 1) (T1): ```npx hardhat run apps/version3_flag_propagation_probabilistic/main.ts```  
 2) (T1): type ```1```, type ```testnet``` and choose username (Alice) and password for your account: you will be fund in seconds with 0.01 USDC from the faucet.
 3) (T1): type  ```1``` to check your smart contract address and your private balance
