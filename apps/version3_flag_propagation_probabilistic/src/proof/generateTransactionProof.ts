@@ -259,30 +259,46 @@ export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, e
 
     // const originalLog = console.log;
 
-    try {
+    // try {
 
-      // console.log = function (...args) {
-      //     if (args[0] !== "ERROR:") return;
-      // };
+    //   // console.log = function (...args) {
+    //   //     if (args[0] !== "ERROR:") return;
+    //   // };
 
-      const start = performance.now();
-      // @ts-ignore
-      ({ proofBloom, publicSignalsBloom } = await proveBloom(inputBloom, wasmBuffer, zKeyBuffer));
-      const end = performance.now();
-      const time = end - start;
-      console.log(`Time to generate proof: ${time} ms`);
+    //   const start = performance.now();
+    //   // @ts-ignore
+    //   ({ proofBloom, publicSignalsBloom } = await proveBloom(inputBloom, wasmBuffer, zKeyBuffer));
+    //   const end = performance.now();
+    //   const time = end - start;
+    //   console.log(`Time to generate proof: ${time} ms`);
 
-    }catch (error) {
+    // }catch (error) {
 
+    //   let m = FILTER_SIZE; // size of the bloom filter
+    //   let k = 2; // number of hash functions
+    //   let n = bitArray1.filter(bit => bit === 1).length/2; // number of elements in the bloom filter
+    //   let fpPropbability = Math.pow(1 - Math.exp(-k * n / m), k);
+
+    //   // Fp probability hardcoded for the moment, since we are considering just one masked commitment flagged
+    //   throw (`\nError in the transaction preparation: your bloom filter may contain a taitned UTXO!\nFalse positive probability: ${fpPropbability}\n` );
+    // } finally {
+    //     // console.log = originalLog;
+    // }
+
+    // non-blocking proof --> non custodial style
+    const start = performance.now();
+    // @ts-ignore
+    ({ proofBloom, publicSignalsBloom } = await proveBloom(inputBloom, wasmBuffer, zKeyBuffer));
+    const end = performance.now();
+    const time = end - start;
+    console.log(`Time to generate proof: ${time} ms`);
+
+    if (publicSignalsBloom[0] === 0n) { 
       let m = FILTER_SIZE; // size of the bloom filter
       let k = 2; // number of hash functions
       let n = bitArray1.filter(bit => bit === 1).length/2; // number of elements in the bloom filter
       let fpPropbability = Math.pow(1 - Math.exp(-k * n / m), k);
-
-      // Fp probability hardcoded for the moment, since we are considering just one masked commitment flagged
-      throw (`\nError in the transaction preparation: your bloom filter may contain a taitned UTXO!\nFalse positive probability: ${fpPropbability}\n` );
-    } finally {
-        // console.log = originalLog;
+      console.log(`Your bloom filter may contain a taitned UTXO!\nFalse positive probability: ${fpPropbability}\n`);
     }
 
   }
@@ -292,7 +308,7 @@ export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, e
     proof,
     args,
     proofBloom,
-    publicSignalsBloom
+    publicSignalsBloom // this now have an additional element to be passed to the contract
   }
 
 }
@@ -416,32 +432,20 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, eventsSta
     const smtData = await argumentsSMT(smt, BigInt(eventsStatusTree[0].index), BigInt(masked_commitment));
     const inputBloom = await generateCircuitInput(bitArray1, bitArray2, smtData);
 
-    // const originalLog = console.log;
+    // non-blocking proof --> non custodial style
+    const start = performance.now();
+    // @ts-ignore
+    ({ proofBloom, publicSignalsBloom } = await proveBloom(inputBloom, wasmBuffer, zKeyBuffer));
+    const end = performance.now();
+    const time = end - start;
+    console.log(`Time to generate proof: ${time} ms`);
 
-    try {
-
-      // console.log = function (...args) {
-      //     if (args[0] !== "ERROR:") return;
-      // };
-
-      const start = performance.now();
-      // @ts-ignore
-      ({ proofBloom, publicSignalsBloom } = await proveBloom(inputBloom, wasmBuffer, zKeyBuffer));
-      const end = performance.now();
-      const time = end - start;
-      console.log(`Time to generate proof: ${time} ms`);
-
-    }catch (error) {
-
+    if (publicSignalsBloom[0] === 0n) { 
       let m = FILTER_SIZE; // size of the bloom filter
       let k = 2; // number of hash functions
       let n = bitArray1.filter(bit => bit === 1).length/2; // number of elements in the bloom filter
       let fpPropbability = Math.pow(1 - Math.exp(-k * n / m), k);
-
-      // Fp probability hardcoded for the moment, since we are considering just one masked commitment flagged
-      throw (`\nError in the transaction preparation: your bloom filter may contain a taitned UTXO!\nFalse positive probability: ${fpPropbability}\n` );
-    } finally {
-        // console.log = originalLog;
+      console.log(`Your bloom filter may contain a taitned UTXO!\nFalse positive probability: ${fpPropbability}\n`);
     }
   }  
 

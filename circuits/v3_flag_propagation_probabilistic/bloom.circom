@@ -79,6 +79,6 @@ template BloomFilter(n, k, depth) {
     eq.in[0] <== intersection.sum;
     eq.in[1] <== k;
 
-    // notInSet <== 1 - eq.out;
-    eq.out === 0;
+    notInSet <== 1 - eq.out; 
+    // eq.out === 0;
 }
