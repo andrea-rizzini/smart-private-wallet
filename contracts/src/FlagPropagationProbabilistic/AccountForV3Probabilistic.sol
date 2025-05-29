@@ -29,7 +29,7 @@ interface IMixerOnboardingAndTransfers {
     }
 
     function deposit(Proof memory _proofArgs, ExtData memory _extData) external;
-    function withdraw(Proof memory _args, bytes memory _proofBloom, uint256[4] memory _publicSignalsBloom, ExtData memory _extData) external;
+    function withdraw(Proof memory _args, bytes[] memory _proofsBloom, uint256[4][] memory _publicSignalsBloomArray, ExtData memory _extData) external;
     
 } 
 
@@ -108,11 +108,11 @@ contract Account is IAccount {
     function callWithdraw(
         address poolAddress,
         IMixerOnboardingAndTransfers.Proof memory _proofArgs,
-        bytes memory _proofBloom, 
-        uint256[4] memory _publicSignalsBloom, 
+        bytes [] memory _proofsBloom, 
+        uint256[4][] memory _publicSignalsBloomArray, 
         IMixerOnboardingAndTransfers.ExtData memory _extData
     ) external payable {
-        IMixerOnboardingAndTransfers(poolAddress).withdraw(_proofArgs, _proofBloom, _publicSignalsBloom, _extData);
+        IMixerOnboardingAndTransfers(poolAddress).withdraw(_proofArgs, _proofsBloom, _publicSignalsBloomArray, _extData);
     }
 
 }

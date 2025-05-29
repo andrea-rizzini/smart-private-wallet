@@ -377,13 +377,13 @@ async function prepareOnboarding ({
     params.tree = await buildMerkleTree({ events })
   }
 
-  const { extData, args, proofBloom, publicSignalsBloom } = await getProofOnboarding(params)
+  const { extData, args, proofsBloom, publicSignalsBloomArray } = await getProofOnboarding(params)
 
   return {
       extData,
       args,
-      proofBloom,
-      publicSignalsBloom,
+      proofsBloom,
+      publicSignalsBloomArray,
       amount,
   }
 
@@ -438,13 +438,13 @@ async function prepareTransaction({
       params.tree = await buildMerkleTree({ events }) // build the tree off-chain
   }
 
-  const { extData, args, proofBloom, publicSignalsBloom } = await getProof(params)
+  const { extData, args, proofsBloom, publicSignalsBloomArray } = await getProof(params)
 
   return {
       extData,
       args,
-      proofBloom,
-      publicSignalsBloom,
+      proofsBloom,
+      publicSignalsBloomArray,
       amount,
   }
 
@@ -516,8 +516,8 @@ export async function createOnboardingData(params: CreateTransactionParams, keyp
   params.events = await fetchCommitments()
   params.eventsStatusTree = await fetchStatusTreeEvents()
   params.addressSender = addressSender
-  const { extData, args, proofBloom, publicSignalsBloom, amount } = await prepareOnboarding(params)
-  return { extData, args, proofBloom, publicSignalsBloom, amount }
+  const { extData, args, proofsBloom, publicSignalsBloomArray, amount } = await prepareOnboarding(params)
+  return { extData, args, proofsBloom, publicSignalsBloomArray, amount }
 }
 
 export async function createTransactionData(params: CreateTransactionParams, keypair: Keypair, signer: any, address ?: string){
@@ -534,6 +534,6 @@ export async function createTransactionData(params: CreateTransactionParams, key
     params.eventsStatusTree = await fetchStatusTreeEvents()
   }
 
-  const { extData, args, proofBloom, publicSignalsBloom, amount } = await prepareTransaction(params)
-  return { extData, args, proofBloom, publicSignalsBloom, amount }
+  const { extData, args, proofsBloom, publicSignalsBloomArray, amount } = await prepareTransaction(params)
+  return { extData, args, proofsBloom, publicSignalsBloomArray, amount }
 }

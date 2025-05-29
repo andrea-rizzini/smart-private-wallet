@@ -232,8 +232,8 @@ export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, e
   }
 
   // proofs for each masked commitment
-  const proofs: BytesLike[] = []
-  const keys: bigint[] = []
+  const proofsBloom: BytesLike[] = []
+  let publicSignalsBloomArray: bigint[][] = [];
 
   fileName = `non_membership_bloom.wasm`;
   filePath = path.join(dirPath, fileName);
@@ -243,18 +243,18 @@ export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, e
   filePath = path.join(dirPath, fileName);
   zKeyBuffer = fs.readFileSync(filePath);
 
-  let proofBloom: BytesLike = "";
-  let publicSignalsBloom: bigint[] = [];
-
   for (const event of eventsStatusTree) { // for each masked commitment flagged
+
+    let proofBloom: BytesLike = "";
+    let publicSignalsBloom: bigint[] = [];
 
     const bitArray1 = statusMerged.chainstateBitArray // this would be the bloom filter representing the utxo chainstate, change this with 0xb9d25ce24336d04e3ab1ed6c2c500299148d61e46095d9361cfd1b5853145c91 to test membership
 
-    const masked_commitment = eventsStatusTree[0].maskedCommitment;
+    const masked_commitment = event.maskedCommitment;
     const indices = await computeBloomIndices(BigInt(masked_commitment), FILTER_SIZE);
     const bitArray2 = createBitArray(FILTER_SIZE, indices); // this would be a bloom filter with just one element (derived from the flagged masked commitment)
 
-    const smtData = await argumentsSMT(smt, BigInt(eventsStatusTree[0].index), BigInt(masked_commitment));
+    const smtData = await argumentsSMT(smt, BigInt(event.index), BigInt(masked_commitment));
     const inputBloom = await generateCircuitInput(bitArray1, bitArray2, smtData);
 
     // non-blocking proof --> non custodial style
@@ -273,14 +273,17 @@ export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, e
       console.log(`Your bloom filter may contain a taitned UTXO!\nFalse positive probability: ${fpPropbability}\n`);
     }
 
+    proofsBloom.push(proofBloom)
+    publicSignalsBloomArray.push(publicSignalsBloom); 
+
   }
 
   return {
     extData,
     proof,
     args,
-    proofBloom,
-    publicSignalsBloom // this now have an additional element to be passed to the contract
+    proofsBloom,
+    publicSignalsBloomArray 
   }
 
 }
@@ -379,8 +382,8 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, eventsSta
   }
 
   // proofs for each masked commitment
-  // const proofs: BytesLike[] = []
-  // const keys: bigint[] = []
+  const proofsBloom: BytesLike[] = []
+  let publicSignalsBloomArray: bigint[][] = [];
 
   fileName = `non_membership_bloom.wasm`;
   filePath = path.join(dirPath, fileName);
@@ -390,18 +393,18 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, eventsSta
   filePath = path.join(dirPath, fileName);
   zKeyBuffer = fs.readFileSync(filePath);
 
-  let proofBloom: BytesLike = "";
-  let publicSignalsBloom: any = {}; 
-
   for (const event of eventsStatusTree) { // for each masked commitment flagged
+
+    let proofBloom: BytesLike = "";
+    let publicSignalsBloom: bigint[] = [];
 
     const bitArray1 = statusMerged.chainstateBitArray // this would be the bloom filter representing the utxo chainstate
 
-    const masked_commitment = eventsStatusTree[0].maskedCommitment;
+    const masked_commitment = event.maskedCommitment;
     const indices = await computeBloomIndices(BigInt(masked_commitment), FILTER_SIZE);
     const bitArray2 = createBitArray(FILTER_SIZE, indices); // this would be a bloom filter with just one element (derived from the flagged masked commitment)
 
-    const smtData = await argumentsSMT(smt, BigInt(eventsStatusTree[0].index), BigInt(masked_commitment));
+    const smtData = await argumentsSMT(smt, BigInt(event.index), BigInt(masked_commitment));
     const inputBloom = await generateCircuitInput(bitArray1, bitArray2, smtData);
 
     // non-blocking proof --> non custodial style
@@ -419,13 +422,16 @@ export async function getProofOnboarding({ inputs, outputs, tree, smt, eventsSta
       let fpPropbability = Math.pow(1 - Math.exp(-k * n / m), k);
       console.log(`Your bloom filter may contain a taitned UTXO!\nFalse positive probability: ${fpPropbability}\n`);
     }
+
+    proofsBloom.push(proofBloom)
+    publicSignalsBloomArray.push(publicSignalsBloom); 
   }  
 
   return {
     extData,
     proof,
     args,
-    proofBloom,
-    publicSignalsBloom
+    proofsBloom,
+    publicSignalsBloomArray
   }
 }
