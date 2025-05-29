@@ -248,7 +248,7 @@ export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, e
 
   for (const event of eventsStatusTree) { // for each masked commitment flagged
 
-    const bitArray1 = statusMerged.chainstateBitArray // this would be the bloom filter representing the utxo chainstate
+    const bitArray1 = statusMerged.chainstateBitArray // this would be the bloom filter representing the utxo chainstate, change this with 0xb9d25ce24336d04e3ab1ed6c2c500299148d61e46095d9361cfd1b5853145c91 to test membership
 
     const masked_commitment = eventsStatusTree[0].maskedCommitment;
     const indices = await computeBloomIndices(BigInt(masked_commitment), FILTER_SIZE);
@@ -256,34 +256,6 @@ export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, e
 
     const smtData = await argumentsSMT(smt, BigInt(eventsStatusTree[0].index), BigInt(masked_commitment));
     const inputBloom = await generateCircuitInput(bitArray1, bitArray2, smtData);
-
-    // const originalLog = console.log;
-
-    // try {
-
-    //   // console.log = function (...args) {
-    //   //     if (args[0] !== "ERROR:") return;
-    //   // };
-
-    //   const start = performance.now();
-    //   // @ts-ignore
-    //   ({ proofBloom, publicSignalsBloom } = await proveBloom(inputBloom, wasmBuffer, zKeyBuffer));
-    //   const end = performance.now();
-    //   const time = end - start;
-    //   console.log(`Time to generate proof: ${time} ms`);
-
-    // }catch (error) {
-
-    //   let m = FILTER_SIZE; // size of the bloom filter
-    //   let k = 2; // number of hash functions
-    //   let n = bitArray1.filter(bit => bit === 1).length/2; // number of elements in the bloom filter
-    //   let fpPropbability = Math.pow(1 - Math.exp(-k * n / m), k);
-
-    //   // Fp probability hardcoded for the moment, since we are considering just one masked commitment flagged
-    //   throw (`\nError in the transaction preparation: your bloom filter may contain a taitned UTXO!\nFalse positive probability: ${fpPropbability}\n` );
-    // } finally {
-    //     // console.log = originalLog;
-    // }
 
     // non-blocking proof --> non custodial style
     const start = performance.now();

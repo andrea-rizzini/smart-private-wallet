@@ -56,8 +56,8 @@ async function main() {
                 const { proof, publicSignals } = await prove(input, wasmBuffer, zKeyBuffer)
 
                 // insert to the status tree
-                const signers = await hre.ethers.getSigners();                                                        
-                await call_userop("Authority", "callFlagStatus", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, proof, maskedCommitment.id, toFixedHex(input.maskedCommitment)], AUTHORITY_ADDRESS, INIT_CODE_AUTHORITY, signers[4]);
+                const signers = await hre.ethers.getSigners();                                                     // + 1 since at the first index it's inserted a dummy masked commitment, to avoid collision in case we need to flag the first commitment    
+                await call_userop("Authority", "callFlagStatus", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, proof, maskedCommitment.id+1, toFixedHex(input.maskedCommitment)], AUTHORITY_ADDRESS, INIT_CODE_AUTHORITY, signers[4]);
             
                 // update to true in the database
                 updateMaskedCommitmentFlagged(maskedCommitment.maskedCommitment);
