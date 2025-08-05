@@ -500,7 +500,9 @@ export async function onboardViaLink() {
       call_userop("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:Account", "insertIntoEncryptedData", [ENCRYPTED_DATA_ADDRESS, keypair.encrypt(bytes)], account, initCode, signers[index]);
     }
 
-    // todo: send the UTXO to yourself to remove the control over it by the sender (the one who created the link)
+    // send the UTXO to yourself to remove the control over it by the sender (the one who created the link)
+    await delay(8000);
+
     const result = await prepareTransfer(totalAmount.toString(), username, account, account, signers[index]);
     
     // start the wallet

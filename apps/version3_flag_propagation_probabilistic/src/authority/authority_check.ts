@@ -35,7 +35,7 @@ async function main() {
                 // generate zk-proof, proving that the authority has the right to flag the commitment
                 const input = {
                     maskedCommitment: maskedCommitment.maskedCommitment,
-                    commitment: maskedCommitment.commitment,
+                    commitment: maskedCommitment.commitment, // todo: add a check on this commitment as well, a valid Merkle path for the main tree
                     blinding: maskedCommitment.blinding,
                 }
 

@@ -48,7 +48,6 @@ export async function setup(username: string, account: string, initCode: string,
 
         insertKeypair(index, keypair.privkey, keypair.pubkey.toString(), keypair.encryptionKey);
 
-        // console.log("\nRegistered successfully!\n")
     }
 }
 
@@ -90,7 +89,6 @@ export async function inviteUsingLink(name: string, account: string, initCode: s
 
     const nameOnbUser: string = await inputFromCLI("\nEnter the name of the invited user to be added on your contacts: ", rl);
 
-    // let choice: string;
     let choiceAmount: string;
     let isValid: boolean = false; 
 
@@ -482,8 +480,6 @@ export async function withdraw(username: string, account: string, initCode: stri
     if (result) {
         const { args, proofsBloom, publicSignalsBloomArray, extData } = result;
         try {
-
-            console.log ('\nChecking Proof of Innocence ...');
             
             await call_userop("contracts/src/FlagPropagationProbabilistic/AccountForV3Probabilistic.sol:Account", "callWithdraw", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, proofsBloom, publicSignalsBloomArray, extData], account, initCode, signer);
 

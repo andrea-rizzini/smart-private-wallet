@@ -81,16 +81,11 @@ export async function getProof({ inputs, outputs, tree, smt, eventsStatusTree, e
     }
 
   }
-
-  // let jsonString = JSON.stringify(statusToEncrypt);
-  // let byteSize = new TextEncoder().encode(jsonString).length;
-  // console.log(`Size of the statusToEncrypt before encryption: ${byteSize} bytes`);
   
   const [output1, output2] = outputs
 
   // prepare encrypted chain state
 
-  // let encryptedChainState1, encryptedChainState2; // maybe encryption is not needed, already hashed
   let encryptedChainState1, encryptedChainState2;
 
   if (extAmount > 0) { // meaning that the transaction is a deposit
