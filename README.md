@@ -1,3 +1,9 @@
+## ⚠️ Project Deprecated
+
+This project is no longer maintained.  
+It has been migrated to [A Private Smart Wallet with Probabilistic Compliance](https://github.com/andrea-rizzini/A-Private-Smart-Wallet-with-Probabilistic-Compliance).
+-
+
 # Smart-private-wallet
 This project comprises three demos:
 1) ```version1_onboarding```, which shows how a private onboarding procedure can be done using notes and commitments
