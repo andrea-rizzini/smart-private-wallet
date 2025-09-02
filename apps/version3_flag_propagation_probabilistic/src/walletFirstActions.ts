@@ -504,6 +504,23 @@ export async function onboardViaLink() {
     await delay(8000);
 
     const result = await prepareTransfer(totalAmount.toString(), username, account, account, signers[index]);
+
+    if (result) {
+        const signers = await hre.ethers.getSigners();
+        const { args, proofsBloom, publicSignalsBloomArray, extData } = result;
+        try {
+            await call_userop("contracts/src/FlagPropagationProbabilistic/RelayerForV3Probabilistic.sol:Relayer", "callTransact", [MIXER_ONBOARDING_AND_TRANSFERS_V3_PROBABILISTIC, args, proofsBloom, publicSignalsBloomArray, extData], RELAYER_V3_PROBABILISTIC_ADDRESS , INIT_CODE_RELAYER_V3_PROBABILISTIC, signers[3]); 
+            console.log(`\nTransfer of ${totalAmount} USDC completed succesfully!\n`);
+        }
+        catch (error) {
+            console.error("\nSomething went wrong during the transfer transaction:", error);
+            console.log("\n");
+        }
+        
+    }
+    else {
+        console.log("\nTransfer preparation failed\n");
+    }
     
     // start the wallet
   
